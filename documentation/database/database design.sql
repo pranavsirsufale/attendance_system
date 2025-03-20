@@ -156,7 +156,6 @@ CREATE TABLE Calendar_Exceptions (
 
 #***************************************************************************************************
 
-
 CREATE TABLE Teachers (
     teacher_id INT PRIMARY KEY AUTO_INCREMENT,
     first_name VARCHAR(50) NOT NULL,
@@ -209,13 +208,15 @@ CREATE TABLE Attendance (
     attendance_id INT PRIMARY KEY AUTO_INCREMENT,
     student_id INT,
     session_id INT,
-    status ENUM('Present', 'Absent', 'Late') DEFAULT 'Absent',
+    status ENUM('Present', 'Absent', 'Late') DEFAULT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     recorded_by INT,
+    UNIQUE (student_id, session_id),
     FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE,
     FOREIGN KEY (session_id) REFERENCES Sessions(session_id) ON DELETE CASCADE,
     FOREIGN KEY (recorded_by) REFERENCES Teachers(teacher_id) ON DELETE SET NULL
 );
+
 
 CREATE TABLE Student_Subject (
     student_id INT,
@@ -226,17 +227,12 @@ CREATE TABLE Student_Subject (
 );
 
 
-
-
 -- Optional: Table for holidays/exceptions
 CREATE TABLE Calendar_Exceptions (
     exception_id INT PRIMARY KEY AUTO_INCREMENT,
     date DATE NOT NULL,
-    description VARCHAR(100),  -- e.g., "Public Holiday"
+    description VARCHAR(100),
     UNIQUE (date)
 );
-
-
-
 
 

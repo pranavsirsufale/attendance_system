@@ -228,7 +228,13 @@ CREATE TABLE Student_Subject (
 
 
 
-
+-- Optional: Table for holidays/exceptions
+CREATE TABLE Calendar_Exceptions (
+    exception_id INT PRIMARY KEY AUTO_INCREMENT,
+    date DATE NOT NULL,
+    description VARCHAR(100),  -- e.g., "Public Holiday"
+    UNIQUE (date)
+);
 
 
 

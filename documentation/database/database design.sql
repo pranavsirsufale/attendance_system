@@ -50,4 +50,27 @@ CREATE TABLE Sessions (
 
 
 
+CREATE TABLE Attendance (
+    attendance_id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id INT,
+    session_id INT,
+    status ENUM('Present', 'Absent', 'Late') DEFAULT 'Absent',
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES Sessions(session_id) ON DELETE CASCADE
+);
+
+
+
+
+CREATE TABLE Student_Subject (
+    student_id INT,
+    subject_id INT,
+    PRIMARY KEY (student_id, subject_id),
+    FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES Subjects(subject_id) ON DELETE CASCADE
+);
+
+
+
 

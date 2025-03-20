@@ -235,6 +235,25 @@ CREATE TABLE Calendar_Exceptions (
     UNIQUE (date)
 );
 
+#**************************************************************************************
+###### INSERT SAMPLE DATA ************************************************************
+
+
+INSERT INTO Teachers (first_name, last_name, email, phone, pass)
+VALUES ('rohan', 'magar', 'rohan@gmail.com', '123456790', 'pass'); 
+
+
+INSERT INTO Students (first_name, last_name, roll_number, email, phone)
+VALUES 
+    ('Alice', 'Smith', 'CS001', 'alice.smith@example.com', '987-654-3210'),
+    ('Bob', 'Johnson', 'CS002', 'bob.johnson@example.com', '555-123-4567'),
+    ('Charlie', 'Brown', 'CS003', 'charlie.brown@example.com', '444-987-6543');
+
+
+
+INSERT INTO Subjects (subject_name, teacher_id)
+VALUES ('Mathematics', 1);
+
 
 
 

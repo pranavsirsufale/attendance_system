@@ -240,8 +240,7 @@ CREATE TABLE Calendar_Exceptions (
 
 
 INSERT INTO Teachers (first_name, last_name, email, phone, pass)
-VALUES ('rohan', 'magar', 'rohan@gmail.com', '123456790', 'pass'); 
-
+VALUES ('John', 'Doe', 'john.doe@example.com', '123-456-7890', 'hashed_password123'); -- In practice, hash this!
 
 INSERT INTO Students (first_name, last_name, roll_number, email, phone)
 VALUES 
@@ -256,5 +255,74 @@ VALUES ('Mathematics', 1);
 
 
 
+INSERT INTO Timetable (subject_id, day_of_week, start_time, end_time, room, semester_start_date, semester_end_date)
+VALUES (1, 'Monday', '09:00:00', '10:00:00', 'Room 101', '2025-03-01', '2025-06-30');
 
 
+
+INSERT INTO Sessions (timetable_id, date, status)
+VALUES 
+    (1, '2025-03-03', 'Scheduled'),
+    (1, '2025-03-10', 'Scheduled'),
+    (1, '2025-03-17', 'Scheduled'),
+    (1, '2025-03-24', 'Scheduled');
+    
+    
+    
+INSERT INTO Calendar_Exceptions (date, description)
+VALUES ('2025-03-17', 'Spring Break');
+
+UPDATE Sessions 
+SET status = 'Cancelled'
+WHERE date = '2025-03-17' AND timetable_id = 1;
+
+
+
+INSERT INTO Attendance (student_id, session_id, status, recorded_by)
+VALUES 
+    (1, 1, 'Present', 1), -- Alice
+    (2, 1, 'Absent', 1),  -- Bob
+    (3, 1, 'Late', 1);    -- Charlie
+
+UPDATE Sessions 
+SET status = 'Completed'
+WHERE session_id = 1;
+
+
+
+INSERT INTO Attendance (student_id, session_id, status, recorded_by)
+VALUES 
+    (1, 2, 'Present', 1), -- Alice
+    (2, 2, 'Present', 1), -- Bob
+    (3, 2, 'Absent', 1);  -- Charlie
+
+UPDATE Sessions 
+SET status = 'Completed'
+WHERE session_id = 2;
+
+
+SELECT 
+    s.student_id,
+    s.first_name,
+    s.last_name,
+    s.roll_number,
+    COUNT(CASE WHEN a.status = 'Present' THEN 1 END) AS present_count,
+    COUNT(CASE WHEN a.status = 'Absent' THEN 1 END) AS absent_count,
+    COUNT(CASE WHEN a.status = 'Late' THEN 1 END) AS late_count,
+    (SELECT COUNT(*) 
+     FROM Sessions ses 
+     JOIN Timetable tt ON ses.timetable_id = tt.timetable_id
+     WHERE ses.status = 'Completed' AND tt.subject_id = 1) AS total_conducted_sessions,
+    (COUNT(CASE WHEN a.status = 'Present' THEN 1 END) * 100.0 / 
+     (SELECT COUNT(*) 
+      FROM Sessions ses 
+      JOIN Timetable tt ON ses.timetable_id = tt.timetable_id
+      WHERE ses.status = 'Completed' AND tt.subject_id = 1)) AS attendance_percentage
+FROM Students s
+JOIN Student_Subject ss ON s.student_id = ss.student_id
+JOIN Subjects sub ON ss.subject_id = sub.subject_id
+JOIN Timetable tt ON sub.subject_id = tt.subject_id
+JOIN Sessions ses ON tt.timetable_id = ses.timetable_id
+LEFT JOIN Attendance a ON s.student_id = a.student_id AND a.session_id = ses.session_id
+WHERE sub.subject_id = 1 AND ses.status = 'Completed'
+GROUP BY s.student_id, s.first_name, s.last_name, s.roll_number;

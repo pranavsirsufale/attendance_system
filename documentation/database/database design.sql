@@ -1,3 +1,5 @@
+/*
+
 CREATE TABLE Teachers (
     teacher_id INT PRIMARY KEY AUTO_INCREMENT,
     first_name VARCHAR(50) NOT NULL,
@@ -58,6 +60,17 @@ CREATE TABLE Student_Subject (
     FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE,
     FOREIGN KEY (subject_id) REFERENCES Subjects(subject_id) ON DELETE CASCADE
 );
+
+
+*/
+
+
+create database attendance_system;
+
+use attendance_system;
+
+#*********************************************************************************************
+
 
 
 

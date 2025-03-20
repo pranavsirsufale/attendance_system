@@ -26,3 +26,28 @@ CREATE TABLE Subjects (
 
 
 
+CREATE TABLE Timetable (
+    timetable_id INT PRIMARY KEY AUTO_INCREMENT,
+    subject_id INT,
+    day_of_week ENUM('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday') NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    room VARCHAR(50),
+    FOREIGN KEY (subject_id) REFERENCES Subjects(subject_id) ON DELETE CASCADE
+);
+
+
+
+
+
+CREATE TABLE Sessions (
+    session_id INT PRIMARY KEY AUTO_INCREMENT,
+    timetable_id INT,
+    date DATE NOT NULL,
+    status ENUM('Scheduled', 'Completed', 'Cancelled') DEFAULT 'Scheduled',
+    FOREIGN KEY (timetable_id) REFERENCES Timetable(timetable_id) ON DELETE CASCADE
+);
+
+
+
+

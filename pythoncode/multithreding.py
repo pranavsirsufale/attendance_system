@@ -1,3 +1,5 @@
+
+''' '
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -20,7 +22,7 @@ def func(seconds):
 
 
 
-def main():
+def something():
     time3 = time.perf_counter()
     # same code using thread
     t1 = threading.Thread(target=func , args=[4])
@@ -58,5 +60,25 @@ def poolingDemo():
 
 poolingDemo()
 
+'''
+
+import multiprocessing
+import requests
+
+def downloadfile(url,name):
+    response = requests.get(url)
+    open(f'file/{name}.jpg','wb').write(response.content)
+
+if __name__ == '__main__':
+    url = 'https://picsum.photos/200'
+    proccess = []
+    for i in range(5):
+        p = multiprocessing.Process(target = downloadfile , args= [ url,i])
+        p.start() 
+        proccess.append(p)
+
+    for p in proccess:
+        p.join()
 
 
+### NOTE FILE FILE DIRECOTRY HAS NOT BEEN CREATED CREATE IT IN ROOT DIRECTORY 

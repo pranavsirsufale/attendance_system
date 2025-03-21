@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 def func(seconds):
     print(f'sleeping for {seconds} seconds')
     time.sleep(seconds)
+    return seconds
 
 # time1 = time.perf_counter()
 
@@ -43,12 +44,19 @@ def main():
 
 def poolingDemo():
     with ThreadPoolExecutor() as executor:
-        future = executor.submit(func , 4)
-        future1 = executor.submit(func , 2)
-        future2 = executor.submit(func , 5)
-        print(future.result())
-        print(future1.result())
-        print(future2.result())
+        # future = executor.submit(func , 4)
+        # future1 = executor.submit(func , 2)
+        # future2 = executor.submit(func , 5)
+        # print(future.result())
+        # print(future1.result())
+        # print(future2.result())
+        l = [3,5,1,2]
+        results = executor.map(func, l)
+        for result in results:
+            print(result)
 
 
 poolingDemo()
+
+
+

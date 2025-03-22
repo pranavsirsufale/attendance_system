@@ -1,9 +1,14 @@
 from django.db import models
 
+default_name = 'firstname'
+default_last_name = 'lastname'
+default_email = 'email@gmail.com'
+
+
 class Teacher(models.Model):
-    first_name = models.CharField(max_length = 50 )
-    last_name = models.CharField(max_length = 50  )
-    email = models.EmailField(unique = True )
+    first_name = models.CharField(max_length = 50 , null = False )
+    last_name = models.CharField(max_length = 50  , null = False )
+    email = models.EmailField(unique = True , null = False , default= 'default@gmail.com' )
     phone = models.CharField(max_length = 15 , null = True , blank = True )
     pass_field = models.CharField(max_length = 255 )
 
@@ -12,11 +17,11 @@ class Teacher(models.Model):
 
 
 class Student(models.Model):
-    first_name = models.CharField(max_length = 50 )
-    last_name = models.CharField(max_length = 50)
-    email = models.EmailField(unique = True)
+    first_name = models.CharField(max_length = 50 , null= False )
+    last_name = models.CharField(max_length = 50 , null= False)
+    email = models.EmailField(unique = True , null = False , default= 'default@gmail.com')
     phone = models.CharField(max_length = 15 , null = True, blank = True )
-    roll_number = models.CharField(max_length = 20 , unique = True )
+    roll_number = models.CharField(max_length = 20 , unique = True , null = False , auto_created= True)
 
 
 class Subject(models.Model):
@@ -38,11 +43,11 @@ class Timetable(models.Model):
 
     subject = models.ForeignKey(Subject , on_delete = models.CASCADE)
     day_of_week = models.CharField(max_length = 9 , choices = DAY_CHOICES )
-    start_time = models.TimeField()
-    end_time = models.TimeField()
+    start_time = models.TimeField( null= False)
+    end_time = models.TimeField( null = False)
     room = models.CharField(max_length = 50 , null = True, blank = True )
-    semester_start_date = models.DateField()
-    semester_end_date = models.DateField()
+    semester_start_date = models.DateField(null = False)
+    semester_end_date = models.DateField( null = False )
 
     class Meta:
         unique_together = ('subject' , 'day_of_week', 'start_time')
@@ -77,7 +82,7 @@ class Attendance(models.Model):
     student = models.ForeignKey(Student , on_delete = models.CASCADE )
     session = models.ForeignKey(Session , on_delete = models.CASCADE )
     status = models.CharField(max_length = 7 , choices = STATUS_CHOICES,  null = True , blank = True )
-    timestamp = models.DateTimeField(auto_now= True )
+    timestamp = models.DateTimeField(auto_now= True , null= False )
     recorded_by = models.ForeignKey(Teacher , on_delete = models.SET_NULL , null = True )
 
     class Meta:

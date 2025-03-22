@@ -8,7 +8,7 @@ default_email = 'email@gmail.com'
 class Teacher(models.Model):
     first_name = models.CharField(max_length = 50 , null = False )
     last_name = models.CharField(max_length = 50  , null = False )
-    email = models.EmailField(unique = True , null = False , default= 'default@gmail.com' )
+    email = models.EmailField(unique = True , null = False , default= default_email )
     phone = models.CharField(max_length = 15 , null = True , blank = True )
     pass_field = models.CharField(max_length = 255 )
 
@@ -19,7 +19,7 @@ class Teacher(models.Model):
 class Student(models.Model):
     first_name = models.CharField(max_length = 50 , null= False )
     last_name = models.CharField(max_length = 50 , null= False)
-    email = models.EmailField(unique = True , null = False , default= 'default@gmail.com')
+    email = models.EmailField(unique = True , null = False , default= default_email)
     phone = models.CharField(max_length = 15 , null = True, blank = True )
     roll_number = models.CharField(max_length = 20 , unique = True , null = False , auto_created= True)
 

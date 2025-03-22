@@ -77,7 +77,7 @@ class Attendance(models.Model):
     student = models.ForeignKey(Student , on_delete = models.CASCADE )
     session = models.ForeignKey(Session , on_delete = models.CASCADE )
     status = models.CharField(max_length = 7 , choices = STATUS_CHOICES,  null = True , blank = True )
-    timestamp = models.DateTimeField(auto_now = True )
+    timestamp = models.DateTimeField(auto_now= True )
     recorded_by = models.ForeignKey(Teacher , on_delete = models.SET_NULL , null = True )
 
     class Meta:

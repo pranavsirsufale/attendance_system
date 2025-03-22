@@ -62,7 +62,41 @@ class Session(models.Model):
 
     timetable = models.ForeignKey(Timetable , on_delete = models.CASCADE )
     date = models.DateField()
-    status = models.CharField(max_length = 10 , choices = STATUS_CHOICES ) 
+    status = models.CharField(max_length = 10 , choices = STATUS_CHOICES  , default = 'Scheduled') 
+
+    class Meta:
+        unique_together = ('timetable' , 'date')
+
+
+class Attendance(models.Model):
+    STATUS_CHOICES = [
+        ('Present', 'Present'),
+        ('Absent', 'Absent'),
+    ]
+
+    student = models.ForeignKey(Student , on_delete = models.CASCADE )
+    session = models.ForeignKey(Session , on_delete = models.CASCADE )
+    status = models.CharField(max_length = 7 , choices = STATUS_CHOICES,  null = True , blank = True )
+    timestamp = models.DateTimeField(auto_now = True )
+    recorded_by = models.ForeignKey(Teacher , on_delete = models.SET_NULL , null = True )
+
+    class Meta:
+        unique_together = ('student','session')
+
+
+
+
+class StudentSubject(models.Model):
+    student = models.ForeignKey(Student , on_delete = models.CASCADE)
+    subject = models.ForeignKey(Subject , on_delete = models.CASCADE )
+    
+    class Meta:
+        unique_together = ( 'student','subject')
+
+
+class CalendarException(models.Model):
+    date = models.DateField(unique = True )
+    description = models.CharField(max_length = 100 ) 
 
 
 

@@ -21,7 +21,7 @@ class Student(models.Model):
     last_name = models.CharField(max_length = 50 , null= False , default= default_last_name)
     email = models.EmailField(unique = True , null = False , default= default_email)
     phone = models.CharField(max_length = 15 , null = True, blank = True )
-    roll_number = models.CharField(max_length = 20 , unique = True , null = False , auto_created= True)
+    roll_number = models.CharField(max_length = 20 , unique = True , null = False , auto_created= True )
 
 
 class Subject(models.Model):

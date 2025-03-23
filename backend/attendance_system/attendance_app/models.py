@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 default_first_name = 'firstname'
 default_last_name = 'lastname'
@@ -6,6 +7,7 @@ default_email = 'email@gmail.com'
 
 
 class Teacher(models.Model):
+    user = models.OneToOneField(User , on_delete= models.CASCADE)
     first_name = models.CharField(max_length = 50 , null = False  , default=default_first_name )
     last_name = models.CharField(max_length = 50  , null = False  , default = default_last_name)
     email = models.EmailField(unique = True , null = False , default= default_email )

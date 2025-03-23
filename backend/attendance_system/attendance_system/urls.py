@@ -9,6 +9,7 @@ router.register(r'attendance',AttendanceViewSet)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path('api/',include(router.urls)),
-    path('', include('attendance_app.urls')),
+    path('api/', include('attendance_app.urls')),
+    
+
 ]

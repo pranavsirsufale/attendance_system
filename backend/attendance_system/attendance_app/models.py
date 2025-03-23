@@ -7,11 +7,12 @@ default_email = 'email@gmail.com'
 
 
 class Teacher(models.Model):
+    user = models.OneToOneField(User, on_delete= models.CASCADE)
     first_name = models.CharField(max_length = 50 , null = False  , default=default_first_name )
     last_name = models.CharField(max_length = 50  , null = False  , default = default_last_name)
     email = models.EmailField(unique = True , null = False , default= default_email )
     phone = models.CharField(max_length = 15 , null = True , blank = True )
-    pass_field = models.CharField(max_length = 255 )
+    # pass_field = models.CharField(max_length = 255 )
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"

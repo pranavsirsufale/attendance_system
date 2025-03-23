@@ -10,6 +10,3 @@ class AttendanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attendance
         fields = ['id', 'student' , 'session' , 'status','timestamp' ,'recorded_by' ]
-
-
-    

@@ -11,18 +11,22 @@
     {% block title %}
     details  of 
 
-    {{student.firstname }}
-    {{student.lastname}}
+    {{student.first_name }}
+    {{student.last_name}}
      
 
     {% endblock %}
 
     {% block content %}
     
-    <h1> {{student.firstname }} {{ student.lastname }} </h1>
+    <h1> {{student.first_name }} {{ student.last_name }} </h1>
 
     <p>
         Phone : {{ student.phone }}
+    </p>
+
+    <p>
+        Email : {{ student.email}}
     </p>
 
     <p>

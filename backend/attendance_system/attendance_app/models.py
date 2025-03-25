@@ -128,29 +128,7 @@ LECTURE_SLOTS = [
     ('13:00:00', '01:00 PM - 02:00 PM'),
 ]
 
-class Program(models.Model):
-    name = models.CharField(max_length=50, unique=True)  # e.g., "BALLB 5 Yr", "LLB 3 Yr"
-    duration_years = models.PositiveIntegerField()  # 3 or 5
 
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        verbose_name = "Program"
-        verbose_name_plural = "Programs"
-
-class Section(models.Model):
-    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="sections")
-    name = models.CharField(max_length=10)  # e.g., "Section A", "Section B"
-    year = models.PositiveIntegerField()  # 1, 2, 3, 4, 5
-
-    def __str__(self):
-        return f"{self.program} - Year {self.year} - {self.name}"
-
-    class Meta:
-        unique_together = ('program', 'year', 'name')
-        verbose_name = "Section"
-        verbose_name_plural = "Sections"
 
 class Subject(models.Model):
     name = models.CharField(max_length=100, unique=True)  # e.g., "Law of Contract I"
@@ -259,13 +237,39 @@ class Attendance(models.Model):
         verbose_name = "Attendance"
         verbose_name_plural = "Attendance"
 
-# class CalendarException(models.Model):
-#     date = models.DateField(unique=True)
-#     description = models.CharField(max_length=100)
+class CalendarException(models.Model):
+    date = models.DateField(unique=True)
+    description = models.CharField(max_length=100)
 
-#     def __str__(self):
-#         return f"{self.date} - {self.description}"
+    def __str__(self):
+        return f"{self.date} - {self.description}"
 
-#     class Meta:
-#         verbose_name = "Calendar Exception"
-#         verbose_name_plural = "Calendar Exceptions"
+    class Meta:
+        verbose_name = "Calendar Exception"
+        verbose_name_plural = "Calendar Exceptions"
+
+
+
+class Program(models.Model):
+    name = models.CharField(max_length=50, unique=True)  # e.g., "BALLB 5 Yr", "LLB 3 Yr"
+    duration_years = models.PositiveIntegerField()  # 3 or 5
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Program"
+        verbose_name_plural = "Programs"
+
+class Section(models.Model):
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="sections")
+    name = models.CharField(max_length=10)  # e.g., "Section A", "Section B"
+    year = models.PositiveIntegerField()  # 1, 2, 3, 4, 5
+
+    def __str__(self):
+        return f"{self.program} - Year {self.year} - {self.name}"
+
+    class Meta:
+        unique_together = ('program', 'year', 'name')
+        verbose_name = "Section"
+        verbose_name_plural = "Sections"

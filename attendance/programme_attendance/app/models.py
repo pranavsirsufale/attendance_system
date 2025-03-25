@@ -76,6 +76,7 @@ class Student(models.Model):
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     email = models.EmailField(unique=True)
+    phone = models.CharField(max_length = 15)
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="students")
     subjects = models.ManyToManyField(Subject, related_name="students", blank=True)
 

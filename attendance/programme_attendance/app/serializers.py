@@ -4,7 +4,7 @@ from .models import Teacher,Student, Subject , Timetable , Session, Attendance ,
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
-        field = ['id' , 'first_name' , 'last_name' , 'email','phone']
+        fields = ['id' , 'first_name' , 'last_name' , 'email','phone']
 
 class StudentSerializer(serializers.ModelSerializer):
     section = serializers.StringRelatedField()

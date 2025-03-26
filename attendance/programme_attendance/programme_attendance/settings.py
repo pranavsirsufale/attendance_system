@@ -7,7 +7,11 @@ SECRET_KEY = "django-insecure-^i)7vl*p4w&*4pd1snts7u-*ahrw3irm6$bei2$c1c-+@vks!!
 
 DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+
+ALLOWED_HOSTS = ['http://localhost:5173','*']
+
+CORS_ALLOWED_ORIGINS = ['http://localhost:5173']
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -18,7 +22,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     'rest_framework',
     'rest_framework_simplejwt',
-    'app'
+    'app',
+    'corsheaders'
 ]
 
 ### added rest-famewokr app and simplejwt
@@ -34,6 +39,12 @@ REST_FRAMEWORK = {
 }
 '''
 
+'''
+Build the attendance marking feature?
+Create the stats display?
+Refine the calendar (e.g., styling, filters)? Let me know!
+'''
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -45,6 +56,7 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

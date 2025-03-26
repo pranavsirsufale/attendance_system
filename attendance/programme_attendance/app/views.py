@@ -18,6 +18,16 @@ def home(request):
     return HttpResponse('hello world this is home')
 
 
+class StudentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Optionally resistrict to studetns in teachers's section
+        return Student.objects.filter(section__timetable__teacher__user = self.request.user ).distinct()
+
+
 
 class SessionViewSet(viewsets.ModelViewSet):
     queryset = Session.objects.all()
@@ -84,6 +94,8 @@ class HolidayListCreateView(generics.ListCreateAPIView):
         holiday = serializer.save()
         # Cancel sessions on this date
         Session.objects.filter(date=holiday.date).update(status='Cancelled')
+
+
 
 class AttendanceStatsView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]

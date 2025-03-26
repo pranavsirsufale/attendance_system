@@ -5,7 +5,7 @@ from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 router.register(r'sessions',views.SessionViewSet)
 router.register(r'attendance',views.AttendanceViewSet)
-
+router.register(r'students', views.StudentViewSet)
 
 urlpatterns = [
     # path('', views.home , name = 'home')

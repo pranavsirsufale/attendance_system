@@ -46,6 +46,39 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(recorded_by=Teacher.objects.get(user=self.request.user))
 
+class TimetableViewSet(viewsets.ModelViewSet):
+    queryset = Timetable.objects.all()
+    serializer_class = TimetableSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Restrict to logged-in teacher
+        return Timetable.objects.filter(teacher__user=self.request.user)
+
+    # def perform_create(self, serializer):
+    #     # Ensure the teacher is the logged-in user
+    #     serializer.save(teacher=Teacher.objects.get(user=self.request.user))
+    def perform_create(self, serializer):
+        timetable = serializer.save(teacher=Teacher.objects.get(user=self.request.user))
+        # Generate sessions for each week between start and end dates
+        start_date = timetable.semester_start_date
+        end_date = timetable.semester_end_date
+        current_date = start_date
+        day_of_week_map = {
+            'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3,
+            'Friday': 4, 'Saturday': 5, 'Sunday': 6
+        }
+        target_day = day_of_week_map[timetable.day_of_week]
+
+        while current_date <= end_date:
+            if current_date.weekday() == target_day:
+                Session.objects.get_or_create(
+                    timetable=timetable,
+                    date=current_date,
+                    defaults={'status': 'Scheduled'}
+                )
+            current_date += timedelta(days=1)    
+
 class TeacherCalendarView(generics.ListAPIView):
     serializer_class = SessionSerializer
     permission_classes = [IsAuthenticated]
@@ -166,3 +199,15 @@ class ClassHourlyStatsView(generics.GenericAPIView):
             })
         except Session.DoesNotExist:
             return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+class SectionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Section.objects.all()
+    serializer_class = serializers.ModelSerializer(Section, fields='__all__')
+    permission_classes = [IsAuthenticated]
+
+class SubjectViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Subject.objects.all()
+    serializer_class = SubjectSerializer
+    permission_classes = [IsAuthenticated]

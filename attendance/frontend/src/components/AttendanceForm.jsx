@@ -1,11 +1,139 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useParams, useNavigate } from 'react-router-dom';
 
-function AttendanceForm({ session, onClose }) {
+function AttendanceForm() {
+  const { sessionId } = useParams(); // Get sessionId from URL
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [attendanceData, setAttendanceData] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [sessionTitle, setSessionTitle] = useState('');
+
+  useEffect(() => {
+    const fetchSessionAndStudents = async () => {
+      const token = localStorage.getItem('access_token');
+      try {
+        // Fetch session details
+        const sessionResponse = await axios.get(`http://localhost:8000/api/sessions/${sessionId}/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setSessionTitle(`${sessionResponse.data.timetable.subject.name} (${sessionResponse.data.status})`);
+
+        // Fetch students in the section
+        const studentsResponse = await axios.get('http://localhost:8000/api/students/', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const sectionStudents = studentsResponse.data.filter(
+          (student) => student.section === sessionResponse.data.timetable.section
+        );
+
+        setStudents(sectionStudents);
+        const initialAttendance = {};
+        sectionStudents.forEach((student) => {
+          initialAttendance[student.id] = 'Absent';
+        });
+        setAttendanceData(initialAttendance);
+      } catch (err) {
+        setError('Failed to load session or students');
+        console.error(err);
+      }
+    };
+
+    fetchSessionAndStudents();
+  }, [sessionId]);
+
+  const handleStatusChange = (studentId, status) => {
+    setAttendanceData((prev) => ({ ...prev, [studentId]: status }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('access_token');
+    const payload = Object.keys(attendanceData).map((studentId) => ({
+      student_id: parseInt(studentId),
+      status: attendanceData[studentId],
+    }));
+
+    try {
+      const response = await axios.post(
+        `http://localhost:8000/api/mark-attendance/${sessionId}/`,
+        { attendance: payload },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSuccess(response.data.message);
+      setError('');
+      setTimeout(() => navigate('/calendar'), 2000); // Redirect after 2 seconds
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to mark attendance');
+      setSuccess('');
+    }
+  };
+
+  return (
+    <div style={{
+      maxWidth: '600px', margin: '50px auto', padding: '20px',
+      border: '1px solid #ddd', borderRadius: '8px'
+    }}>
+      <h3>Mark Attendance for {sessionTitle}</h3>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {success && <p style={{ color: 'green' }}>{success}</p>}
+      <form onSubmit={handleSubmit}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={{ border: '1px solid #ddd', padding: '8px' }}>Roll Number</th>
+              <th style={{ border: '1px solid #ddd', padding: '8px' }}>Name</th>
+              <th style={{ border: '1px solid #ddd', padding: '8px' }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((student) => (
+              <tr key={student.id}>
+                <td style={{ border: '1px solid #ddd', padding: '8px' }}>{student.roll_number}</td>
+                <td style={{ border: '1px solid #ddd', padding: '8px' }}>{student.first_name} {student.last_name}</td>
+                <td style={{ border: '1px solid #ddd', padding: '8px' }}>
+                  <select
+                    value={attendanceData[student.id] || 'Absent'}
+                    onChange={(e) => handleStatusChange(student.id, e.target.value)}
+                    style={{ padding: '4px' }}
+                  >
+                    <option value="Absent">Absent</option>
+                    <option value="Present">Present</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{ marginTop: '20px', textAlign: 'right' }}>
+          <button type="button" onClick={() => navigate('/calendar')} style={{ padding: '8px 16px', marginRight: '10px' }}>
+            Cancel
+          </button>
+          <button type="submit" style={{ padding: '8px 16px' }}>Save Attendance</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export default AttendanceForm;
+
+
+/*
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useParams , useNavigate , } from 'react-router-dom';
+
+function AttendanceForm({ session, onClose }) {
+  const navigate = useNavigate()
+  const [students, setStudents] = useState([]);
+  const [attendanceData, setAttendanceData] = useState({});
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  console.log(session)
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -120,3 +248,5 @@ function AttendanceForm({ session, onClose }) {
 }
 
 export default AttendanceForm;
+
+*/

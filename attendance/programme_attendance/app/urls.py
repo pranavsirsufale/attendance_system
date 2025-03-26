@@ -6,6 +6,9 @@ router = DefaultRouter()
 router.register(r'sessions',views.SessionViewSet)
 router.register(r'attendance',views.AttendanceViewSet)
 router.register(r'students', views.StudentViewSet)
+router.register(r'timetables', views.TimetableViewSet)
+router.register(r'sections', views.SectionViewSet)
+router.register(r'subjects', views.SubjectViewSet)
 
 urlpatterns = [
     # path('', views.home , name = 'home')

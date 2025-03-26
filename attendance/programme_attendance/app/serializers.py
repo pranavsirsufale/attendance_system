@@ -23,10 +23,13 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 
 class TimetableSerializer(serializers.ModelSerializer):
-    section = serializers.StringRelatedField()
-    subject = SubjectSerializer(read_only = True)
-    teacher = TeacherSerializer(read_only = True)
+    # section = serializers.StringRelatedField()
+    # subject = SubjectSerializer(read_only = True)
+    # teacher = TeacherSerializer(read_only = True)
 
+    section = serializers.PrimaryKeyRelatedField(queryset = Section.objects.all())
+    subject = serializers.PrimaryKeyRelatedField(queryset = Subject.objects.all())
+    teacher = serializers.PrimaryKeyRelatedField(queryset = Teacher.objects.all())
     class Meta:
         model = Timetable
         fields = ['id','section','subject','teacher','day_of_week','start_time', 'semester_start_date', 'semester_end_date']

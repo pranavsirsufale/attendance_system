@@ -57,3 +57,9 @@ class CalendarExceptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = CalendarException
         fields = ['id','date','description']
+
+class SectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Section
+        fields = ['id','program','name','year']
+    # serializers.ModelSerializer(Section, fields='__all__')

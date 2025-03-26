@@ -1,14 +1,14 @@
 from django.shortcuts import render
 from django.http import HttpResponse
-from rest_framework import viewsets, generics, status
+from rest_framework import viewsets, generics, status , serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Count, Q
 from datetime import datetime, timedelta
-from .models import Session, Attendance, Teacher, Student, Subject, Timetable, CalendarException
+from .models import Session, Attendance, Teacher, Student, Subject, Timetable, CalendarException , Section
 from .serializers import (
     SessionSerializer, AttendanceSerializer, TeacherSerializer, StudentSerializer,
-    TimetableSerializer, CalendarExceptionSerializer
+    TimetableSerializer, CalendarExceptionSerializer , SubjectSerializer , SectionSerializer
 )
 
 
@@ -204,7 +204,7 @@ class ClassHourlyStatsView(generics.GenericAPIView):
 
 class SectionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Section.objects.all()
-    serializer_class = serializers.ModelSerializer(Section, fields='__all__')
+    serializer_class = SectionSerializer #serializers.ModelSerializer(Section, fields='__all__')
     permission_classes = [IsAuthenticated]
 
 class SubjectViewSet(viewsets.ReadOnlyModelViewSet):

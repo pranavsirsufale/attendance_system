@@ -22,17 +22,55 @@ class SubjectSerializer(serializers.ModelSerializer):
         fields = ['id' , 'name' ,'is_law_subject', 'semester','teacher']
 
 
+class DailyScheduleSerializer(serializers.Serializer):
+    day_of_week = serializers.ChoiceField(choices = Timetable.DAY_CHOICES)
+    subject = serializers.PrimaryKeyRelatedField(queryset = Subject.objects.all())
+    start_time = serializers.ChoiceField(choices = Timetable.LECTURE_SLOTS)
+
+    
+
 class TimetableSerializer(serializers.ModelSerializer):
     # section = serializers.StringRelatedField()
     # subject = SubjectSerializer(read_only = True)
     # teacher = TeacherSerializer(read_only = True)
 
     section = serializers.PrimaryKeyRelatedField(queryset = Section.objects.all())
-    subject = serializers.PrimaryKeyRelatedField(queryset = Subject.objects.all())
+    # subject = serializers.PrimaryKeyRelatedField(queryset = Subject.objects.all())
     teacher = serializers.PrimaryKeyRelatedField(queryset = Teacher.objects.all())
+    daily_schedules = DailyScheduleSerializer(many = True)
+    semester_start_date = serializers.DateField()
+    semester_end_date = serializers.DateField()
+
     class Meta:
         model = Timetable
-        fields = ['id','section','subject','teacher','day_of_week','start_time', 'semester_start_date', 'semester_end_date']
+        fields = ['id','section','teacher','day_of_week','start_time', 'semester_start_date', 'semester_end_date']
+
+    def validate(self,data):
+        section = data['section']
+        semester = section.year 
+        subjects = Subject.objects.filter(semster = semester)
+        for schedule in data['daily_schedules']:
+            if schedule['subject'] not in subjects:
+                raise serializers.ValidationError(f'Subject {schedule['subject'].name} is not part of Semster {semester}')
+        return data
+
+
+    def create(self,validated_data):
+        daily_schedules = validate_data.pop('daily_schedules')
+        timetable_instances = []
+        for schedule in daily_schedules:
+            timetable = Timetable.objects.create(
+                section = validated_data['section'],
+                teacher = validated_data['teacher'],
+                day_of_week = schedule['day_of_week'],
+                subject = schedule['subject'],
+                start_time = schedule['start_time'],
+                semester_start_date = validated_data['semester_start_date'],
+                semester_end_date = validated_data['semester_end_date']
+                
+            )
+            timetable_instances.append(timetable)
+        return timetable_instances[0]
 
 
 class SessionSerializer(serializers.ModelSerializer):

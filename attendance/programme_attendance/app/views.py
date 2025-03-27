@@ -3,6 +3,7 @@ from django.http import HttpResponse
 from rest_framework import viewsets, generics, status , serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from django.db.models import Count, Q
 from datetime import datetime, timedelta
 from .models import Session, Attendance, Teacher, Student, Subject, Timetable, CalendarException , Section
@@ -16,6 +17,8 @@ from .serializers import (
 
 def home(request):
     return HttpResponse('hello world this is home')
+
+
 
 
 class StudentViewSet(viewsets.ReadOnlyModelViewSet):
@@ -46,6 +49,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(recorded_by=Teacher.objects.get(user=self.request.user))
 
+'''
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     serializer_class = TimetableSerializer
@@ -59,6 +63,15 @@ class TimetableViewSet(viewsets.ModelViewSet):
     #     # Ensure the teacher is the logged-in user
     #     serializer.save(teacher=Teacher.objects.get(user=self.request.user))
     def perform_create(self, serializer):
+        teacher = Teacher.objects.get(user = self.request.user)
+        
+        section = serializer.validate_data['section']
+        day = serializer.validate_data['day_of_week']
+        start_time = serializer.validate_data['start_time']
+        existing = Timetable.objects.filter(section = section , day_of_week = day).count()
+        if existing >= 5:
+            raise ValidationError('cannot Schedule mroe than 5 lectures per day for this section')
+        
         timetable = serializer.save(teacher=Teacher.objects.get(user=self.request.user))
         # Generate sessions for each week between start and end dates
         start_date = timetable.semester_start_date
@@ -78,6 +91,60 @@ class TimetableViewSet(viewsets.ModelViewSet):
                     defaults={'status': 'Scheduled'}
                 )
             current_date += timedelta(days=1)    
+'''
+
+class TimetableViewSet(viewsets.ModelViewSet):
+    queryset = Timetable.objects.all()
+    serializer_class = TimetableSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Timetable.objects.filter(teacher__user=self.request.user)
+
+    def perform_create(self, serializer):
+        teacher = Teacher.objects.get(user=self.request.user)
+        validated_data = serializer.validated_data
+        daily_schedules = validated_data.pop('daily_schedules')
+        section = validated_data['section']
+
+        # Validate 5 lectures per day limit and teacher availability
+        for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+            existing = Timetable.objects.filter(section=section, day_of_week=day).count()
+            new_for_day = len([s for s in daily_schedules if s['day_of_week'] == day])
+            if existing + new_for_day > 5:
+                raise ValidationError(f"Cannot schedule more than 5 lectures on {day} for this section.")
+            for schedule in [s for s in daily_schedules if s['day_of_week'] == day]:
+                if Timetable.objects.filter(
+                    teacher=teacher, day_of_week=day, start_time=schedule['start_time']
+                ).exists():
+                    raise ValidationError(f"Teacher already scheduled on {day} at {schedule['start_time']}.")
+
+        # Create timetables and sessions
+        for schedule in daily_schedules:
+            timetable = Timetable.objects.create(
+                section=section,
+                teacher=teacher,
+                day_of_week=schedule['day_of_week'],
+                subject=schedule['subject'],
+                start_time=schedule['start_time'],
+                semester_start_date=validated_data['semester_start_date'],
+                semester_end_date=validated_data['semester_end_date']
+            )
+            start_date = timetable.semester_start_date
+            end_date = timetable.semester_end_date
+            current_date = start_date
+            day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
+            target_day = day_of_week_map[timetable.day_of_week]
+
+            while current_date <= end_date:
+                if current_date.weekday() == target_day:
+                    Session.objects.get_or_create(
+                        timetable=timetable,
+                        date=current_date,
+                        defaults={'status': 'Scheduled'}
+                    )
+                current_date += timedelta(days=1)
+
 
 class TeacherCalendarView(generics.ListAPIView):
     serializer_class = SessionSerializer
@@ -207,7 +274,7 @@ class SectionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = SectionSerializer #serializers.ModelSerializer(Section, fields='__all__')
     permission_classes = [IsAuthenticated]
 
-class SubjectViewSet(viewsets.ReadOnlyModelViewSet):
+class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
     permission_classes = [IsAuthenticated]

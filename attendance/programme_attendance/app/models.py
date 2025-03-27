@@ -42,7 +42,7 @@ class Section(models.Model):
         verbose_name_plural = "Sections"
 
 class Subject(models.Model):
-    name = models.CharField(max_length=100, unique=True)  # e.g., "Law of Contract I"
+    name = models.CharField(max_length=255)  # e.g., "Law of Contract I"
     is_law_subject = models.BooleanField(default=True)  # True for law, False for non-law
     semester = models.PositiveIntegerField()  # 1 to 10 (depending on program)
 
@@ -50,6 +50,7 @@ class Subject(models.Model):
         return self.name
 
     class Meta:
+        unique_together = ('name','semester')
         verbose_name = "Subject"
         verbose_name_plural = "Subjects"
 

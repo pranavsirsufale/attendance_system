@@ -280,18 +280,17 @@ function Calendar() {
 export default Calendar;
 */
 
-
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import TimetableForm from './TimetableForm';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import TimetableForm from "./TimetableForm";
+import { useNavigate } from "react-router-dom";
 
 function Calendar() {
   const [events, setEvents] = useState([]);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showTimetableForm, setShowTimetableForm] = useState(false);
   const navigate = useNavigate();
 
@@ -300,32 +299,35 @@ function Calendar() {
   }, []);
 
   const fetchSessions = async () => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem("access_token");
     if (!token) {
-      setError('No authentication token found. Please log in.');
+      setError("No authentication token found. Please log in.");
       return;
     }
 
     try {
-      const response = await axios.get('http://localhost:8000/api/calendar/', {
+      const response = await axios.get("http://localhost:8000/api/calendar/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const sessionEvents = response.data.map((session) => ({
         title: `${session.timetable.subject.name} (${session.status})`,
         start: `${session.date}T${session.timetable.start_time}`,
-        end: `${session.date}T${new Date(`1970-01-01T${session.timetable.start_time}`).getTime() + 60 * 60 * 1000}`.slice(0, -1),
+        end: `${session.date}T${
+          new Date(`1970-01-01T${session.timetable.start_time}`).getTime() +
+          60 * 60 * 1000
+        }`.slice(0, -1),
         extendedProps: { sessionId: session.id, status: session.status },
       }));
       setEvents(sessionEvents);
     } catch (err) {
-      setError('Failed to fetch sessions');
+      setError("Failed to fetch sessions");
       console.error(err);
     }
   };
 
   const handleEventClick = (info) => {
-    if (info.event.extendedProps.status !== 'Scheduled') {
-      alert('Attendance can only be marked for Scheduled sessions.');
+    if (info.event.extendedProps.status !== "Scheduled") {
+      alert("Attendance can only be marked for Scheduled sessions.");
       return;
     }
     navigate(`/attendance/${info.event.extendedProps.sessionId}`);
@@ -333,7 +335,9 @@ function Calendar() {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Your Teaching Schedule</h2>
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">
+        Your Teaching Schedule
+      </h2>
       <button
         onClick={() => setShowTimetableForm(true)}
         className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition mb-4"
@@ -349,9 +353,9 @@ function Calendar() {
           slotMinTime="08:00:00"
           slotMaxTime="14:00:00"
           headerToolbar={{
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay',
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek,timeGridDay",
           }}
           eventClick={handleEventClick}
         />
@@ -364,6 +368,13 @@ function Calendar() {
           }}
         />
       )}
+
+      <button
+        onClick={() => navigate("/stats")}
+        className="bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 transition mb-4 ml-4"
+      >
+        View Stats
+      </button>
     </div>
   );
 }

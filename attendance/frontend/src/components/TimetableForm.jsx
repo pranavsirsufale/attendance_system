@@ -3,8 +3,8 @@ import axios from 'axios';
 
 function TimetableForm({ onClose }) {
   const [section, setSection] = useState('');
-  const [semesterStart, setSemesterStart] = useState(`${new Date().getFullYear()}-03-01`); // March start
-  const [semesterEnd, setSemesterEnd] = useState(`${new Date().getFullYear()}-08-31`); // August end
+  const [semesterStart, setSemesterStart] = useState(`${new Date().getFullYear()}-03-01`);
+  const [semesterEnd, setSemesterEnd] = useState(`${new Date().getFullYear()}-08-31`);
   const [dailySchedules, setDailySchedules] = useState({
     Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: [],
   });
@@ -38,7 +38,6 @@ function TimetableForm({ onClose }) {
             const response = await axios.get('http://localhost:8000/api/subjects/', {
               headers: { Authorization: `Bearer ${token}` },
             });
-            // Filter subjects by semester (assuming year = semester for simplicity)
             const semesterSubjects = response.data.filter((sub) => sub.semester === selectedSection.year);
             setSubjects(semesterSubjects);
           } catch (err) {
@@ -49,6 +48,22 @@ function TimetableForm({ onClose }) {
       fetchSubjects();
     }
   }, [section, sections]);
+
+  const calculateFirstDates = () => {
+    if (!semesterStart) return {};
+    const startDate = new Date(semesterStart);
+    const dayOfWeekMap = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5 };
+    const dates = {};
+    Object.keys(dayOfWeekMap).forEach((day) => {
+      const daysAhead = dayOfWeekMap[day] - startDate.getDay();
+      const targetDate = new Date(startDate);
+      targetDate.setDate(startDate.getDate() + (daysAhead < 0 ? daysAhead + 7 : daysAhead));
+      dates[day] = targetDate.toLocaleDateString();
+    });
+    return dates;
+  };
+
+  const firstDates = calculateFirstDates();
 
   const addSchedule = (day) => {
     if (dailySchedules[day].length >= 5) {
@@ -76,9 +91,43 @@ function TimetableForm({ onClose }) {
     }));
   };
 
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   const token = localStorage.getItem('access_token');
+  //   const payload = {
+  //     section,
+  //     daily_schedules: Object.entries(dailySchedules).flatMap(([day, schedules]) =>
+  //       schedules.map((sched) => ({
+  //         day_of_week: day,
+  //         subject: sched.subject,
+  //         start_time: sched.start_time,
+  //       }))
+  //     ),
+  //     semester_start_date: semesterStart,
+  //     semester_end_date: semesterEnd,
+  //   };
+
+  //   try {
+  //     await axios.post('http://localhost:8000/api/timetables/', payload, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+  //     setSuccess('Semester timetable created successfully');
+  //     setError('');
+  //     setTimeout(onClose, 2000);
+  //   } catch (err) {
+  //     setError(err.response?.data?.detail || 'Failed to create timetable');
+  //     setSuccess('');
+  //   }
+  // };
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('Please log in first');
+      return;
+    }
     const payload = {
       section,
       daily_schedules: Object.entries(dailySchedules).flatMap(([day, schedules]) =>
@@ -91,19 +140,29 @@ function TimetableForm({ onClose }) {
       semester_start_date: semesterStart,
       semester_end_date: semesterEnd,
     };
-
+  
+    if (payload.daily_schedules.length === 0) {
+      setError('Please add at least one lecture');
+      return;
+    }
+  
+    console.log('Submitting payload:', payload); // Debug payload
+  
     try {
-      await axios.post('http://localhost:8000/api/timetables/', payload, {
+      const response = await axios.post('http://localhost:8000/api/timetables/', payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log('Response:', response.data); // Debug response
       setSuccess('Semester timetable created successfully');
       setError('');
       setTimeout(onClose, 2000);
     } catch (err) {
+      console.error('Error details:', err.response?.data); // Log detailed error
       setError(err.response?.data?.detail || 'Failed to create timetable');
       setSuccess('');
     }
   };
+
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -152,7 +211,9 @@ function TimetableForm({ onClose }) {
           <div>
             {days.map((day) => (
               <div key={day} className="mb-4">
-                <h4 className="text-lg font-semibold mb-2">{day}</h4>
+                <h4 className="text-lg font-semibold mb-2">
+                  {day} (First: {firstDates[day] || 'N/A'})
+                </h4>
                 {dailySchedules[day].map((sched, index) => (
                   <div key={index} className="flex space-x-2 mb-2 items-center">
                     <select

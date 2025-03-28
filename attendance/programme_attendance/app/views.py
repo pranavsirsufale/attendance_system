@@ -11,6 +11,10 @@ from .serializers import (
     SessionSerializer, AttendanceSerializer, TeacherSerializer, StudentSerializer,
     TimetableSerializer, CalendarExceptionSerializer , SubjectSerializer , SectionSerializer
 )
+import logging
+
+
+
 
 
 # Create your views here.
@@ -92,6 +96,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
                 )
             current_date += timedelta(days=1)    
 '''
+logger = logging.getLogger(__name__)
 
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
@@ -101,13 +106,38 @@ class TimetableViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Timetable.objects.filter(teacher__user=self.request.user)
 
-    def perform_create(self, serializer):
-        teacher = Teacher.objects.get(user=self.request.user)
-        validated_data = serializer.validated_data
-        daily_schedules = validated_data.pop('daily_schedules')
-        section = validated_data['section']
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            logger.error(f'Serializer validation failed: {serializer.errors}')
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except Exception as e:
+            logger.error(f'Error creating timetable: {str(e)}', exc_info=True)
+            return Response({"detail": f"Server error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Validate 5 lectures per day limit and teacher availability
+    def perform_create(self, serializer):
+        logger.info('Starting timetable creation')
+        try:
+            teacher = Teacher.objects.get(user=self.request.user)
+            logger.info(f'Teacher found: {teacher.id}')
+        except Teacher.DoesNotExist:
+            logger.error(f"No teacher found for user {self.request.user.username}")
+            raise ValidationError("No teacher profile found for this user.")
+
+        validated_data = serializer.validated_data
+        daily_schedules = validated_data.pop('daily_schedules', [])
+        section = validated_data['section']
+        logger.info(f'Section: {section.id}, Daily Schedules: {daily_schedules}')
+
+        if not daily_schedules:
+            raise ValidationError('At least one daily schedule is required.')
+
+        # Validate 5 lectures per day and teacher availability
         for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
             existing = Timetable.objects.filter(section=section, day_of_week=day).count()
             new_for_day = len([s for s in daily_schedules if s['day_of_week'] == day])
@@ -115,12 +145,18 @@ class TimetableViewSet(viewsets.ModelViewSet):
                 raise ValidationError(f"Cannot schedule more than 5 lectures on {day} for this section.")
             for schedule in [s for s in daily_schedules if s['day_of_week'] == day]:
                 if Timetable.objects.filter(
-                    teacher=teacher, day_of_week=day, start_time=schedule['start_time']
+                    teacher=teacher,
+                    day_of_week=day,
+                    start_time=schedule['start_time'],
+                    semester_start_date=validated_data['semester_start_date'],
+                    semester_end_date=validated_data['semester_end_date']
                 ).exists():
-                    raise ValidationError(f"Teacher already scheduled on {day} at {schedule['start_time']}.")
+                    raise ValidationError(f"Teacher already scheduled on {day} at {schedule['start_time']} for this semester.")
 
         # Create timetables and sessions
+        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
         for schedule in daily_schedules:
+            logger.info(f"Creating timetable for {schedule['day_of_week']} with subject {schedule['subject'].id}")
             timetable = Timetable.objects.create(
                 section=section,
                 teacher=teacher,
@@ -133,7 +169,6 @@ class TimetableViewSet(viewsets.ModelViewSet):
             start_date = timetable.semester_start_date
             end_date = timetable.semester_end_date
             current_date = start_date
-            day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
             target_day = day_of_week_map[timetable.day_of_week]
 
             while current_date <= end_date:
@@ -144,8 +179,8 @@ class TimetableViewSet(viewsets.ModelViewSet):
                         defaults={'status': 'Scheduled'}
                     )
                 current_date += timedelta(days=1)
-
-
+            logger.info(f"Finished creating sessions for {timetable.day_of_week}")
+      
 class TeacherCalendarView(generics.ListAPIView):
     serializer_class = SessionSerializer
     permission_classes = [IsAuthenticated]

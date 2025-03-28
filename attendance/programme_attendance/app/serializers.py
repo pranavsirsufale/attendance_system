@@ -48,15 +48,16 @@ class TimetableSerializer(serializers.ModelSerializer):
     def validate(self,data):
         section = data['section']
         semester = section.year 
-        subjects = Subject.objects.filter(semster = semester)
+        subjects = Subject.objects.filter(semester = semester)
         for schedule in data['daily_schedules']:
             if schedule['subject'] not in subjects:
-                raise serializers.ValidationError(f'Subject {schedule['subject'].name} is not part of Semster {semester}')
+                raise serializers.ValidationError(f"Subject {schedule['subject'].name} is not part of Semester {semester}")
+
         return data
 
 
     def create(self,validated_data):
-        daily_schedules = validate_data.pop('daily_schedules')
+        daily_schedules = validated_data.pop('daily_schedules')
         timetable_instances = []
         for schedule in daily_schedules:
             timetable = Timetable.objects.create(

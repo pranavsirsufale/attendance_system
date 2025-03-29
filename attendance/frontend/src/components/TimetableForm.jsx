@@ -146,18 +146,17 @@ function TimetableForm({ onClose }) {
       return;
     }
   
-    console.log('Submitting payload:', payload); // Debug payload
-  
+    console.log('Submitting payload:', JSON.stringify(payload, null, 2));
     try {
       const response = await axios.post('http://localhost:8000/api/timetables/', payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Response:', response.data); // Debug response
+      console.log('Response:', response.data);
       setSuccess('Semester timetable created successfully');
       setError('');
       setTimeout(onClose, 2000);
     } catch (err) {
-      console.error('Error details:', err.response?.data); // Log detailed error
+      console.error('Error response:', err.response ? err.response.data : err.message);
       setError(err.response?.data?.detail || 'Failed to create timetable');
       setSuccess('');
     }

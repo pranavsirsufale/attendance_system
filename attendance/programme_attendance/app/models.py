@@ -109,7 +109,7 @@ class Timetable(models.Model):
 
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="timetable")
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="timetable")
-    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name="timetable")
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name="timetable", blank = True)
     day_of_week = models.CharField(max_length=9, choices=DAY_CHOICES)
     start_time = models.TimeField(choices=LECTURE_SLOTS)  # Fixed lecture slots
     semester_start_date = models.DateField()

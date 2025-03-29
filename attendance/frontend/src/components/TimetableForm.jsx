@@ -166,7 +166,7 @@ function TimetableForm({ onClose }) {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   return (
-    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg z-50 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+    <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-lg border border-gray-300">
       <h3 className="text-xl font-bold mb-4 text-gray-800">Add Semester Timetable</h3>
       {error && <p className="text-red-500 mb-4">{error}</p>}
       {success && <p className="text-green-500 mb-4">{success}</p>}

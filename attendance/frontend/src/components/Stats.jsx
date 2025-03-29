@@ -121,12 +121,12 @@ function Stats() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Attendance Stats</h2>
-      <button
+      {/* <button
         onClick={() => navigate('/calendar')}
         className="mb-4 bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 transition"
       >
         Back to Calendar
-      </button>
+      </button> */}
 
       {/* Consolidated Report */}
       <div className="mb-8">

@@ -279,7 +279,6 @@ function Calendar() {
 
 export default Calendar;
 */
-
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import FullCalendar from "@fullcalendar/react";
@@ -335,17 +334,26 @@ function Calendar() {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">
+      <h2 className="text-3xl font-bold mb-6 text-gray-800">
         Your Teaching Schedule
       </h2>
-      <button
-        onClick={() => setShowTimetableForm(true)}
-        className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition mb-4"
-      >
-        Add Timetable
-      </button>
+      <div className="flex justify-between items-center mb-6">
+        {/* <button
+          onClick={() => setShowTimetableForm(true)}
+          className="bg-blue-500 text-white py-2 px-6 rounded-md hover:bg-blue-600 transition"
+        >
+          Add Timetable
+        </button> */}
+        
+        {/* <button
+          onClick={() => navigate("/stats")}
+          className="bg-green-500 text-white py-2 px-6 rounded-md hover:bg-green-600 transition"
+        >
+          View Stats
+        </button> */}
+      </div>
       {error && <p className="text-red-500 mb-4">{error}</p>}
-      <div className="bg-white shadow-lg rounded-lg p-4">
+      <div className="bg-white shadow-lg rounded-lg p-6">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin]}
           initialView="timeGridWeek"
@@ -368,13 +376,6 @@ function Calendar() {
           }}
         />
       )}
-
-      <button
-        onClick={() => navigate("/stats")}
-        className="bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 transition mb-4 ml-4"
-      >
-        View Stats
-      </button>
     </div>
   );
 }

@@ -1,71 +1,3 @@
-// src/components/Stats.js
-/*
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-function Stats() {
-  const [rollNumber, setRollNumber] = useState('');
-  const [stats, setStats] = useState(null);
-  const [error, setError] = useState('');
-
-  const fetchStats = async () => {
-    const token = localStorage.getItem('access_token');
-    try {
-      const response = await axios.get(`http://localhost:8000/api/attendance-stats/${rollNumber}/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setStats(response.data);
-      setError('');
-    } catch (err) {
-      setError('Failed to fetch stats');
-      setStats(null);
-    }
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Attendance Stats</h2>
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Enter Roll Number (e.g., G240001)"
-          value={rollNumber}
-          onChange={(e) => setRollNumber(e.target.value)}
-          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          onClick={fetchStats}
-          className="mt-2 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition"
-        >
-          Fetch Stats
-        </button>
-      </div>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      {stats && (
-        <div className="bg-white shadow-lg rounded-lg p-4">
-          <h3 className="text-lg font-semibold">{stats.student.roll_number} - {stats.student.first_name} {stats.student.last_name}</h3>
-          <p>Total Sessions: {stats.total_sessions}</p>
-          <p>Present: {stats.present}</p>
-          <p>Absent: {stats.absent}</p>
-          <p>Percentage: {stats.percentage}%</p>
-          <p>Consolidated: {stats.consolidated}</p>
-          <h4 className="mt-4 font-medium">Monthly Breakdown</h4>
-          <ul>
-            {stats.monthly_stats.map((month) => (
-              <li key={month.month}>Month {month.month}: {month.present} Present, {month.absent} Absent</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default Stats;
-
-*/
-
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -98,19 +30,39 @@ function Stats() {
 
   const fetchHourlyStats = async () => {
     const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('Please log in to view hourly stats');
+      return;
+    }
+
     try {
       const sessionsResponse = await axios.get('http://localhost:8000/api/calendar/', {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (!sessionsResponse.data || sessionsResponse.data.length === 0) {
+        setError('No sessions available to fetch hourly stats');
+        setHourlyStats([]);
+        return;
+      }
+
       const hourlyPromises = sessionsResponse.data.map((session) =>
-        axios.get(`http://localhost:8000/api/hourly-stats/${session.id}/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        axios
+          .get(`http://localhost:8000/api/hourly-stats/${session.id}/`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          .catch((err) => null) // Handle individual request failures
       );
+
+      console.log('Hourly Promises:', hourlyPromises); // Debugging line
+      
       const hourlyResponses = await Promise.all(hourlyPromises);
-      setHourlyStats(hourlyResponses.map((res) => res.data));
+      const validResponses = hourlyResponses.filter((res) => res !== null); // Filter out failed requests
+      setHourlyStats(validResponses.map((res) => res.data));
+      setError('');
     } catch (err) {
       setError('Failed to fetch hourly stats');
+      setHourlyStats([]);
     }
   };
 
@@ -121,12 +73,6 @@ function Stats() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Attendance Stats</h2>
-      {/* <button
-        onClick={() => navigate('/calendar')}
-        className="mb-4 bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 transition"
-      >
-        Back to Calendar
-      </button> */}
 
       {/* Consolidated Report */}
       <div className="mb-8">

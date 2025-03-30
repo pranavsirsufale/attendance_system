@@ -5,7 +5,7 @@ import Calendar from './Calendar';
 import Stats from './Stats';
 import Timetable from './TimetableForm';
 import AttendanceForm from './AttendanceForm';
-import TimetableForm from './TimetableForm';
+import HomeDash from './HomeDash';
 
 function Dashboard() {
   const [activeComponent, setActiveComponent] = useState('');
@@ -27,7 +27,7 @@ function Dashboard() {
       case 'attendanceform':
         return <AttendanceForm />; // Replace with your actual AttendanceForm component
       default:
-        return <Outlet />;
+        return <HomeDash/>;
     }
   };
 

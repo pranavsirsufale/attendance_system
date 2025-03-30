@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from rest_framework import viewsets, generics, status , serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -408,3 +408,5 @@ class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
     permission_classes = [IsAuthenticated]
+
+

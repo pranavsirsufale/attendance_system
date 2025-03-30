@@ -9,6 +9,7 @@ router.register(r'students', views.StudentViewSet)
 router.register(r'timetables', views.TimetableViewSet)
 router.register(r'sections', views.SectionViewSet)
 router.register(r'subjects', views.SubjectViewSet)
+router.register(r'teachers', views.TeacherViewSet)
 
 urlpatterns = [
     # path('', views.home , name = 'home')
@@ -17,4 +18,5 @@ urlpatterns = [
     path('mark-attendance/<int:session_id>/', views.MarkAttendanceView.as_view(), name='mark_attendance'),
     path('holidays/', views.HolidayListCreateView.as_view(), name='holiday_list_create'),
     path('attendance-stats/<str:roll_number>/', views.AttendanceStatsView.as_view(), name='attendance_stats'),
+    path('teacher-info/', views.teacher_info, name='teacher_info'),
     path('hourly-stats/<int:session_id>/', views.ClassHourlyStatsView.as_view(), name='hourly_stats'),]

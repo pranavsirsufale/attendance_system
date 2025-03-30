@@ -101,6 +101,17 @@ function Login() {
     }
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post('http://localhost:8000/api/token/', { username, password });
+      localStorage.setItem('access_token', response.data.access);
+      window.location.href = '/calendar';
+    } catch (err) {
+      setError('Invalid credentials');
+    }
+  };
+
   return (
     <div style={{ maxWidth: '400px', margin: '50px auto', textAlign: 'center' }}>
       <h2>Teacher Login</h2>

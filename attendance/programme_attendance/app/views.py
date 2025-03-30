@@ -1,5 +1,7 @@
 from django.shortcuts import render
+from rest_framework.views import APIView
 from django.http import HttpResponse
+from django.utils import timezone
 from rest_framework import viewsets, generics, status , serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -17,6 +19,7 @@ import traceback
 import sys
 import jwt
 
+
 # Logging setup
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', stream=sys.stdout)
@@ -25,6 +28,72 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(mes
 # Create your views here.
 def home(request):
     return HttpResponse('hello world this is home')
+
+
+class TeacherAttendanceStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            teacher = Teacher.objects.get(user=request.user)
+            period = request.query_params.get('period', 'semester')  # Default to semester
+            logger.debug(f"Fetching attendance stats for teacher {teacher.id}, period: {period}")
+
+            # Get all timetables for this teacher
+            timetables = Timetable.objects.filter(teacher=teacher)
+            session_ids = Session.objects.filter(timetable__in=timetables).values_list('id', flat=True)
+            students = Student.objects.filter(section__in=timetables.values('section')).distinct()
+
+            # Define date range based on period
+            today = timezone.now().date()
+            if period == 'weekly':
+                start_date = today - timedelta(days=today.weekday())  # Start of week (Monday)
+                end_date = start_date + timedelta(days=6)  # End of week (Sunday)
+            elif period == 'monthly':
+                start_date = today.replace(day=1)  # Start of month
+                end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)  # End of month
+            else:  # semester
+                start_date = min(t.semester_start_date for t in timetables)
+                end_date = max(t.semester_end_date for t in timetables)
+
+            # Fetch attendance stats
+            attendance_stats = (
+                Attendance.objects.filter(session__id__in=session_ids, student__in=students)
+                .filter(session__date__gte=start_date, session__date__lte=end_date)
+                .values('student__id', 'student__first_name', 'student__last_name', 'student__roll_number')
+                .annotate(
+                    total_sessions=Count('session'),
+                    present=Count('session', filter=Q(status='Present')),
+                    absent=Count('session', filter=Q(status='Absent'))
+                )
+            )
+
+            # Calculate percentages
+            stats = [
+                {
+                    'student_id': stat['student__id'],
+                    'name': f"{stat['student__first_name']} {stat['student__last_name']}",
+                    'roll_number': stat['student__roll_number'],
+                    'total_sessions': stat['total_sessions'],
+                    'present': stat['present'],
+                    'absent': stat['absent'],
+                    'attendance_percentage': round((stat['present'] / stat['total_sessions']) * 100, 2) if stat['total_sessions'] > 0 else 0
+                }
+                for stat in attendance_stats
+            ]
+
+            return Response({
+                'period': period,
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+                'stats': stats
+            }, status=200)
+        except Teacher.DoesNotExist:
+            logger.error("Teacher not found for user: %s", request.user)
+            return Response({"error": "Teacher not found"}, status=404)
+        except Exception as e:
+            logger.error("Error fetching attendance stats: %s", str(e))
+            return Response({"error": str(e)}, status=500)     
 
 
 class StudentViewSet(viewsets.ReadOnlyModelViewSet):

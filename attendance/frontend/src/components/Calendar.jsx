@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 function Calendar() {
   const [sessions, setSessions] = useState([]);
@@ -31,7 +32,17 @@ function Calendar() {
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">Teacher Calendar</h2>
       {error && <p className="text-red-500 mb-4">{error}</p>}
+
+
+     
+<div className="mb-4">
+  <Link to="/attendance-stats" className="text-blue-600 hover:underline">
+    View Attendance Statistics
+  </Link>
+</div>
+      
       {sessions.length > 0 ? (
+        
         <ul className="space-y-4">
           {sessions.map((session) => (
             <li key={session.id} className="p-4 bg-white rounded-lg shadow">

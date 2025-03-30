@@ -19,4 +19,8 @@ urlpatterns = [
     path('holidays/', views.HolidayListCreateView.as_view(), name='holiday_list_create'),
     path('attendance-stats/<str:roll_number>/', views.AttendanceStatsView.as_view(), name='attendance_stats'),
     path('teacher-info/', views.teacher_info, name='teacher_info'),
-    path('hourly-stats/<int:session_id>/', views.ClassHourlyStatsView.as_view(), name='hourly_stats'),]
+    path('teacher-attendance-stats/', views.TeacherAttendanceStatsView.as_view(), name='teacher_attendance_stats'),
+    path('hourly-stats/<int:session_id>/', views.ClassHourlyStatsView.as_view(), name='hourly_stats'),
+    
+    
+    ]

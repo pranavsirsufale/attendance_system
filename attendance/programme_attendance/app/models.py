@@ -55,10 +55,12 @@ class Subject(models.Model):
 
 class Teacher(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)  # Authentication
-    first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15, null=True, blank=True)
+    is_admin = models.BooleanField(default = False)
+
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -96,6 +98,15 @@ class Timetable(models.Model):
         ('Friday', 'Friday'),
         ('Saturday', 'Saturday'),
     ]
+
+    LECTURE_SLOTS = [
+    ('08:30:00', '08:30 AM - 09:30 AM'),
+    ('09:30:00', '09:30 AM - 10:30 AM'),
+    ('10:30:00', '10:30 AM - 11:30 AM'),
+    ('12:00:00', '12:00 PM - 01:00 PM'),
+    ('13:00:00', '01:00 PM - 02:00 PM'),
+    ]
+    
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="timetable")
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="timetable")
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name="timetable")

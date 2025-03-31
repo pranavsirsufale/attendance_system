@@ -3,13 +3,19 @@ from . import views
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
-router.register(r'sessions',views.SessionViewSet)
-router.register(r'attendance',views.AttendanceViewSet)
-router.register(r'students', views.StudentViewSet)
-router.register(r'timetables', views.TimetableViewSet)
-router.register(r'sections', views.SectionViewSet)
-router.register(r'subjects', views.SubjectViewSet)
 router.register(r'teachers', views.TeacherViewSet)
+router.register(r'students', views.StudentViewSet)
+router.register(r'programs' , views.ProgramViewSet)
+router.register(r'subjects', views.SubjectViewSet)
+router.register(r'timetables', views.TimetableViewSet)
+router.register(r'sessions',views.SessionViewSet)
+router.register(r'admin-attendance-stats', views.AdminAttendanceStatsView , basename= 'admin-attendance-stats')
+
+
+
+# router.register(r'attendance',views.AttendanceViewSet)
+# router.register(r'sections', views.SectionViewSet)
+
 
 urlpatterns = [
     # path('', views.home , name = 'home')
@@ -21,6 +27,8 @@ urlpatterns = [
     path('teacher-info/', views.teacher_info, name='teacher_info'),
     path('teacher-attendance-stats/', views.TeacherAttendanceStatsView.as_view(), name='teacher_attendance_stats'),
     path('hourly-stats/<int:session_id>/', views.ClassHourlyStatsView.as_view(), name='hourly_stats'),
-    
+    path('sections/', views.get_sections, name='get_sections'),
+    path('subjects/', views.get_subjects, name='get_subjects'),
+    path('time-slots/', views.get_time_slots, name='get_time_slots'),
     
     ]

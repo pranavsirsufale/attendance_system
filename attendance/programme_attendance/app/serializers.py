@@ -1,10 +1,10 @@
 from rest_framework import serializers
-from .models import Teacher,Student, Subject , Timetable , Session, Attendance , Section , CalendarException
+from .models import Teacher,Student, Subject , Program , Timetable , Session, Attendance , Section , CalendarException
 
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
-        fields = ['id' , 'first_name' , 'last_name' , 'email','phone']
+        fields = ['id' , 'first_name' , 'last_name' , 'email','phone' , 'is_admin']
 
 class StudentSerializer(serializers.ModelSerializer):
     section = serializers.StringRelatedField()
@@ -13,7 +13,15 @@ class StudentSerializer(serializers.ModelSerializer):
         model = Student
         fields = ['id','roll_number','first_name','last_name','email','phone','section','subjects']
 
+        
 
+class ProgramSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Program
+        fields = ['id' , 'name' , 'duration']
+
+
+        
 class SubjectSerializer(serializers.ModelSerializer):
     teacher = TeacherSerializer(read_only = True)
     class Meta:

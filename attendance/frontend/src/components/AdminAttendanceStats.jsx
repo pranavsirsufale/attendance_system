@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-function AttendanceStats() {
+function AdminAttendanceStats() {
   const [stats, setStats] = useState([]);
   const [period, setPeriod] = useState('semester');
+  const [section, setSection] = useState('');
+  const [date, setDate] = useState('');
+  const [error, setError] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [customRange, setCustomRange] = useState(false);
-  const [error, setError] = useState('');
-  const [responseStartDate, setResponseStartDate] = useState('');
-  const [responseEndDate, setResponseEndDate] = useState('');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -19,18 +18,17 @@ function AttendanceStats() {
         return;
       }
 
-      let url = `http://localhost:8000/api/teacher-attendance-stats/?period=${period}`;
-      if (customRange && startDate && endDate) {
-        url += `&start_date=${startDate}&end_date=${endDate}`;
-      }
+      let url = `http://localhost:8000/api/admin-attendance-stats/?period=${period}`;
+      if (section) url += `&section=${section}`;
+      if (period === 'daily' && date) url += `&date=${date}`;
 
       try {
         const response = await axios.get(url, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setStats(response.data.stats);
-        setResponseStartDate(response.data.start_date);
-        setResponseEndDate(response.data.end_date);
+        setStartDate(response.data.start_date);
+        setEndDate(response.data.end_date);
         setError('');
       } catch (err) {
         console.error('Failed to fetch stats:', err);
@@ -38,59 +36,50 @@ function AttendanceStats() {
       }
     };
     fetchStats();
-  }, [period, startDate, endDate, customRange]);
+  }, [period, section, date]);
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Attendance Statistics</h2>
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">All Attendance Statistics</h2>
       {error && <p className="text-red-600 mb-4">{error}</p>}
-      <div className="mb-4 flex flex-col space-y-4">
-        <div className="flex space-x-4">
+      <div className="mb-4 flex space-x-4">
+        <div>
           <label className="mr-2 text-gray-800">View by:</label>
           <select
             value={period}
-            onChange={(e) => {
-              setPeriod(e.target.value);
-              setCustomRange(false); // Reset custom range when changing period
-            }}
+            onChange={(e) => setPeriod(e.target.value)}
             className="p-2 border rounded-md bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
+            <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
             <option value="semester">Semester</option>
-            <option value="custom">Custom Range</option>
           </select>
         </div>
-        {period === 'custom' && (
-          <div className="flex space-x-4">
-            <div>
-              <label className="mr-2 text-gray-800">Start Date:</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  setCustomRange(true);
-                }}
-                className="p-2 border rounded-md text-gray-800"
-              />
-            </div>
-            <div>
-              <label className="mr-2 text-gray-800">End Date:</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setCustomRange(true);
-                }}
-                className="p-2 border rounded-md text-gray-800"
-              />
-            </div>
+        <div>
+          <label className="mr-2 text-gray-800">Section ID:</label>
+          <input
+            type="number"
+            value={section}
+            onChange={(e) => setSection(e.target.value)}
+            className="p-2 border rounded-md text-gray-800"
+            placeholder="Optional"
+          />
+        </div>
+        {period === 'daily' && (
+          <div>
+            <label className="mr-2 text-gray-800">Date:</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="p-2 border rounded-md text-gray-800"
+              required
+            />
           </div>
         )}
       </div>
-      <p className="text-gray-800 mb-4">Period: {responseStartDate} to {responseEndDate}</p>
+      <p className="text-gray-800 mb-4">Period: {startDate} to {endDate}</p>
       {stats.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full bg-white rounded-lg shadow-md">
@@ -102,6 +91,7 @@ function AttendanceStats() {
                 <th className="p-2 text-left">Present</th>
                 <th className="p-2 text-left">Absent</th>
                 <th className="p-2 text-left">Attendance %</th>
+                <th className="p-2 text-left">Recorded By</th>
               </tr>
             </thead>
             <tbody>
@@ -113,6 +103,7 @@ function AttendanceStats() {
                   <td className="p-2 text-gray-800">{stat.present}</td>
                   <td className="p-2 text-gray-800">{stat.absent}</td>
                   <td className="p-2 text-gray-800">{stat.attendance_percentage}%</td>
+                  <td className="p-2 text-gray-800">{stat.recorded_by}</td>
                 </tr>
               ))}
             </tbody>
@@ -125,4 +116,4 @@ function AttendanceStats() {
   );
 }
 
-export default AttendanceStats;
+export default AdminAttendanceStats;

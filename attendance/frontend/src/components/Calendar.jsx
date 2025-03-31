@@ -11,9 +11,9 @@ function Calendar() {
   const [timeSlots, setTimeSlots] = useState([]);
   const [timetableData, setTimetableData] = useState({
     section: '',
-    daily_schedules: [{ day_of_week: 'Monday', subject: '', start_time: '09:00' }],
+    daily_schedules: [{ day_of_week: 'Monday', subject: '', start_time: '08:30:00' }],
     semester_start_date: '2025-01-01',
-    semester_end_date: '2025-06-30'
+    semester_end_date: '2025-06-30',
   });
 
   useEffect(() => {
@@ -41,18 +41,55 @@ function Calendar() {
 
   const fetchOptions = async () => {
     const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('Please log in first');
+      return;
+    }
     try {
-      const [sectionsRes, subjectsRes, timeSlotsRes] = await Promise.all([
+      const [sectionsRes, timeSlotsRes] = await Promise.all([
         axios.get('http://localhost:8000/api/sections/', { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get('http://localhost:8000/api/subjects/', { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get('http://localhost:8000/api/time-slots/', { headers: { Authorization: `Bearer ${token}` } })
+        axios.get('http://localhost:8000/api/time-slots/', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       setSections(sectionsRes.data);
-      setSubjects(subjectsRes.data);
       setTimeSlots(timeSlotsRes.data);
+      // Fetch subjects if section and semester_start_date are set
+      if (timetableData.section && timetableData.semester_start_date) {
+        fetchSubjects(timetableData.section, timetableData.semester_start_date);
+      }
+      setError('');
     } catch (err) {
       console.error('Failed to fetch options:', err);
-      setError('Failed to load timetable options');
+      setError('Failed to load timetable options: ' + (err.response?.data?.error || 'Unknown error'));
+    }
+  };
+
+  const fetchSubjects = async (sectionId, semesterStartDate) => {
+    const token = localStorage.getItem('access_token');
+    try {
+      const response = await axios.get('http://localhost:8000/api/subjects-for-section/', {
+        params: { section_id: sectionId, semester_start_date: semesterStartDate },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSubjects(response.data);
+    } catch (err) {
+      console.error('Failed to fetch subjects:', err);
+      setError('Failed to load subjects: ' + (err.response?.data?.error || 'Unknown error'));
+    }
+  };
+
+  const handleSectionChange = (e) => {
+    const sectionId = e.target.value;
+    setTimetableData({ ...timetableData, section: sectionId });
+    if (sectionId && timetableData.semester_start_date) {
+      fetchSubjects(sectionId, timetableData.semester_start_date);
+    }
+  };
+
+  const handleSemesterStartChange = (e) => {
+    const startDate = e.target.value;
+    setTimetableData({ ...timetableData, semester_start_date: startDate });
+    if (timetableData.section && startDate) {
+      fetchSubjects(timetableData.section, startDate);
     }
   };
 
@@ -64,7 +101,15 @@ function Calendar() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setShowTimetableForm(false);
+      setTimetableData({
+        section: '',
+        daily_schedules: [{ day_of_week: 'Monday', subject: '', start_time: '08:30:00' }],
+        semester_start_date: '2025-01-01',
+        semester_end_date: '2025-06-30',
+      });
+      setSubjects([]); // Reset subjects
       fetchSessions();
+      setError('');
     } catch (err) {
       console.error('Failed to create timetable:', err);
       setError(err.response?.data?.detail || 'Failed to create timetable');
@@ -74,7 +119,10 @@ function Calendar() {
   const addSchedule = () => {
     setTimetableData({
       ...timetableData,
-      daily_schedules: [...timetableData.daily_schedules, { day_of_week: 'Monday', subject: '', start_time: '09:00' }]
+      daily_schedules: [
+        ...timetableData.daily_schedules,
+        { day_of_week: 'Monday', subject: '', start_time: '08:30:00' },
+      ],
     });
   };
 
@@ -89,7 +137,9 @@ function Calendar() {
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Teacher Calendar</h2>
       {error && <p className="text-red-600 mb-4">{error}</p>}
       <div className="mb-4 flex space-x-4">
-        <Link to="/attendance-stats" className="text-blue-600 hover:underline">View Attendance Statistics</Link>
+        <Link to="/attendance-stats" className="text-blue-600 hover:underline">
+          View Attendance Statistics
+        </Link>
         <button
           onClick={() => setShowTimetableForm(true)}
           className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
@@ -99,103 +149,127 @@ function Calendar() {
       </div>
 
       {showTimetableForm && (
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg z-50 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-          <h3 className="text-xl font-bold mb-4 text-gray-800">Create Timetable</h3>
-          <form onSubmit={handleTimetableSubmit}>
-            <div className="mb-4">
-              <label className="block text-gray-800">Section:</label>
-              <select
-                value={timetableData.section}
-                onChange={(e) => setTimetableData({ ...timetableData, section: e.target.value })}
-                className="w-full p-2 border rounded-md bg-white text-gray-800"
-                required
-              >
-                <option value="">Select Section</option>
-                {sections.map((section) => (
-                  <option key={section.id} value={section.id}>
-                    {section.name} ({section.program?.name} - {section.semester_start_date?.slice(0, 4)})
-                  </option>
-                ))}
-              </select>
-            </div>
-            {timetableData.daily_schedules.map((schedule, index) => (
-              <div key={index} className="mb-4 flex space-x-2">
+        <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-4 text-gray-800">Create Timetable</h3>
+            <form onSubmit={handleTimetableSubmit}>
+              <div className="mb-4">
+                <label className="block text-gray-800">Section:</label>
                 <select
-                  value={schedule.day_of_week}
-                  onChange={(e) => updateSchedule(index, 'day_of_week', e.target.value)}
-                  className="p-2 border rounded-md bg-white text-gray-800"
-                >
-                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
-                    <option key={day} value={day}>{day}</option>
-                  ))}
-                </select>
-                <select
-                  value={schedule.subject}
-                  onChange={(e) => updateSchedule(index, 'subject', e.target.value)}
-                  className="p-2 border rounded-md bg-white text-gray-800"
+                  value={timetableData.section}
+                  onChange={handleSectionChange}
+                  className="w-full p-2 border rounded-md bg-white text-gray-800"
                   required
                 >
-                  <option value="">Select Subject</option>
-                  {subjects.map((subject) => (
-                    <option key={subject.id} value={subject.id}>{subject.name}</option>
-                  ))}
-                </select>
-                <select
-                  value={schedule.start_time}
-                  onChange={(e) => updateSchedule(index, 'start_time', e.target.value)}
-                  className="p-2 border rounded-md bg-white text-gray-800"
-                  required
-                >
-                  <option value="">Select Time</option>
-                  {timeSlots.map((slot) => (
-                    <option key={slot} value={slot}>{slot}</option>
+                  <option value="">Select Section</option>
+                  {sections.map((section) => (
+                    <option key={section.id} value={section.id}>
+                      {section.name} (Year: {section.year})
+                    </option>
                   ))}
                 </select>
               </div>
-            ))}
-            <button
-              type="button"
-              onClick={addSchedule}
-              className="bg-green-600 text-white py-1 px-2 rounded-md hover:bg-green-700 mb-4"
-            >
-              Add Another Schedule
-            </button>
-            <div className="mb-4">
-              <label className="block text-gray-800">Semester Start Date:</label>
-              <input
-                type="date"
-                value={timetableData.semester_start_date}
-                onChange={(e) => setTimetableData({ ...timetableData, semester_start_date: e.target.value })}
-                className="w-full p-2 border rounded-md text-gray-800"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-800">Semester End Date:</label>
-              <input
-                type="date"
-                value={timetableData.semester_end_date}
-                onChange={(e) => setTimetableData({ ...timetableData, semester_end_date: e.target.value })}
-                className="w-full p-2 border rounded-md text-gray-800"
-                required
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
+
+              <div className="mb-4">
+                <label className="block text-gray-800">Semester Period:</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="date"
+                    value={timetableData.semester_start_date}
+                    onChange={handleSemesterStartChange}
+                    className="w-full p-2 border rounded-md text-gray-800"
+                    required
+                  />
+                  <span className="text-gray-800">to</span>
+                  <input
+                    type="date"
+                    value={timetableData.semester_end_date}
+                    onChange={(e) =>
+                      setTimetableData({ ...timetableData, semester_end_date: e.target.value })
+                    }
+                    className="w-full p-2 border rounded-md text-gray-800"
+                    required
+                  />
+                </div>
+                <p className="text-sm text-gray-600">
+                  Semester: {timetableData.semester_start_date} to {timetableData.semester_end_date}
+                </p>
+              </div>
+
+              {timetableData.daily_schedules.map((schedule, index) => (
+                <div key={index} className="mb-4 flex space-x-2">
+                  <select
+                    value={schedule.day_of_week}
+                    onChange={(e) => updateSchedule(index, 'day_of_week', e.target.value)}
+                    className="p-2 border rounded-md bg-white text-gray-800"
+                  >
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day) => (
+                      <option key={day} value={day}>
+                        {day}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={schedule.subject}
+                    onChange={(e) => updateSchedule(index, 'subject', e.target.value)}
+                    className="p-2 border rounded-md bg-white text-gray-800"
+                    required
+                  >
+                    <option value="">Select Subject</option>
+                    {subjects.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={schedule.start_time}
+                    onChange={(e) => updateSchedule(index, 'start_time', e.target.value)}
+                    className="p-2 border rounded-md bg-white text-gray-800"
+                    required
+                  >
+                    <option value="">Select Time</option>
+                    {timeSlots.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
               <button
                 type="button"
-                onClick={() => setShowTimetableForm(false)}
-                className="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700"
+                onClick={addSchedule}
+                className="bg-green-600 text-white py-1 px-2 rounded-md hover:bg-green-700 mb-4"
               >
-                Cancel
+                Add Another Schedule
               </button>
-              <button
-                type="submit"
-                className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
-              >
-                Save Timetable
-              </button>
-            </div>
-          </form>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTimetableForm(false);
+                    setError('');
+                    setTimetableData({
+                      section: '',
+                      daily_schedules: [{ day_of_week: 'Monday', subject: '', start_time: '08:30:00' }],
+                      semester_start_date: '2025-01-01',
+                      semester_end_date: '2025-06-30',
+                    });
+                  }}
+                  className="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+                >
+                  Save Timetable
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -203,12 +277,24 @@ function Calendar() {
         <ul className="space-y-4">
           {sessions.map((session) => (
             <li key={session.id} className="p-4 bg-white rounded-lg shadow-md">
-              <p className="text-gray-800"><strong>Date:</strong> {session.date}</p>
-              <p className="text-gray-800"><strong>Day:</strong> {session.timetable.day_of_week}</p>
-              <p className="text-gray-800"><strong>Time:</strong> {session.timetable.start_time}</p>
-              <p className="text-gray-800"><strong>Subject:</strong> {session.timetable.subject?.name || 'N/A'}</p>
-              <p className="text-gray-800"><strong>Section:</strong> {session.timetable.section?.name || 'N/A'}</p>
-              <p className="text-gray-800"><strong>Status:</strong> {session.status}</p>
+              <p className="text-gray-800">
+                <strong>Date:</strong> {session.date}
+              </p>
+              <p className="text-gray-800">
+                <strong>Day:</strong> {session.timetable.day_of_week}
+              </p>
+              <p className="text-gray-800">
+                <strong>Time:</strong> {session.timetable.start_time}
+              </p>
+              <p className="text-gray-800">
+                <strong>Subject:</strong> {session.timetable.subject?.name || 'N/A'}
+              </p>
+              <p className="text-gray-800">
+                <strong>Section:</strong> {session.timetable.section?.name || 'N/A'}
+              </p>
+              <p className="text-gray-800">
+                <strong>Status:</strong> {session.status}
+              </p>
               {session.status === 'Scheduled' ? (
                 <Link to={`/attendance/${session.id}`} className="text-blue-600 hover:underline">
                   Mark Attendance

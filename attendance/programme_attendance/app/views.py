@@ -66,83 +66,10 @@ class SubjectViewSet(AdminCRUDViewSet):
 #     queryset = Timetable.objects.all()
 #     serializer_class = TimetableSerializer
 
-# Session CRUD
+
 class SessionViewSet(AdminCRUDViewSet):
     queryset = Session.objects.all()
     serializer_class = SessionSerializer
-
-# Admin All Stats View
-
-'''
-class AdminAttendanceStatsView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated, IsAdmin]
-
-    # def get(self,request):
-    #     period = request.query_params.get('period','semester')
-    #     logger.debug(f"Fetching all attendance stats for period : {period}")
-
-
-
-    def list(self, request):
-        period = request.query_params.get('period', 'semester')
-        section_id = request.query_params.get('section',None)
-        specific_date = request.query_params.get('date',None)
-        logger.debug(f"Fetching all attendance stats for period: {period}")
-
-        # Define date range
-        today = timezone.now().date()
-        if period == 'daily' and specific_date:
-            start_date = end_date = datetime.strptime(specific_date , '%Y-%m-%d').date()
-        elif period == 'weekly':
-            start_date = today - timedelta(days=today.weekday())
-            end_date = start_date + timedelta(days=6)
-        elif period == 'monthly':
-            start_date = today.replace(day=1)
-            end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
-        else:  # semester
-            timetables = Timetable.objects.all()
-            start_date = min(t.semester_start_date for t in timetables) if timetables else today
-            end_date = max(t.semester_end_date for t in timetables) if timetables else today
-
-        stats_query = Attendance.objects.filter(session__date__gte = start_date , session__date__lte = end_date)
-        if section_id :
-            stats_query = stats_query.filter(session__timetable__section_id = section_id)
-        
-
-        # Fetch all attendance stats
-        stats = (
-            Attendance.objects.filter(session__date__gte=start_date, session__date__lte=end_date)
-            .values('student__id', 'student__first_name', 'student__last_name', 'student__roll_number')
-            .annotate(
-                total_sessions=Count('session'),
-                present=Count('session', filter=Q(status='Present')),
-                absent=Count('session', filter=Q(status='Absent'))
-            )
-        )
-
-        response = [
-            {
-                'student_id': stat['student__id'],
-                'name': f"{stat['student__first_name']} {stat['student__last_name']}",
-                'roll_number': stat['student__roll_number'],
-                'total_sessions': stat['total_sessions'],
-                'present': stat['present'],
-                'absent': stat['absent'],
-                'attendance_percentage': round((stat['present'] / stat['total_sessions']) * 100, 2) if stat['total_sessions'] > 0 else 0 , 
-                'recorded_by' : f"{stat['recorded_by__first_name']} {stat['recorded_by__last_name']}"
-            }
-            for stat in stats
-        ]
-
-        return Response({
-            'period': period,
-            'section':section_id,
-            'start_date': start_date.isoformat(),
-            'end_date': end_date.isoformat(),
-            'stats': response
-        })
-
-'''
 
 
 class AdminAttendanceStatsView(viewsets.ViewSet):
@@ -300,239 +227,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(recorded_by=Teacher.objects.get(user=self.request.user))
 
-'''
-
-
-# class TimetableViewSet(viewsets.ModelViewSet):
-#     queryset = Timetable.objects.all()
-#     serializer_class = TimetableSerializer
-#     permission_classes = [IsAuthenticated]
-
-#     def get_queryset(self):
-#         logger.debug("Fetching queryset for user: %s", self.request.user)
-#         return Timetable.objects.filter(teacher__user=self.request.user)
-
-#     def create(self, request, *args, **kwargs):
-#         logger.debug("POST request received at /api/timetables/")
-#         logger.debug("Request data: %s", request.data)
-
-#         try:
-#             serializer = self.get_serializer(data=request.data)
-#             logger.debug("Serializer initialized")
-#             serializer.is_valid(raise_exception=True)
-#             logger.debug("Serializer validated: %s", serializer.validated_data)
-#         except ValidationError as e:
-#             logger.error("Serializer validation failed: %s", str(e))
-#             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-#         except Exception as e:
-#             logger.error("Unexpected validation error: %s\n%s", str(e), traceback.format_exc())
-#             return Response({"detail": f"Validation error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#         try:
-#             self.perform_create(serializer)
-#             headers = self.get_success_headers(serializer.data)
-#             logger.info("Timetable created successfully")
-#             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-#         except Exception as e:
-#             logger.error("Error in perform_create: %s\n%s", str(e), traceback.format_exc())
-#             return Response({"detail": f"Server error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#     def perform_create(self, serializer):
-#         logger.info("Starting perform_create")
-#         validated_data = serializer.validated_data
-#         logger.debug("Validated data: %s", validated_data)
-
-#         try:
-#             teacher = Teacher.objects.get(user=self.request.user)
-#             logger.info("Teacher found: %s (user: %s)", teacher.id, self.request.user.username)
-#         except Teacher.DoesNotExist:
-#             logger.error("No teacher found for user: %s", self.request.user.username)
-#             raise ValidationError("No teacher profile found for this user.")
-
-#         daily_schedules = validated_data.pop('daily_schedules', [])
-#         section = validated_data['section']
-#         logger.info("Section: %s, Daily Schedules: %s", section.id, daily_schedules)
-
-#         if not daily_schedules:
-#             logger.error("No daily schedules provided")
-#             raise ValidationError("At least one daily schedule is required.")
-
-#         # Validate 5 lectures per day and teacher availability
-#         for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
-#             existing = Timetable.objects.filter(section=section, day_of_week=day).count()
-#             new_for_day = len([s for s in daily_schedules if s['day_of_week'] == day])
-#             logger.debug("Checking %s: existing=%d, new=%d", day, existing, new_for_day)
-#             if existing + new_for_day > 5:
-#                 logger.error("Too many lectures on %s: %d + %d > 5", day, existing, new_for_day)
-#                 raise ValidationError(f"Cannot schedule more than 5 lectures on {day} for this section.")
-#             for schedule in [s for s in daily_schedules if s['day_of_week'] == day]:
-#                 if Timetable.objects.filter(
-#                     teacher=teacher,
-#                     day_of_week=day,
-#                     start_time=schedule['start_time'],
-#                     semester_start_date=validated_data['semester_start_date'],
-#                     semester_end_date=validated_data['semester_end_date']
-#                 ).exists():
-#                     logger.error("Teacher conflict on %s at %s", day, schedule['start_time'])
-#                     raise ValidationError(f"Teacher already scheduled on {day} at {schedule['start_time']} for this semester.")
-
-#         # Create timetables and sessions
-#         day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
-#         created_timetables = []
-#         for schedule in daily_schedules:
-#             logger.info("Creating timetable for %s with subject %s", schedule['day_of_week'], schedule['subject'].id)
-#             timetable = Timetable.objects.create(
-#                 section=section,
-#                 teacher=teacher,
-#                 day_of_week=schedule['day_of_week'],
-#                 subject=schedule['subject'],
-#                 start_time=schedule['start_time'],
-#                 semester_start_date=validated_data['semester_start_date'],
-#                 semester_end_date=validated_data['semester_end_date']
-#             )
-#             created_timetables.append(timetable)
-#             start_date = validated_data['semester_start_date']
-#             end_date = validated_data['semester_end_date']
-#             current_date = start_date
-#             target_day = day_of_week_map[timetable.day_of_week]
-
-#             logger.debug("Generating sessions from %s to %s", start_date, end_date)
-#             while current_date <= end_date:
-#                 if current_date.weekday() == target_day:
-#                     Session.objects.get_or_create(
-#                         timetable=timetable,
-#                         date=current_date,
-#                         defaults={'status': 'Scheduled'}
-#                     )
-#                 current_date += timedelta(days=1)
-#             logger.info("Finished generating sessions for %s", timetable.day_of_week)
-
-#         # Save the serializer with teacher set
-#         validated_data['teacher'] = teacher
-#         serializer.save(**validated_data)
-
-'''
-'''
-
-class TimetableViewSet(viewsets.ModelViewSet):
-    queryset = Timetable.objects.all()
-    serializer_class = TimetableSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        logger.debug("Fetching queryset for user: %s", self.request.user)
-        return Timetable.objects.filter(teacher__user=self.request.user)
-
-    def create(self, request, *args, **kwargs):
-        logger.debug("POST request received at /api/timetables/")
-        logger.debug("Request data: %s", request.data)
-
-        try:
-            serializer = self.get_serializer(data=request.data)
-            logger.debug("Serializer initialized")
-            serializer.is_valid(raise_exception=True)
-            logger.debug("Serializer validated: %s", serializer.validated_data)
-        except ValidationError as e:
-            logger.error("Serializer validation failed: %s", str(e))
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            logger.error("Unexpected validation error: %s\n%s", str(e), traceback.format_exc())
-            return Response({"detail": f"Validation error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        try:
-            timetable = self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            logger.info("Timetable created successfully")
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-        except Exception as e:
-            logger.error("Error in perform_create: %s\n%s", str(e), traceback.format_exc())
-            return Response({"detail": f"Server error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    def perform_create(self, serializer):
-        logger.info("Starting perform_create")
-        validated_data = serializer.validated_data
-        logger.debug("Validated data: %s", validated_data)
-
-
-        teacher = validated_data['teacher']
-        daily_schedules = validated_data.pop('daily_schedules',[])
-        section = validated_data['section']
-        logger.info('Section : %s, Teacher: %s, Daily Schedules: %s' , section.id , teacher.id, daily_schedules)
-
-
-        if not daily_schedules:
-            logger.error('No daily schedules provided')
-            raise ValidationError('At least one daily schedule is required')
-        
-        # vakudate 5 kectyres oer dau abd teacger avaukubukuty
-
-        
-        daily_schedules = validated_data.pop('daily_schedules', [])
-        section = validated_data['section']
-        logger.info("Section: %s, Daily Schedules: %s", section.id, daily_schedules)
-
-        if not daily_schedules:
-            logger.error("No daily schedules provided")
-            raise ValidationError("At least one daily schedule is required.")
-
-        # Validate 5 lectures per day and teacher availability
-        for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
-            existing = Timetable.objects.filter(section=section, day_of_week=day).count()
-            new_for_day = len([s for s in daily_schedules if s['day_of_week'] == day])
-            logger.debug("Checking %s: existing=%d, new=%d", day, existing, new_for_day)
-            if existing + new_for_day > 5:
-                logger.error("Too many lectures on %s: %d + %d > 5", day, existing, new_for_day)
-                raise ValidationError(f"Cannot schedule more than 5 lectures on {day} for this section.")
-            for schedule in [s for s in daily_schedules if s['day_of_week'] == day]:
-                if Timetable.objects.filter(
-                    teacher=teacher,
-                    day_of_week=day,
-                    start_time=schedule['start_time'],
-                    semester_start_date=validated_data['semester_start_date'],
-                    semester_end_date=validated_data['semester_end_date']
-                ).exists():
-                    logger.error("Teacher conflict on %s at %s", day, schedule['start_time'])
-                    raise ValidationError(f"Teacher already scheduled on {day} at {schedule['start_time']} for this semester.")
-
-        # Create timetables and sessions
-        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
-        created_timetables = []
-        for schedule in daily_schedules:
-            logger.info("Creating timetable for %s with subject %s", schedule['day_of_week'], schedule['subject'].id)
-            timetable = Timetable.objects.create(
-                section=section,
-                teacher=teacher,
-                day_of_week=schedule['day_of_week'],
-                subject=schedule['subject'],
-                start_time=schedule['start_time'],
-                semester_start_date=validated_data['semester_start_date'],
-                semester_end_date=validated_data['semester_end_date']
-            )
-            created_timetables.append(timetable)
-            start_date = validated_data['semester_start_date']
-            end_date = validated_data['semester_end_date']
-            current_date = start_date
-            target_day = day_of_week_map[timetable.day_of_week]
-
-            logger.debug("Generating sessions from %s to %s", start_date, end_date)
-            while current_date <= end_date:
-                if current_date.weekday() == target_day:
-                    Session.objects.get_or_create(
-                        timetable=timetable,
-                        date=current_date,
-                        defaults={'status': 'Scheduled'}
-                    )
-                current_date += timedelta(days=1)
-            logger.info("Finished generating sessions for %s", timetable.day_of_week)
-
-        # Update serializer data with the first timetable for response
-        serializer.validated_data.update({
-            'id': created_timetables[0].id,
-            'teacher': teacher,
-        })
-        return created_timetables[0]
-
-'''
 
 
 class TimetableViewSet(viewsets.ModelViewSet):
@@ -553,7 +247,11 @@ class TimetableViewSet(viewsets.ModelViewSet):
         logger.debug("Request data: %s", request.data)
 
         try:
-            serializer = self.get_serializer(data=request.data)
+            # Add teacher to the request data since frontend doesn't send it
+            mutable_data = request.data.copy()
+            teacher = Teacher.objects.get(user=request.user)
+            mutable_data['teacher'] = teacher.id
+            serializer = self.get_serializer(data=mutable_data)
             serializer.is_valid(raise_exception=True)
             timetable_data = self.perform_create(serializer)
             logger.info("Timetable created successfully")
@@ -567,13 +265,14 @@ class TimetableViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         validated_data = serializer.validated_data
-        teacher = Teacher.objects.get(user=self.request.user)
+        teacher = validated_data['teacher']  # Already set in create()
         daily_schedules = validated_data['daily_schedules']
         section = validated_data['section']
 
         if not daily_schedules:
             raise ValidationError("At least one daily schedule is required.")
 
+        # Validate constraints
         for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
             existing = Timetable.objects.filter(section=section, day_of_week=day).count()
             new_for_day = len([s for s in daily_schedules if s['day_of_week'] == day])
@@ -589,6 +288,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
                 ).exists():
                     raise ValidationError(f"Teacher already scheduled on {day} at {schedule['start_time']} for this semester.")
 
+        # Create timetables and sessions
         day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
         created_timetables = []
         for schedule in daily_schedules:
@@ -697,6 +397,7 @@ class MarkAttendanceView(generics.GenericAPIView):
 
             students = Student.objects.filter(section=session.timetable.section)
             existing_attendance = Attendance.objects.filter(session=session).select_related('student')
+            
             attendance_data = [
                 {'student_id': a.student.id, 'status': a.status} for a in existing_attendance
             ] if existing_attendance.exists() else []
@@ -706,6 +407,8 @@ class MarkAttendanceView(generics.GenericAPIView):
                 "students": StudentSerializer(students, many=True).data,
                 "attendance": attendance_data
             }, status=status.HTTP_200_OK)
+
+
         except Session.DoesNotExist:
             logger.error(f"Session {session_id} not found")
             return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -744,7 +447,10 @@ class MarkAttendanceView(generics.GenericAPIView):
         except Student.DoesNotExist:
             return Response({"error": "Invalid student ID"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            logger.error(f"Error in MarkAttendanceView POST: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 
 class HolidayListCreateView(generics.ListCreateAPIView):
@@ -843,56 +549,56 @@ class SubjectViewSet(viewsets.ModelViewSet):
 
 
 
-class MarkAttendanceView(generics.GenericAPIView):
-    serializer_class = AttendanceSerializer
-    permission_classes = [IsAuthenticated]
+# class MarkAttendanceView(generics.GenericAPIView):
+#     serializer_class = AttendanceSerializer
+#     permission_classes = [IsAuthenticated]
 
-    def get(self, request, session_id):
-        try:
-            session = Session.objects.get(id=session_id)
-            teacher = Teacher.objects.get(user=request.user)
-            if session.timetable.teacher != teacher:
-                return Response({"error": "Not authorized to mark this session"}, status=status.HTTP_403_FORBIDDEN)
+#     def get(self, request, session_id):
+#         try:
+#             session = Session.objects.get(id=session_id)
+#             teacher = Teacher.objects.get(user=request.user)
+#             if session.timetable.teacher != teacher:
+#                 return Response({"error": "Not authorized to mark this session"}, status=status.HTTP_403_FORBIDDEN)
 
-            students = Student.objects.filter(section=session.timetable.section)
-            return Response({
-                "session": SessionSerializer(session).data,
-                "students": StudentSerializer(students, many=True).data
-            }, status=status.HTTP_200_OK)
-        except Session.DoesNotExist:
-            return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
-        except Teacher.DoesNotExist:
-            return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
+#             students = Student.objects.filter(section=session.timetable.section)
+#             return Response({
+#                 "session": SessionSerializer(session).data,
+#                 "students": StudentSerializer(students, many=True).data
+#             }, status=status.HTTP_200_OK)
+#         except Session.DoesNotExist:
+#             return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
+#         except Teacher.DoesNotExist:
+#             return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    def post(self, request, session_id):
-        try:
-            session = Session.objects.get(id=session_id)
-            teacher = Teacher.objects.get(user=request.user)
-            if session.timetable.teacher != teacher:
-                return Response({"error": "Not authorized to mark this session"}, status=status.HTTP_403_FORBIDDEN)
+#     def post(self, request, session_id):
+#         try:
+#             session = Session.objects.get(id=session_id)
+#             teacher = Teacher.objects.get(user=request.user)
+#             if session.timetable.teacher != teacher:
+#                 return Response({"error": "Not authorized to mark this session"}, status=status.HTTP_403_FORBIDDEN)
 
-            attendance_data = request.data.get('attendance', [])
-            if not attendance_data:
-                return Response({"error": "Attendance data required"}, status=status.HTTP_400_BAD_REQUEST)
+#             attendance_data = request.data.get('attendance', [])
+#             if not attendance_data:
+#                 return Response({"error": "Attendance data required"}, status=status.HTTP_400_BAD_REQUEST)
 
-            for entry in attendance_data:
-                student = Student.objects.get(id=entry['student_id'])
-                if student.section != session.timetable.section:
-                    continue  # Skip students not in this section
-                Attendance.objects.update_or_create(
-                    student=student,
-                    session=session,
-                    defaults={'status': entry['status'], 'recorded_by': teacher}
-                )
-            session.status = 'Completed'
-            session.save()
-            return Response({"message": "Attendance marked successfully"}, status=status.HTTP_200_OK)
-        except Session.DoesNotExist:
-            return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
-        except Student.DoesNotExist:
-            return Response({"error": "Invalid student ID"}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)      
+#             for entry in attendance_data:
+#                 student = Student.objects.get(id=entry['student_id'])
+#                 if student.section != session.timetable.section:
+#                     continue  # Skip students not in this section
+#                 Attendance.objects.update_or_create(
+#                     student=student,
+#                     session=session,
+#                     defaults={'status': entry['status'], 'recorded_by': teacher}
+#                 )
+#             session.status = 'Completed'
+#             session.save()
+#             return Response({"message": "Attendance marked successfully"}, status=status.HTTP_200_OK)
+#         except Session.DoesNotExist:
+#             return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
+#         except Student.DoesNotExist:
+#             return Response({"error": "Invalid student ID"}, status=status.HTTP_400_BAD_REQUEST)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)      
 
 
 
@@ -901,14 +607,21 @@ class MarkAttendanceView(generics.GenericAPIView):
 def get_sections(request):
     try:
         teacher = Teacher.objects.get(user=request.user)
-        # Assuming sections are linked to programs and teachers have assigned programs
-        sections = Section.objects.filter(
-            program__in=Program.objects.filter(timetable__teacher=teacher).distinct()
-        )
+        # Fetch sections where the teacher is assigned via timetables
+        sections = Section.objects.filter(timetable__teacher=teacher).distinct()
         serializer = SectionSerializer(sections, many=True)
         return Response(serializer.data)
     except Teacher.DoesNotExist:
+        logger.error(f"Teacher not found for user: {request.user}")
         return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error in get_sections: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -917,12 +630,31 @@ def get_subjects(request):
     serializer = SubjectSerializer(subjects, many=True)
     return Response(serializer.data)
 
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_time_slots(request):
-    # Define available time slots (customize as needed)
-    time_slots = [
-        "08:00", "09:00", "10:00", "11:00", "12:00",
-        "13:00", "14:00", "15:00", "16:00", "17:00"
-    ]
+    time_slots = [slot[0] for slot in Timetable.LECTURE_SLOTS]
     return Response(time_slots)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_subjects_for_section(request):
+    section_id = request.query_params.get('section_id')
+    semester_start_date = request.query_params.get('semester_start_date')
+    if not section_id or not semester_start_date:
+        return Response({"error": "Section ID and semester start date are required"}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        section = Section.objects.get(id=section_id)
+        start_date = datetime.strptime(semester_start_date, '%Y-%m-%d').date()
+        semester = (section.year * 2 - 1) if start_date.month <= 6 else (section.year * 2)
+        subjects = Subject.objects.filter(semester=semester)
+        serializer = SubjectSerializer(subjects, many=True)
+        return Response(serializer.data)
+    except Section.DoesNotExist:
+        return Response({"error": "Section not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error in get_subjects_for_section: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

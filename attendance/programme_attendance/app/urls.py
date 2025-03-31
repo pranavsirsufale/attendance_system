@@ -11,12 +11,6 @@ router.register(r'timetables', views.TimetableViewSet)
 router.register(r'sessions',views.SessionViewSet)
 router.register(r'admin-attendance-stats', views.AdminAttendanceStatsView , basename= 'admin-attendance-stats')
 
-
-
-# router.register(r'attendance',views.AttendanceViewSet)
-# router.register(r'sections', views.SectionViewSet)
-
-
 urlpatterns = [
     # path('', views.home , name = 'home')
     path('', include(router.urls)),
@@ -31,5 +25,5 @@ urlpatterns = [
     path('subjects/', views.get_subjects, name='get_subjects'),
     path('time-slots/', views.get_time_slots, name='get_time_slots'),
     path('subjects-for-section/', views.get_subjects_for_section, name='get_subjects_for_section'),
-    
+
     ]

@@ -20,7 +20,7 @@ function AttendanceForm() {
         });
         setSessionTitle(`${sessionResponse.data.timetable.subject.name} (${sessionResponse.data.status})`);
 
-        const studentsResponse = await axios.get('http://localhost:8000/api/students/', {
+        const studentsResponse = await axios.get('http://127.0.0.1:8000/api/teachers/', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const sectionStudents = studentsResponse.data.filter(
@@ -107,7 +107,7 @@ function AttendanceForm() {
         <div className="mt-6 flex justify-end">
           <button
             type="button"
-            onClick={() => navigate('/calendar')}
+            onClick={() => navigate('/dashboard')}
             className="bg-gray-500 text-white px-4 py-2 rounded mr-4 hover:bg-gray-600"
           >
             Cancel

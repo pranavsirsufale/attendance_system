@@ -13,21 +13,16 @@ class StudentSerializer(serializers.ModelSerializer):
         model = Student
         fields = ['id','roll_number','first_name','last_name','email','phone','section','subjects']
 
-        
-
 class ProgramSerializer(serializers.ModelSerializer):
     class Meta:
         model = Program
         fields = ['id' , 'name' , 'duration']
-
-
-        
+     
 class SubjectSerializer(serializers.ModelSerializer):
     teacher = TeacherSerializer(read_only = True)
     class Meta:
         model = Subject
         fields = ['id' , 'name' ,'is_law_subject', 'semester','teacher']
-
 
 class DailyScheduleSerializer(serializers.Serializer):
     day_of_week = serializers.ChoiceField(choices= Timetable.DAY_CHOICES)
@@ -44,12 +39,7 @@ class SectionSerializer(serializers.ModelSerializer):
         model = Section
         fields = ['id','program','name','year']
 
-
 class TimetableSerializer(serializers.ModelSerializer):
-    # section = serializers.PrimaryKeyRelatedField(queryset = Section.objects.all())
-    # teacher = serializers.PrimaryKeyRelatedField(queryset = Teacher.objects.all())
-    # daily_schedules = DailyScheduleSerializer(many = True , write_only = True )
-    # subject = serializers.PrimaryKeyRelatedField(queryset = Subject.objects.all())
     
     section = SectionSerializer(read_only = True)
     teacher = TeacherSerializer(read_only = True )
@@ -82,8 +72,6 @@ class AttendanceSerializer(serializers.ModelSerializer):
         model = Attendance
         fields = ['id','student','session','status','timestamp','recorded_by']
         read_only_fields = ['timestamp' , 'recorded_by']
-
-
 
 class TimetableCreateSerializer(serializers.ModelSerializer):
     section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())

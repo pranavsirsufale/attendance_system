@@ -209,12 +209,15 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(recorded_by=Teacher.objects.get(user=self.request.user))
 
+
+
+
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.action in ['create', 'update', 'partial_update']:
             return TimetableCreateSerializer
         return TimetableSerializer
 
@@ -225,7 +228,6 @@ class TimetableViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         logger.debug("POST request received at /api/timetables/")
         logger.debug("Request data: %s", request.data)
-
         try:
             mutable_data = request.data.copy()
             teacher = Teacher.objects.get(user=request.user)
@@ -241,14 +243,16 @@ class TimetableViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error("Unexpected error: %s\n%s", str(e), traceback.format_exc())
             return Response({"detail": f"Server error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
     def perform_create(self, serializer):
         validated_data = serializer.validated_data
-        teacher = validated_data['teacher']  
+        teacher = validated_data['teacher']
         daily_schedules = validated_data['daily_schedules']
         section = validated_data['section']
+
         if not daily_schedules:
             raise ValidationError("At least one daily schedule is required.")
+
         for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
             existing = Timetable.objects.filter(section=section, day_of_week=day).count()
             new_for_day = len([s for s in daily_schedules if s['day_of_week'] == day])
@@ -263,13 +267,14 @@ class TimetableViewSet(viewsets.ModelViewSet):
                     semester_end_date=validated_data['semester_end_date']
                 ).exists():
                     raise ValidationError(f"Teacher already scheduled on {day} at {schedule['start_time']} for this semester.")
+
         day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
         created_timetables = []
         for schedule in daily_schedules:
             timetable = Timetable.objects.create(
                 section=section,
                 teacher=teacher,
-                subject=schedule['subject'],
+                subject=Subject.objects.get(id=schedule['subject']),
                 day_of_week=schedule['day_of_week'],
                 start_time=schedule['start_time'],
                 semester_start_date=validated_data['semester_start_date'],
@@ -280,7 +285,6 @@ class TimetableViewSet(viewsets.ModelViewSet):
             end_date = validated_data['semester_end_date']
             current_date = start_date
             target_day = day_of_week_map[timetable.day_of_week]
-
             while current_date <= end_date:
                 if current_date.weekday() == target_day:
                     Session.objects.get_or_create(
@@ -289,18 +293,42 @@ class TimetableViewSet(viewsets.ModelViewSet):
                         defaults={'status': 'Scheduled'}
                     )
                 current_date += timedelta(days=1)
-        response_data = {
-            'id': created_timetables[0].id,
-            'section': section.id,
-            'teacher': teacher.id,
-            'daily_schedules': [
-                {'day_of_week': s['day_of_week'], 'subject': s['subject'].id, 'start_time': s['start_time']}
-                for s in daily_schedules
-            ],
-            'semester_start_date': validated_data['semester_start_date'].isoformat(),
-            'semester_end_date': validated_data['semester_end_date'].isoformat()
-        }
-        return response_data
+
+        # Serialize the created timetables
+        timetable_serializer = TimetableSerializer(created_timetables, many=True)
+        return timetable_serializer.data
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = TimetableSerializer(instance, data=request.data, partial=True)  # Use TimetableSerializer for updates
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        Session.objects.filter(timetable=instance).delete()
+        serializer.save()
+        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
+        start_date = instance.semester_start_date
+        end_date = instance.semester_end_date
+        current_date = start_date
+        target_day = day_of_week_map[instance.day_of_week]
+        while current_date <= end_date:
+            if current_date.weekday() == target_day:
+                Session.objects.get_or_create(
+                    timetable=instance,
+                    date=current_date,
+                    defaults={'status': 'Scheduled'}
+                )
+            current_date += timedelta(days=1)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        Session.objects.filter(timetable=instance).delete()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class TeacherViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Teacher.objects.all()
@@ -486,10 +514,10 @@ class SubjectViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
 
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_sections(request):
+'''
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_sections(request):
     try:
         teacher = Teacher.objects.get(user=request.user)
         # Fetch sections where the teacher is assigned via timetables, distinct
@@ -504,7 +532,19 @@ def get_sections(request):
         logger.error(f"Error in get_sections: {str(e)}")
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+'''
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_sections(request):
+    try:
+        # Fetch all sections (not just those tied to the teacher)
+        sections = Section.objects.all()
+        serializer = SectionSerializer(sections, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        logger.error(f"Error in get_sections: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])

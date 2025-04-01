@@ -4,12 +4,14 @@ import { Link } from 'react-router-dom';
 
 function Calendar() {
   const [sessions, setSessions] = useState([]);
+  const [timetables, setTimetables] = useState([]);
   const [error, setError] = useState('');
   const [showTimetableForm, setShowTimetableForm] = useState(false);
+  const [editTimetableId, setEditTimetableId] = useState(null);
   const [sections, setSections] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
-  const [selectedSection, setSelectedSection] = useState(''); // New state for section filter
+  const [selectedSection, setSelectedSection] = useState('');
   const [timetableData, setTimetableData] = useState({
     section: '',
     daily_schedules: [{ day_of_week: 'Monday', subject: '', start_time: '08:30:00' }],
@@ -19,8 +21,9 @@ function Calendar() {
 
   useEffect(() => {
     fetchSessions();
+    fetchTimetables();
     fetchOptions();
-  }, [selectedSection]); // Re-fetch sessions when selectedSection changes
+  }, [selectedSection]);
 
   const fetchSessions = async () => {
     const token = localStorage.getItem('access_token');
@@ -32,14 +35,29 @@ function Calendar() {
       const url = selectedSection
         ? `http://localhost:8000/api/calendar/?section_id=${selectedSection}`
         : 'http://localhost:8000/api/calendar/';
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
       setSessions(response.data);
       setError('');
     } catch (err) {
       console.error('Failed to fetch sessions:', err);
       setError('Failed to load sessions');
+    }
+  };
+
+  const fetchTimetables = async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('Please log in first');
+      return;
+    }
+    try {
+      const response = await axios.get('http://localhost:8000/api/timetables/', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTimetables(response.data);
+    } catch (err) {
+      console.error('Failed to fetch timetables:', err);
+      setError('Failed to load timetables');
     }
   };
 
@@ -96,14 +114,34 @@ function Calendar() {
     }
   };
 
+  const getSemesterNumber = (startDate) => {
+    const date = new Date(startDate);
+    const month = date.getMonth(); // 0-11
+    return month <= 5 ? '1 (Jan-Jun)' : '2 (Jul-Dec)';
+  };
+
   const handleTimetableSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('access_token');
     try {
-      await axios.post('http://localhost:8000/api/timetables/', timetableData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      if (editTimetableId) {
+        await axios.put(`http://localhost:8000/api/timetables/${editTimetableId}/`, {
+          section: timetableData.section,
+          subject: timetableData.daily_schedules[0].subject,
+          day_of_week: timetableData.daily_schedules[0].day_of_week,
+          start_time: timetableData.daily_schedules[0].start_time,
+          semester_start_date: timetableData.semester_start_date,
+          semester_end_date: timetableData.semester_end_date,
+        }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else {
+        await axios.post('http://localhost:8000/api/timetables/', timetableData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
       setShowTimetableForm(false);
+      setEditTimetableId(null);
       setTimetableData({
         section: '',
         daily_schedules: [{ day_of_week: 'Monday', subject: '', start_time: '08:30:00' }],
@@ -112,10 +150,11 @@ function Calendar() {
       });
       setSubjects([]);
       fetchSessions();
+      fetchTimetables();
       setError('');
     } catch (err) {
-      console.error('Failed to create timetable:', err);
-      setError(err.response?.data?.detail || 'Failed to create timetable');
+      console.error('Failed to save timetable:', err);
+      setError(err.response?.data?.detail || 'Failed to save timetable');
     }
   };
 
@@ -135,6 +174,39 @@ function Calendar() {
     setTimetableData({ ...timetableData, daily_schedules: newSchedules });
   };
 
+  const handleEditTimetable = (timetable) => {
+    setEditTimetableId(timetable.id);
+    setTimetableData({
+      section: timetable.section.id,
+      daily_schedules: [{
+        day_of_week: timetable.day_of_week,
+        subject: timetable.subject.id,
+        start_time: timetable.start_time,
+      }],
+      semester_start_date: timetable.semester_start_date,
+      semester_end_date: timetable.semester_end_date,
+    });
+    fetchSubjects(timetable.section.id, timetable.semester_start_date);
+    setShowTimetableForm(true);
+  };
+
+  const handleDeleteTimetable = async (timetableId) => {
+    const token = localStorage.getItem('access_token');
+    if (window.confirm('Are you sure you want to delete this timetable?')) {
+      try {
+        await axios.delete(`http://localhost:8000/api/timetables/${timetableId}/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        fetchTimetables();
+        fetchSessions();
+        setError('');
+      } catch (err) {
+        console.error('Failed to delete timetable:', err);
+        setError('Failed to delete timetable');
+      }
+    }
+  };
+
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Teacher Calendar</h2>
@@ -144,12 +216,59 @@ function Calendar() {
           View Attendance Statistics
         </Link>
         <button
-          onClick={() => setShowTimetableForm(true)}
+          onClick={() => {
+            setEditTimetableId(null);
+            setTimetableData({
+              section: '',
+              daily_schedules: [{ day_of_week: 'Monday', subject: '', start_time: '08:30:00' }],
+              semester_start_date: '2025-01-01',
+              semester_end_date: '2025-06-30',
+            });
+            setShowTimetableForm(true);
+          }}
           className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
         >
           Create Timetable
         </button>
       </div>
+
+      {/* Timetable List */}
+      <h3 className="text-xl font-bold mb-2 text-gray-800">Your Timetables</h3>
+      {timetables.length > 0 ? (
+        <ul className="space-y-4 mb-6">
+          {timetables.map((timetable) => (
+            <li key={timetable.id} className="p-4 bg-white rounded-lg shadow-md flex justify-between items-center">
+              <div>
+                <p className="text-gray-800">
+                  <strong>Section:</strong> {timetable.section.name} (Year: {timetable.section.year})
+                </p>
+                <p className="text-gray-800">
+                  <strong>Semester:</strong> {timetable.semester_start_date} to {timetable.semester_end_date} (Semester {getSemesterNumber(timetable.semester_start_date)})
+                </p>
+                <p className="text-gray-800">
+                  <strong>Schedule:</strong> {timetable.day_of_week}: {timetable.subject.name} at {timetable.start_time}
+                </p>
+              </div>
+              <div className="space-x-2">
+                <button
+                  onClick={() => handleEditTimetable(timetable)}
+                  className="bg-yellow-600 text-white py-1 px-2 rounded-md hover:bg-yellow-700"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteTimetable(timetable.id)}
+                  className="bg-red-600 text-white py-1 px-2 rounded-md hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-gray-600 mb-6">No timetables found.</p>
+      )}
 
       {/* Section Selector */}
       <div className="mb-4">
@@ -171,7 +290,9 @@ function Calendar() {
       {showTimetableForm && (
         <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4 text-gray-800">Create Timetable</h3>
+            <h3 className="text-xl font-bold mb-4 text-gray-800">
+              {editTimetableId ? 'Edit Timetable' : 'Create Timetable'}
+            </h3>
             <form onSubmit={handleTimetableSubmit}>
               <div className="mb-4">
                 <label className="block text-gray-800">Section:</label>
@@ -189,7 +310,6 @@ function Calendar() {
                   ))}
                 </select>
               </div>
-
               <div className="mb-4">
                 <label className="block text-gray-800">Semester Period:</label>
                 <div className="flex space-x-2">
@@ -204,18 +324,15 @@ function Calendar() {
                   <input
                     type="date"
                     value={timetableData.semester_end_date}
-                    onChange={(e) =>
-                      setTimetableData({ ...timetableData, semester_end_date: e.target.value })
-                    }
+                    onChange={(e) => setTimetableData({ ...timetableData, semester_end_date: e.target.value })}
                     className="w-full p-2 border rounded-md text-gray-800"
                     required
                   />
                 </div>
                 <p className="text-sm text-gray-600">
-                  Semester: {timetableData.semester_start_date} to {timetableData.semester_end_date}
+                  Semester: {getSemesterNumber(timetableData.semester_start_date)} ({timetableData.semester_start_date} to {timetableData.semester_end_date})
                 </p>
               </div>
-
               {timetableData.daily_schedules.map((schedule, index) => (
                 <div key={index} className="mb-4 flex space-x-2">
                   <select
@@ -269,13 +386,14 @@ function Calendar() {
                   type="button"
                   onClick={() => {
                     setShowTimetableForm(false);
-                    setError('');
+                    setEditTimetableId(null);
                     setTimetableData({
                       section: '',
                       daily_schedules: [{ day_of_week: 'Monday', subject: '', start_time: '08:30:00' }],
                       semester_start_date: '2025-01-01',
                       semester_end_date: '2025-06-30',
                     });
+                    setError('');
                   }}
                   className="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700"
                 >
@@ -285,7 +403,7 @@ function Calendar() {
                   type="submit"
                   className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
                 >
-                  Save Timetable
+                  {editTimetableId ? 'Update Timetable' : 'Save Timetable'}
                 </button>
               </div>
             </form>
@@ -307,15 +425,13 @@ function Calendar() {
                 <strong>Time:</strong> {session.timetable.start_time}
               </p>
               <p className="text-gray-800">
-                <strong>Subject:</strong> {session.timetable.subject?.name || 'N/A'}
+                <strong>Subject:</strong> {session.timetable.subject.name}
               </p>
               <p className="text-gray-800">
-                <strong>Section:</strong> {session.timetable.section?.name || 'N/A'} (Year:{' '}
-                {session.timetable.section?.year || 'N/A'})
+                <strong>Section:</strong> {session.timetable.section.name} (Year: {session.timetable.section.year})
               </p>
               <p className="text-gray-800">
-                <strong>Semester:</strong> {session.timetable.semester_start_date} to{' '}
-                {session.timetable.semester_end_date}
+                <strong>Semester:</strong> {session.timetable.semester_start_date} to {session.timetable.semester_end_date} (Semester {getSemesterNumber(session.timetable.semester_start_date)})
               </p>
               <p className="text-gray-800">
                 <strong>Status:</strong> {session.status}

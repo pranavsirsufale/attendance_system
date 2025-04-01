@@ -41,10 +41,13 @@ class SectionSerializer(serializers.ModelSerializer):
 
 class TimetableSerializer(serializers.ModelSerializer):
     
-    section = SectionSerializer(read_only = True)
-    teacher = TeacherSerializer(read_only = True )
-    subject = SubjectSerializer(read_only = True)
+    section = SectionSerializer()
+    teacher = TeacherSerializer()
+    subject = SubjectSerializer()
+    # daily_schedules = serializers.ListField(child = serializers.DictField())
     # daily_schedules = DailyScheduleSerializer(many=True)
+
+
 
     class Meta:
         model = Timetable
@@ -73,11 +76,24 @@ class AttendanceSerializer(serializers.ModelSerializer):
         fields = ['id','student','session','status','timestamp','recorded_by']
         read_only_fields = ['timestamp' , 'recorded_by']
 
-class TimetableCreateSerializer(serializers.ModelSerializer):
+class TimetableCreateSerializer(serializers.Serializer):
     section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())
-    teacher = serializers.PrimaryKeyRelatedField(queryset = Teacher.objects.all())
-    daily_schedules = DailyScheduleSerializer(many = True )
+    teacher = serializers.PrimaryKeyRelatedField(queryset=Teacher.objects.all())
+    daily_schedules = serializers.ListField(
+        child=serializers.DictField(
+            child=serializers.CharField()
+        )
+    )
+    semester_start_date = serializers.DateField()
+    semester_end_date = serializers.DateField()
 
-    class Meta:
-        model = Timetable
-        fields = ['id', 'section', 'teacher', 'daily_schedules', 'semester_start_date', 'semester_end_date']
+    def validate_daily_schedules(self, value):
+        for schedule in value:
+            required_fields = ['day_of_week', 'subject', 'start_time']
+            if not all(field in schedule for field in required_fields):
+                raise serializers.ValidationError(f"Each schedule must include {required_fields}")
+            if schedule['day_of_week'] not in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+                raise serializers.ValidationError("Invalid day of week")
+            if schedule['start_time'] not in LECTURE_SLOTS:
+                raise serializers.ValidationError(f"Start time must be one of {LECTURE_SLOTS}")
+        return value

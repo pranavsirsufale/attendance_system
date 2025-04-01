@@ -9,6 +9,7 @@ function Calendar() {
   const [sections, setSections] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
+  const [selectedSection, setSelectedSection] = useState(''); // New state for section filter
   const [timetableData, setTimetableData] = useState({
     section: '',
     daily_schedules: [{ day_of_week: 'Monday', subject: '', start_time: '08:30:00' }],
@@ -19,7 +20,7 @@ function Calendar() {
   useEffect(() => {
     fetchSessions();
     fetchOptions();
-  }, []);
+  }, [selectedSection]); // Re-fetch sessions when selectedSection changes
 
   const fetchSessions = async () => {
     const token = localStorage.getItem('access_token');
@@ -28,7 +29,10 @@ function Calendar() {
       return;
     }
     try {
-      const response = await axios.get('http://localhost:8000/api/calendar/', {
+      const url = selectedSection
+        ? `http://localhost:8000/api/calendar/?section_id=${selectedSection}`
+        : 'http://localhost:8000/api/calendar/';
+      const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSessions(response.data);
@@ -52,7 +56,6 @@ function Calendar() {
       ]);
       setSections(sectionsRes.data);
       setTimeSlots(timeSlotsRes.data);
-      // Fetch subjects if section and semester_start_date are set
       if (timetableData.section && timetableData.semester_start_date) {
         fetchSubjects(timetableData.section, timetableData.semester_start_date);
       }
@@ -107,7 +110,7 @@ function Calendar() {
         semester_start_date: '2025-01-01',
         semester_end_date: '2025-06-30',
       });
-      setSubjects([]); // Reset subjects
+      setSubjects([]);
       fetchSessions();
       setError('');
     } catch (err) {
@@ -146,6 +149,23 @@ function Calendar() {
         >
           Create Timetable
         </button>
+      </div>
+
+      {/* Section Selector */}
+      <div className="mb-4">
+        <label className="block text-gray-800">Filter Sessions by Section:</label>
+        <select
+          value={selectedSection}
+          onChange={(e) => setSelectedSection(e.target.value)}
+          className="w-full p-2 border rounded-md bg-white text-gray-800"
+        >
+          <option value="">All Sections</option>
+          {sections.map((section) => (
+            <option key={section.id} value={section.id}>
+              {section.name} (Year: {section.year})
+            </option>
+          ))}
+        </select>
       </div>
 
       {showTimetableForm && (
@@ -290,7 +310,12 @@ function Calendar() {
                 <strong>Subject:</strong> {session.timetable.subject?.name || 'N/A'}
               </p>
               <p className="text-gray-800">
-                <strong>Section:</strong> {session.timetable.section?.name || 'N/A'}
+                <strong>Section:</strong> {session.timetable.section?.name || 'N/A'} (Year:{' '}
+                {session.timetable.section?.year || 'N/A'})
+              </p>
+              <p className="text-gray-800">
+                <strong>Semester:</strong> {session.timetable.semester_start_date} to{' '}
+                {session.timetable.semester_end_date}
               </p>
               <p className="text-gray-800">
                 <strong>Status:</strong> {session.status}
@@ -308,7 +333,7 @@ function Calendar() {
           ))}
         </ul>
       ) : (
-        <p className="text-gray-600">No sessions found.</p>
+        <p className="text-gray-600">No sessions found for this section.</p>
       )}
     </div>
   );

@@ -328,7 +328,12 @@ class TeacherCalendarView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Session.objects.filter(timetable__teacher__user=self.request.user).order_by('date')
+        teacher = Teacher.objects.get(user=self.request.user)
+        queryset = Session.objects.filter(timetable__teacher=teacher).order_by('date')
+        section_id = self.request.query_params.get('section_id')
+        if section_id:
+            queryset = queryset.filter(timetable__section_id=section_id)
+        return queryset
 
 class MarkAttendanceView(generics.GenericAPIView):
     serializer_class = AttendanceSerializer
@@ -480,14 +485,17 @@ class SubjectViewSet(viewsets.ModelViewSet):
     serializer_class = SubjectSerializer
     permission_classes = [IsAuthenticated]
 
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_sections(request):
     try:
         teacher = Teacher.objects.get(user=request.user)
-        # Fetch sections where the teacher is assigned via timetables
+        # Fetch sections where the teacher is assigned via timetables, distinct
         sections = Section.objects.filter(timetable__teacher=teacher).distinct()
         serializer = SectionSerializer(sections, many=True)
+        # Enhance data with semester context (optional, if semester is stored elsewhere)
         return Response(serializer.data)
     except Teacher.DoesNotExist:
         logger.error(f"Teacher not found for user: {request.user}")
@@ -497,19 +505,7 @@ def get_sections(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_subjects(request):
-    subjects = Subject.objects.all()
-    serializer = SubjectSerializer(subjects, many=True)
-    return Response(serializer.data)
 
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_time_slots(request):
-    time_slots = [slot[0] for slot in Timetable.LECTURE_SLOTS]
-    return Response(time_slots)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -521,7 +517,9 @@ def get_subjects_for_section(request):
     try:
         section = Section.objects.get(id=section_id)
         start_date = datetime.strptime(semester_start_date, '%Y-%m-%d').date()
+        # Infer semester: Jan-Jun = odd (1, 3, 5), Jul-Dec = even (2, 4, 6)
         semester = (section.year * 2 - 1) if start_date.month <= 6 else (section.year * 2)
+        # Filter subjects by semester and optionally by section-specific logic if Subject model has a section relation
         subjects = Subject.objects.filter(semester=semester)
         serializer = SubjectSerializer(subjects, many=True)
         return Response(serializer.data)
@@ -530,3 +528,24 @@ def get_subjects_for_section(request):
     except Exception as e:
         logger.error(f"Error in get_subjects_for_section: {str(e)}")
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_subjects(request):
+    subjects = Subject.objects.all()
+    serializer = SubjectSerializer(subjects, many=True)
+    return Response(serializer.data)
+
+
+
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_time_slots(request):
+    time_slots = [slot[0] for slot in Timetable.LECTURE_SLOTS]
+    return Response(time_slots)
+

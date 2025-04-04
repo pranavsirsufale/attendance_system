@@ -86,14 +86,14 @@ class TimetableCreateSerializer(serializers.Serializer):
     )
     semester_start_date = serializers.DateField()
     semester_end_date = serializers.DateField()
-
-    def validate_daily_schedules(self, value):
-        for schedule in value:
-            required_fields = ['day_of_week', 'subject', 'start_time']
-            if not all(field in schedule for field in required_fields):
-                raise serializers.ValidationError(f"Each schedule must include {required_fields}")
-            if schedule['day_of_week'] not in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
-                raise serializers.ValidationError("Invalid day of week")
-            if schedule['start_time'] not in LECTURE_SLOTS:
-                raise serializers.ValidationError(f"Start time must be one of {LECTURE_SLOTS}")
-        return value
+    
+def validate_daily_schedules(self, value):
+    for schedule in value:
+        required_fields = ['day_of_week', 'subject', 'start_time']
+        if not all(field in schedule for field in required_fields):
+            raise serializers.ValidationError(f"Each schedule must include {required_fields}")
+        if schedule['day_of_week'] not in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+            raise serializers.ValidationError("Invalid day of week")
+        if schedule['start_time'] not in dict(Timetable.LECTURE_SLOTS):  # Fix here
+            raise serializers.ValidationError(f"Start time must be one of {dict(Timetable.LECTURE_SLOTS).keys()}")
+    return value

@@ -235,37 +235,45 @@ function Calendar() {
       {/* Timetable List */}
       <h3 className="text-xl font-bold mb-2 text-gray-800">Your Timetables</h3>
       {timetables.length > 0 ? (
-        <ul className="space-y-4 mb-6">
-          {timetables.map((timetable) => (
-            <li key={timetable.id} className="p-4 bg-white rounded-lg shadow-md flex justify-between items-center">
-              <div>
-                <p className="text-gray-800">
-                  <strong>Section:</strong> {timetable.section.name} (Year: {timetable.section.year})
-                </p>
-                <p className="text-gray-800">
-                  <strong>Semester:</strong> {timetable.semester_start_date} to {timetable.semester_end_date} (Semester {getSemesterNumber(timetable.semester_start_date)})
-                </p>
-                <p className="text-gray-800">
-                  <strong>Schedule:</strong> {timetable.day_of_week}: {timetable.subject.name} at {timetable.start_time}
-                </p>
-              </div>
-              <div className="space-x-2">
-                <button
-                  onClick={() => handleEditTimetable(timetable)}
-                  className="bg-yellow-600 text-white py-1 px-2 rounded-md hover:bg-yellow-700"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteTimetable(timetable.id)}
-                  className="bg-red-600 text-white py-1 px-2 rounded-md hover:bg-red-700"
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <table className="table-auto w-full mb-6 bg-white rounded-lg shadow-md">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="px-4 py-2 text-left text-gray-800">Section</th>
+              <th className="px-4 py-2 text-left text-gray-800">Semester</th>
+              <th className="px-4 py-2 text-left text-gray-800">Schedule</th>
+              <th className="px-4 py-2 text-left text-gray-800">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {timetables.map((timetable) => (
+              <tr key={timetable.id} className="border-t">
+                <td className="px-4 py-2 text-gray-800">
+                  {timetable.section.name} (Year: {timetable.section.year})
+                </td>
+                <td className="px-4 py-2 text-gray-800">
+                  {timetable.semester_start_date} to {timetable.semester_end_date} (Semester {getSemesterNumber(timetable.semester_start_date)})
+                </td>
+                <td className="px-4 py-2 text-gray-800">
+                  {timetable.day_of_week}: {timetable.subject.name} at {timetable.start_time}
+                </td>
+                <td className="px-4 py-2">
+                  <button
+                    onClick={() => handleEditTimetable(timetable)}
+                    className="bg-yellow-600 text-white py-1 px-2 rounded-md hover:bg-yellow-700 mr-2"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTimetable(timetable.id)}
+                    className="bg-red-600 text-white py-1 px-2 rounded-md hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ) : (
         <p className="text-gray-600 mb-6">No timetables found.</p>
       )}
@@ -412,42 +420,48 @@ function Calendar() {
       )}
 
       {sessions.length > 0 ? (
-        <ul className="space-y-4">
-          {sessions.map((session) => (
-            <li key={session.id} className="p-4 bg-white rounded-lg shadow-md">
-              <p className="text-gray-800">
-                <strong>Date:</strong> {session.date}
-              </p>
-              <p className="text-gray-800">
-                <strong>Day:</strong> {session.timetable.day_of_week}
-              </p>
-              <p className="text-gray-800">
-                <strong>Time:</strong> {session.timetable.start_time}
-              </p>
-              <p className="text-gray-800">
-                <strong>Subject:</strong> {session.timetable.subject.name}
-              </p>
-              <p className="text-gray-800">
-                <strong>Section:</strong> {session.timetable.section.name} (Year: {session.timetable.section.year})
-              </p>
-              <p className="text-gray-800">
-                <strong>Semester:</strong> {session.timetable.semester_start_date} to {session.timetable.semester_end_date} (Semester {getSemesterNumber(session.timetable.semester_start_date)})
-              </p>
-              <p className="text-gray-800">
-                <strong>Status:</strong> {session.status}
-              </p>
-              {session.status === 'Scheduled' ? (
-                <Link to={`/attendance/${session.id}`} className="text-blue-600 hover:underline">
-                  Mark Attendance
-                </Link>
-              ) : (
-                <Link to={`/attendance/${session.id}`} className="text-green-600 hover:underline">
-                  Update Attendance
-                </Link>
-              )}
-            </li>
-          ))}
-        </ul>
+        <table className="table-auto w-full bg-white rounded-lg shadow-md">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="px-4 py-2 text-left text-gray-800">Date</th>
+              <th className="px-4 py-2 text-left text-gray-800">Day</th>
+              <th className="px-4 py-2 text-left text-gray-800">Time</th>
+              <th className="px-4 py-2 text-left text-gray-800">Subject</th>
+              <th className="px-4 py-2 text-left text-gray-800">Section</th>
+              <th className="px-4 py-2 text-left text-gray-800">Semester</th>
+              <th className="px-4 py-2 text-left text-gray-800">Status</th>
+              <th className="px-4 py-2 text-left text-gray-800">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sessions.map((session) => (
+              <tr key={session.id} className="border-t">
+                <td className="px-4 py-2 text-gray-800">{session.date}</td>
+                <td className="px-4 py-2 text-gray-800">{session.timetable.day_of_week}</td>
+                <td className="px-4 py-2 text-gray-800">{session.timetable.start_time}</td>
+                <td className="px-4 py-2 text-gray-800">{session.timetable.subject.name}</td>
+                <td className="px-4 py-2 text-gray-800">
+                  {session.timetable.section.name} (Year: {session.timetable.section.year})
+                </td>
+                <td className="px-4 py-2 text-gray-800">
+                  {session.timetable.semester_start_date} to {session.timetable.semester_end_date} (Semester {getSemesterNumber(session.timetable.semester_start_date)})
+                </td>
+                <td className="px-4 py-2 text-gray-800">{session.status}</td>
+                <td className="px-4 py-2">
+                  {session.status === 'Scheduled' ? (
+                    <Link to={`/attendance/${session.id}`} className="text-blue-600 hover:underline">
+                      Mark Attendance
+                    </Link>
+                  ) : (
+                    <Link to={`/attendance/${session.id}`} className="text-green-600 hover:underline">
+                      Update Attendance
+                    </Link>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ) : (
         <p className="text-gray-600">No sessions found for this section.</p>
       )}

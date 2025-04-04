@@ -209,9 +209,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(recorded_by=Teacher.objects.get(user=self.request.user))
 
-
-
-
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated]
@@ -329,7 +326,6 @@ class TimetableViewSet(viewsets.ModelViewSet):
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
 class TeacherViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Teacher.objects.all()
     serializer_class = TeacherSerializer
@@ -412,10 +408,14 @@ class MarkAttendanceView(generics.GenericAPIView):
                 if student.section != session.timetable.section:
                     continue
                 Attendance.objects.update_or_create(
-                    student=student,
-                    session=session,
-                    defaults={'status': entry['status'], 'recorded_by': teacher}
-                )
+                   student=student,
+                   session=session,
+                   defaults={
+                    'status': entry['status'],
+                    'recorded_by': teacher,
+                    'timestamp': session.date  # Store session date instead of today
+                    })
+                
             session.status = 'Completed'
             session.save()
             return Response({"message": "Attendance marked/updated successfully"}, status=status.HTTP_200_OK)
@@ -513,7 +513,6 @@ class SubjectViewSet(viewsets.ModelViewSet):
     serializer_class = SubjectSerializer
     permission_classes = [IsAuthenticated]
 
-
 '''
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
@@ -569,17 +568,12 @@ def get_subjects_for_section(request):
         logger.error(f"Error in get_subjects_for_section: {str(e)}")
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_subjects(request):
     subjects = Subject.objects.all()
     serializer = SubjectSerializer(subjects, many=True)
     return Response(serializer.data)
-
-
-
 
 
 

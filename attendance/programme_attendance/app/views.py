@@ -575,11 +575,39 @@ def get_subjects(request):
     serializer = SubjectSerializer(subjects, many=True)
     return Response(serializer.data)
 
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_time_slots(request):
     time_slots = [slot[0] for slot in Timetable.LECTURE_SLOTS]
     return Response(time_slots)
 
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Section, Subject, Student
+from .serializers import SubjectSerializer
+
+class SectionSemesterWiseDataView(APIView):
+    def get(self, request):
+        data = {}
+        sections = Section.objects.all()
+
+        for section in sections:
+            students = section.students.all()
+            if not students.exists():
+                continue
+
+            section_data = {}
+
+            for student in students:
+                for subject in student.subjects.all():
+                    sem = f"Semester {subject.semester}"
+                    if sem not in section_data:
+                        section_data[sem] = []
+                    serialized = SubjectSerializer(subject).data
+                    if serialized not in section_data[sem]:  # prevent duplicates
+                        section_data[sem].append(serialized)
+
+            data[str(section)] = section_data
+
+        return Response(data)

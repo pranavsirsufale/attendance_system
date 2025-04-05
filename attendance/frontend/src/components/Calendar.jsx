@@ -117,7 +117,7 @@ function Calendar() {
   const getSemesterNumber = (startDate) => {
     const date = new Date(startDate);
     const month = date.getMonth(); // 0-11
-    return month <= 5 ? '1 (Jan-Jun)' : '2 (Jul-Dec)';
+    return month <= 5 ? '1 ': '2 '; // 1st semester: Jan-Jun, 2nd semester: Jul-Dec
   };
 
   const handleTimetableSubmit = async (e) => {

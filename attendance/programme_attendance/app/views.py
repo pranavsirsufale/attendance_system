@@ -210,6 +210,8 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         serializer.save(recorded_by=Teacher.objects.get(user=self.request.user))
 
 
+
+
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated]
@@ -300,6 +302,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
 
 
 '''
+
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated]
@@ -417,7 +420,9 @@ class TimetableViewSet(viewsets.ModelViewSet):
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
 was working the first previous 
+
 
 
 
@@ -484,6 +489,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
 previous than above ( the second previous )
 
 '''
+
 
 
 
@@ -572,10 +578,14 @@ class MarkAttendanceView(generics.GenericAPIView):
                 if student.section != session.timetable.section:
                     continue
                 Attendance.objects.update_or_create(
-                    student=student,
-                    session=session,
-                    defaults={'status': entry['status'], 'recorded_by': teacher}
-                )
+                   student=student,
+                   session=session,
+                   defaults={
+                    'status': entry['status'],
+                    'recorded_by': teacher,
+                    'timestamp': session.date  # Store session date instead of today
+                    })
+                
             session.status = 'Completed'
             session.save()
             return Response({"message": "Attendance marked/updated successfully"}, status=status.HTTP_200_OK)
@@ -674,6 +684,7 @@ class SubjectViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
 
+
 logger.debug('SubjectsForSectionView loaded - TEST DEPLOYMENT')
 
 '''
@@ -764,6 +775,7 @@ class SubjectsForSectionView(APIView):
 
 
 
+
 '''
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
@@ -823,8 +835,6 @@ def get_subjects_for_section(request):
         logger.error(f"Error in get_subjects_for_section: {str(e)}")
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_subjects(request):
@@ -832,14 +842,39 @@ def get_subjects(request):
     serializer = SubjectSerializer(subjects, many=True)
     return Response(serializer.data)
 
-
-
-
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_time_slots(request):
     time_slots = [slot[0] for slot in Timetable.LECTURE_SLOTS]
     return Response(time_slots)
 
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Section, Subject, Student
+from .serializers import SubjectSerializer
+
+class SectionSemesterWiseDataView(APIView):
+    def get(self, request):
+        data = {}
+        sections = Section.objects.all()
+
+        for section in sections:
+            students = section.students.all()
+            if not students.exists():
+                continue
+
+            section_data = {}
+
+            for student in students:
+                for subject in student.subjects.all():
+                    sem = f"Semester {subject.semester}"
+                    if sem not in section_data:
+                        section_data[sem] = []
+                    serialized = SubjectSerializer(subject).data
+                    if serialized not in section_data[sem]:  # prevent duplicates
+                        section_data[sem].append(serialized)
+
+            data[str(section)] = section_data
+
+        return Response(data)

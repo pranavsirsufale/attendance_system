@@ -211,7 +211,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
 
 
-
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated]
@@ -328,6 +327,74 @@ class TimetableViewSet(viewsets.ModelViewSet):
         Session.objects.filter(timetable=instance).delete()
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+'''
+
+
+
+class TimetableViewSet(viewsets.ModelViewSet):
+    queryset = Timetable.objects.all()
+    permission_classes = [IsAuthenticated]
+    print(permission_classes)
+
+    def get_serializer_class(self):
+        if self.action in ['create']:
+            return TimetableCreateSerializer
+        return TimetableSerializer  # Includes semester_start_date, semester_end_date for updates
+
+    def get_queryset(self):
+        return Timetable.objects.filter(teacher__user=self.request.user)
+
+    def perform_create(self, serializer):
+        validated_data = serializer.validated_data
+        teacher = validated_data['teacher']
+        print(teacher)
+        daily_schedules = validated_data['daily_schedules']
+        section = validated_data['section']
+        print(daily_schedules)
+        print(section)
+        if not daily_schedules:
+            raise ValidationError("At least one daily schedule is required.")
+
+        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
+        created_timetables = []
+        default_start = datetime.now().date()
+        default_end = default_start + timedelta(days=180)  # 6 months default
+
+        for schedule in daily_schedules:
+            timetable = Timetable.objects.create(
+                section=section,
+                teacher=teacher,
+                subject=Subject.objects.get(id=schedule['subject']),
+                day_of_week=schedule['day_of_week'],
+                start_time=schedule['start_time'],
+                semester_start_date=default_start,
+                semester_end_date=default_end
+            )
+            created_timetables.append(timetable)
+            start_date = default_start
+            end_date = default_end
+            current_date = start_date
+            target_day = day_of_week_map[timetable.day_of_week]
+            while current_date <= end_date:
+                if current_date.weekday() == target_day:
+                    Session.objects.get_or_create(
+                        timetable=timetable,
+                        date=current_date,
+                        defaults={'status': 'Scheduled'}
+                    )
+                current_date += timedelta(days=1)
+
+        timetable_serializer = TimetableSerializer(created_timetables, many=True)
+        return Response(timetable_serializer.data, status=status.HTTP_201_CREATED)
+
+
+
+'''
+
+
+
+
 
 
 class TeacherViewSet(viewsets.ReadOnlyModelViewSet):
@@ -514,6 +581,96 @@ class SubjectViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
 
+logger.debug('SubjectsForSectionView loaded - TEST DEPLOYMENT')
+
+'''
+class SubjectsForSectionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        logger.debug("TEST: Endpoint hit")
+        section_id = request.query_params.get('section_id')
+        semester = request.query_params.get('semester')
+        logger.debug(f"TEST: Request received: section_id={section_id}, semester={semester}")
+
+        if not section_id or not semester:
+            logger.warning("TEST: Missing parameters")
+            return Response({"error": "section_id and semester are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            section = Section.objects.get(id=int(section_id))
+            semester_int = int(semester)
+            logger.debug(f"TEST: Section: {section}, Program: {section.program}, Year: {section.year}, Semester: {semester_int}")
+        except (ValueError, Section.DoesNotExist):
+            logger.error(f"TEST: Invalid input: section_id={section_id}, semester={semester}")
+            return Response({"error": "Invalid section_id or semester"}, status=status.HTTP_400_BAD_REQUEST)
+
+        program_duration = section.program.duration_years * 2
+        start_semester = (section.year - 1) * 2 + 1
+        end_semester = min(section.year * 2, program_duration)
+        logger.debug(f"TEST: Validation range: {start_semester} <= {semester_int} <= {end_semester}")
+
+        if semester_int < start_semester or semester_int > end_semester:
+            logger.warning(f"TEST: Semester {semester_int} out of range for {section}")
+            return Response({"error": f"Semester {semester_int} is not valid for {section} (valid range: {start_semester}-{end_semester})"}, status=status.HTTP_400_BAD_REQUEST)
+
+        subjects = Subject.objects.filter(semester=semester_int)
+        logger.debug(f"TEST: Subjects: {list(subjects.values('id', 'name', 'semester'))}")
+        serializer = SubjectSerializer(subjects, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+'''
+
+
+
+
+
+class SubjectsForSectionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        section_id = request.query_params.get('section_id')
+        semester = request.query_params.get('semester')
+        logger.debug(f"Request: section_id={section_id}, semester={semester}")
+
+        if not section_id or not semester:
+            logger.warning("Missing parameters")
+            return Response({"error": "section_id and semester are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            section_id_int = int(section_id)
+            semester_int = int(semester)
+            logger.debug(f"Parsed: section_id={section_id_int}, semester={semester_int}")
+            section = Section.objects.get(id=section_id_int)
+            logger.debug(f"Section found: {section}")
+        except ValueError as e:
+            logger.error(f"ValueError: {str(e)}")
+            return Response({"error": "section_id and semester must be integers"}, status=status.HTTP_400_BAD_REQUEST)
+        except Section.DoesNotExist:
+            logger.error(f"Section id={section_id} not found")
+            return Response({"error": f"Section with id={section_id} not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate semester against section's available semesters
+        program_duration = section.program.duration_years * 2
+        start_semester = (section.year - 1) * 2 + 1
+        end_semester = min(section.year * 2, program_duration)
+        if not (start_semester <= semester_int <= end_semester):
+            logger.error(f"Semester {semester_int} invalid for section {section.id} (range: {start_semester}-{end_semester})")
+            return Response({"error": f"Semester {semester_int} is invalid for {section.name} (valid: {start_semester}-{end_semester})"}, status=status.HTTP_400_BAD_REQUEST)
+
+        subjects = Subject.objects.filter(semester=semester_int)
+        logger.debug(f"Subjects found: {list(subjects.values('id', 'name', 'semester'))}")
+        if not subjects.exists():
+            logger.info(f"No subjects for semester={semester_int}")
+            return Response({"message": "No subjects found", "data": []}, status=status.HTTP_200_OK)
+
+        serializer = SubjectSerializer(subjects, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+
+
+
 '''
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
@@ -551,12 +708,16 @@ def get_sections(request):
 @permission_classes([IsAuthenticated])
 def get_subjects_for_section(request):
     section_id = request.query_params.get('section_id')
+    print(section_id)
     semester_start_date = request.query_params.get('semester_start_date')
+    print(semester_start_date)
     if not section_id or not semester_start_date:
         return Response({"error": "Section ID and semester start date are required"}, status=status.HTTP_400_BAD_REQUEST)
     try:
         section = Section.objects.get(id=section_id)
+        print('section id' , section)
         start_date = datetime.strptime(semester_start_date, '%Y-%m-%d').date()
+        print('got date ' , start_date)
         # Infer semester: Jan-Jun = odd (1, 3, 5), Jul-Dec = even (2, 4, 6)
         semester = (section.year * 2 - 1) if start_date.month <= 6 else (section.year * 2)
         # Filter subjects by semester and optionally by section-specific logic if Subject model has a section relation

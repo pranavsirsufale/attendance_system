@@ -98,24 +98,38 @@ function AttendanceForm({ onClose = () => {} }) {
           </div>
         )}
         <form onSubmit={handleSubmit}>
-          {students.map((student) => (
-            <div key={student.id} className="mb-4 flex items-center space-x-4">
-              <span className="text-gray-800">
-                {student.first_name} {student.last_name} ({student.roll_number})
-              </span>
-              <select
-                value={attendance[student.id] || "Present"}
-                onChange={(e) =>
-                  handleAttendanceChange(student.id, e.target.value)
-                }
-                className="p-2 border rounded-md bg-white text-gray-800"
-              >
-                <option value="Present">Present</option>
-                <option value="Absent">Absent</option>
-              </select>
-            </div>
-          ))}
-          <div className="flex justify-end space-x-2">
+          <table className="table-auto w-full border-collapse border border-gray-300">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-gray-300 px-4 py-2 text-left">Roll Number</th>
+                <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
+                <th className="border border-gray-300 px-4 py-2 text-left">Attendance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((student) => (
+                <tr key={student.id}>
+                  <td className="border border-gray-300 px-4 py-2">{student.roll_number}</td>
+                  <td className="border border-gray-300 px-4 py-2">
+                    {student.first_name} {student.last_name}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2">
+                    <select
+                      value={attendance[student.id] || "Present"}
+                      onChange={(e) =>
+                        handleAttendanceChange(student.id, e.target.value)
+                      }
+                      className="p-2 border rounded-md bg-white text-gray-800"
+                    >
+                      <option value="Present">Present</option>
+                      <option value="Absent">Absent</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="flex justify-end space-x-2 mt-4">
             <button
               type="button"
               onClick={() => {

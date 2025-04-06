@@ -1,3 +1,12 @@
+
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █    DEVELOPED BY PRANAV SIRSUFALE   █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+#? ╔═══════════════════════════════════════════════════════════════════════════╗
+#? ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
+#? ╚═══════════════════════════════════════════════════════════════════════════╝
+
 from django.urls import path,include
 from . import views
 from rest_framework.routers import DefaultRouter
@@ -27,3 +36,12 @@ urlpatterns = [
     path('subjects-for-section/', views.get_subjects_for_section, name='get_subjects_for_section'),
 
     ]
+
+
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █    DEVELOPED BY PRANAV SIRSUFALE   █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+#? ╔═══════════════════════════════════════════════════════════════════════════╗
+#? ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
+#? ╚═══════════════════════════════════════════════════════════════════════════╝

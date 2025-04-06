@@ -210,7 +210,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         serializer.save(recorded_by=Teacher.objects.get(user=self.request.user))
 
 
-# views.py
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated]
@@ -297,8 +296,6 @@ class TimetableViewSet(viewsets.ModelViewSet):
 
         timetable_serializer = TimetableSerializer(created_timetables, many=True)
         return timetable_serializer.data
-
-
 
 
 

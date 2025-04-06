@@ -97,6 +97,7 @@ class TimetableCreateSerializer(serializers.Serializer):
     semester_start_date = serializers.DateField()
     semester_end_date = serializers.DateField()
 
+
     def validate_daily_schedules(self, value):
         LECTURE_SLOTS = Timetable.LECTURE_SLOTS
         for schedule in value:

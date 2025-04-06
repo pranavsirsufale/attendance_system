@@ -8,6 +8,9 @@ function ProfileIcon() {
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
 
+
+
+
   useEffect(() => {
     const fetchProfile = async () => {
       const token = localStorage.getItem('access_token');
@@ -20,7 +23,11 @@ function ProfileIcon() {
         const response = await axios.get('http://localhost:8000/api/teacher-info/', {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setProfile(response.data);
+        const last_login = convertToIndianFormat(response.data.last_login)
+        const token_expiry = convertToIndianFormat(response.data.token_expiry)
+
+        const data = {...response.data , last_login : last_login , token_expiry : token_expiry}
+        setProfile(data);
         setError('');
       } catch (err) {
         console.error('Failed to load profile:', err);
@@ -29,6 +36,37 @@ function ProfileIcon() {
       }
     };
     fetchProfile();
+
+
+
+
+    function convertToIndianFormat(isoString) {
+      // Parse the ISO string to a Date object
+      const date = new Date(isoString);
+      
+      // Format the date in DD/MM/YYYY format
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      
+      // Format time in 12-hour format with AM/PM
+      let hours = date.getHours();
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      
+      // Convert to 12-hour format
+      hours = hours % 12;
+      hours = hours ? hours : 12; // If hours is 0, make it 12
+      const formattedHours = hours.toString().padStart(2, '0');
+      
+      // Create the formatted string
+      //return `${day}/${month}/${year}, ${formattedHours}:${minutes} ${ampm}`;
+
+      return `${formattedHours}:${minutes} ${ampm}`
+    }
+
+
+
 
     const checkTokenExpiry = setInterval(() => {
       const token = localStorage.getItem('access_token');

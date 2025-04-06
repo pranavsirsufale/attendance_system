@@ -1,3 +1,84 @@
+
+
+/*
+
+
+// src/components/AdminAttendanceStats.jsx
+
+
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+function AdminAttendanceStats() {
+  const [stats, setStats] = useState(null);
+  const [period, setPeriod] = useState('semester');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, [period]);
+
+  const fetchStats = async () => {
+    const token = localStorage.getItem('access_token');
+    try {
+      const response = await axios.get(`http://localhost:8000/admin/attendance-overview/?period=${period}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setStats(response.data);
+      setError('');
+    } catch (err) {
+      setError('Failed to fetch attendance stats: ' + (err.response?.data?.detail || 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div className="text-red-600">{error}</div>;
+
+  return (
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">Attendance Statistics</h2>
+      <div className="mb-4">
+        <label className="mr-2">Period:</label>
+        <select
+          value={period}
+          onChange={(e) => setPeriod(e.target.value)}
+          className="p-2 border rounded-md"
+        >
+          <option value="semester">Semester</option>
+          <option value="monthly">Monthly</option>
+          <option value="weekly">Weekly</option>
+        </select>
+      </div>
+      {stats && (
+        <div>
+          <p>Period: {stats.period} ({stats.start_date} to {stats.end_date})</p>
+          <ul className="space-y-4">
+            {stats.stats.map((stat, index) => (
+              <li key={index} className="p-4 bg-white rounded-lg shadow-md">
+                <p><strong>Section:</strong> {stat.section}</p>
+                <p><strong>Total Sessions:</strong> {stat.total_sessions}</p>
+                <p><strong>Present:</strong> {stat.present}</p>
+                <p><strong>Absent:</strong> {stat.absent}</p>
+                <p><strong>Attendance %:</strong> {stat.attendance_percentage}%</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default AdminAttendanceStats;
+
+
+*/
+
+
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -117,3 +198,6 @@ function AdminAttendanceStats() {
 }
 
 export default AdminAttendanceStats;
+
+
+

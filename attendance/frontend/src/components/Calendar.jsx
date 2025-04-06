@@ -8,9 +8,9 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { Link , useNavigate } from 'react-router-dom';
 
-function Calendar() {
+function Calendar(admin) {
   const [sessions, setSessions] = useState([]);
   const [timetables, setTimetables] = useState([]);
   const [error, setError] = useState('');
@@ -21,6 +21,7 @@ function Calendar() {
   const [timeSlots, setTimeSlots] = useState([]);
   const [selectedSection, setSelectedSection] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
+  // const [admin , setAdmin ] = useState(admin)
   const [timetableData, setTimetableData] = useState({
     section: '',
     semester: '',
@@ -28,6 +29,10 @@ function Calendar() {
     semester_start_date: '',
     semester_end_date: '',
   });
+
+  console.log(admin)
+
+const navigate = useNavigate()
 
   useEffect(() => {
     fetchSessions();
@@ -136,8 +141,10 @@ function Calendar() {
     }
   };
 
+
   const handleDateChange = (field) => (e) => {
     setTimetableData({ ...timetableData, [field]: e.target.value });
+
   };
 
   const handleTimetableSubmit = async (e) => {
@@ -232,7 +239,15 @@ function Calendar() {
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Teacher Calendar</h2>
       {error && <p className="text-red-600 mb-4">{error}</p>}
       <div className="mb-4 flex space-x-4">
+
+        {/* <button 
+        className="bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700"
+        > */}
+
         <Link to="/attendance-stats" className="text-blue-600 hover:underline">View Attendance Statistics</Link>
+        {/* </button> */}
+        
+        
         <button
           onClick={() => {
             setEditTimetableId(null);
@@ -249,10 +264,25 @@ function Calendar() {
         >
           Create Timetable
         </button>
+
+
+          {/* {admin == true ?
+        
+        <button  
+        onClick={() => navigate('/admin')}
+        className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+        >
+          Admin Dashboard
+        </button>  : ""
+        } */}
+
+
+
       </div>
 
       <h3 className="text-xl font-bold mb-2 text-gray-800">Your Timetables</h3>
       {timetables.length > 0 ? (
+
         <ul className="space-y-4 mb-6">
           {timetables.map((timetable) => (
             <li key={timetable.id} className="p-4 bg-white rounded-lg shadow-md flex justify-between items-center">
@@ -268,6 +298,7 @@ function Calendar() {
             </li>
           ))}
         </ul>
+
       ) : (
         <p className="text-gray-600 mb-6">No timetables found.</p>
       )}
@@ -396,6 +427,7 @@ function Calendar() {
       )}
 
       {sessions.length > 0 ? (
+
         <ul className="space-y-4">
           {sessions.map((session) => (
             <li key={session.id} className="p-4 bg-white rounded-lg shadow-md">
@@ -414,6 +446,7 @@ function Calendar() {
             </li>
           ))}
         </ul>
+
       ) : (
         <p className="text-gray-600">No sessions found for this section.</p>
       )}

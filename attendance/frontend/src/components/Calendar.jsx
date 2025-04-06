@@ -128,8 +128,10 @@ function Calendar() {
     }
   };
 
+
   const handleDateChange = (field) => (e) => {
     setTimetableData({ ...timetableData, [field]: e.target.value });
+
   };
 
   const handleTimetableSubmit = async (e) => {
@@ -245,6 +247,7 @@ function Calendar() {
 
       <h3 className="text-xl font-bold mb-2 text-gray-800">Your Timetables</h3>
       {timetables.length > 0 ? (
+
         <ul className="space-y-4 mb-6">
           {timetables.map((timetable) => (
             <li key={timetable.id} className="p-4 bg-white rounded-lg shadow-md flex justify-between items-center">
@@ -260,6 +263,7 @@ function Calendar() {
             </li>
           ))}
         </ul>
+
       ) : (
         <p className="text-gray-600 mb-6">No timetables found.</p>
       )}
@@ -388,6 +392,7 @@ function Calendar() {
       )}
 
       {sessions.length > 0 ? (
+
         <ul className="space-y-4">
           {sessions.map((session) => (
             <li key={session.id} className="p-4 bg-white rounded-lg shadow-md">
@@ -406,6 +411,7 @@ function Calendar() {
             </li>
           ))}
         </ul>
+
       ) : (
         <p className="text-gray-600">No sessions found for this section.</p>
       )}

@@ -1,3 +1,12 @@
+
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █    DEVELOPED BY PRANAV SIRSUFALE   █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+#? ╔═══════════════════════════════════════════════════════════════════════════╗
+#? ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
+#? ╚═══════════════════════════════════════════════════════════════════════════╝
+
 from django.urls import path,include
 from . import views
 from rest_framework.routers import DefaultRouter
@@ -30,3 +39,12 @@ urlpatterns = [
     path('section-semester-wise/', SectionSemesterWiseDataView.as_view(), name='section_semester_wise'),
 
     ]
+
+
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █    DEVELOPED BY PRANAV SIRSUFALE   █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+#? ╔═══════════════════════════════════════════════════════════════════════════╗
+#? ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
+#? ╚═══════════════════════════════════════════════════════════════════════════╝

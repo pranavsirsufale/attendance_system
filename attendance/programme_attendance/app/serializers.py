@@ -1,3 +1,11 @@
+#                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#                       █    DEVELOPED BY PRANAV SIRSUFALE   █
+#                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
 from rest_framework import serializers
 from .models import Teacher,Student, Subject , Program , Timetable , Session, Attendance , Section , CalendarException
 
@@ -166,6 +174,16 @@ previous
 
 '''
 
+
+
+
+#                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#                       █    DEVELOPED BY PRANAV SIRSUFALE   █
+#                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
 
 
 

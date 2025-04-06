@@ -1,3 +1,14 @@
+
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █    DEVELOPED BY PRANAV SIRSUFALE   █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+#? ╔═══════════════════════════════════════════════════════════════════════════╗
+#? ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
+#? ╚═══════════════════════════════════════════════════════════════════════════╝
+
+
+
 from django.shortcuts import render
 from rest_framework.views import APIView
 from django.http import HttpResponse
@@ -21,9 +32,17 @@ import sys
 import jwt
 
 
+
+
+
 # Logging setup
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', stream=sys.stdout)
+
+
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █    THE TEACHER VIEWS APPEAR HERE   █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
 
 # Create your views here.
@@ -849,6 +868,35 @@ def get_time_slots(request):
     return Response(time_slots)
 
 
+
+
+
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █    THE ADMIN VIEWS APPEAR HERE     █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+
+
+#### ADMIN VIEWS
+# (Keeping all other teacher-related views like TimetableViewSet, SubjectsForSectionView, etc., unchanged)
+
+
+
+
+
+
+
+
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █    DEVELOPED BY PRANAV SIRSUFALE   █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+#? ╔═══════════════════════════════════════════════════════════════════════════╗
+#? ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
+#? ╚═══════════════════════════════════════════════════════════════════════════╝
+
+
+'''
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Section, Subject, Student
@@ -878,3 +926,4 @@ class SectionSemesterWiseDataView(APIView):
             data[str(section)] = section_data
 
         return Response(data)
+'''

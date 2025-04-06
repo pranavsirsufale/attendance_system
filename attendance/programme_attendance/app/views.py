@@ -210,7 +210,99 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         serializer.save(recorded_by=Teacher.objects.get(user=self.request.user))
 
 
+# views.py
+class TimetableViewSet(viewsets.ModelViewSet):
+    queryset = Timetable.objects.all()
+    permission_classes = [IsAuthenticated]
 
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return TimetableCreateSerializer
+        return TimetableSerializer
+
+    def get_queryset(self):
+        logger.debug("Fetching queryset for user: %s", self.request.user)
+        return Timetable.objects.filter(teacher__user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        logger.debug("POST request received at /api/timetables/")
+        logger.debug("Request data: %s", request.data)
+        try:
+            mutable_data = request.data.copy()
+            teacher = Teacher.objects.get(user=request.user)
+            mutable_data['teacher'] = teacher.id
+            serializer = self.get_serializer(data=mutable_data)
+            serializer.is_valid(raise_exception=True)
+            timetable_data = self.perform_create(serializer)
+            logger.info("Timetable created successfully")
+            return Response(timetable_data, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            logger.error("Serializer validation failed: %s", str(e))
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error("Unexpected error: %s\n%s", str(e), traceback.format_exc())
+            return Response({"detail": f"Server error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def perform_create(self, serializer):
+        validated_data = serializer.validated_data
+        teacher = validated_data['teacher']
+        daily_schedules = validated_data['daily_schedules']
+        section = validated_data['section']
+        semester_start_date = validated_data.get('semester_start_date')
+        semester_end_date = validated_data.get('semester_end_date')
+
+        if not daily_schedules:
+            raise ValidationError("At least one daily schedule is required.")
+
+        for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+            existing = Timetable.objects.filter(section=section, day_of_week=day).count()
+            new_for_day = len([s for s in daily_schedules if s['day_of_week'] == day])
+            if existing + new_for_day > 5:
+                raise ValidationError(f"Cannot schedule more than 5 lectures on {day} for this section.")
+            for schedule in [s for s in daily_schedules if s['day_of_week'] == day]:
+                if Timetable.objects.filter(
+                    teacher=teacher,
+                    day_of_week=day,
+                    start_time=schedule['start_time'],
+                    semester_start_date=semester_start_date,
+                    semester_end_date=semester_end_date
+                ).exists():
+                    raise ValidationError(f"Teacher already scheduled on {day} at {schedule['start_time']} for this semester.")
+
+        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
+        created_timetables = []
+        for schedule in daily_schedules:
+            timetable = Timetable.objects.create(
+                section=section,
+                teacher=teacher,
+                subject=Subject.objects.get(id=schedule['subject']),
+                day_of_week=schedule['day_of_week'],
+                start_time=schedule['start_time'],
+                semester_start_date=semester_start_date,
+                semester_end_date=semester_end_date
+            )
+            created_timetables.append(timetable)
+            start_date = semester_start_date
+            end_date = semester_end_date
+            current_date = start_date
+            target_day = day_of_week_map[timetable.day_of_week]
+            while current_date <= end_date:
+                if current_date.weekday() == target_day:
+                    Session.objects.get_or_create(
+                        timetable=timetable,
+                        date=current_date,
+                        defaults={'status': 'Scheduled'}
+                    )
+                current_date += timedelta(days=1)
+
+        timetable_serializer = TimetableSerializer(created_timetables, many=True)
+        return timetable_serializer.data
+
+
+
+
+
+'''
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated]
@@ -328,7 +420,11 @@ class TimetableViewSet(viewsets.ModelViewSet):
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-'''
+was working
+
+
+
+
 
 
 
@@ -388,7 +484,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
         timetable_serializer = TimetableSerializer(created_timetables, many=True)
         return Response(timetable_serializer.data, status=status.HTTP_201_CREATED)
 
-
+previous than above 
 
 '''
 

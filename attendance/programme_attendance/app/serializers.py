@@ -78,6 +78,51 @@ class AttendanceSerializer(serializers.ModelSerializer):
 
 
 
+# serializers.py
+class TimetableCreateSerializer(serializers.Serializer):
+    section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())
+    teacher = serializers.PrimaryKeyRelatedField(queryset=Teacher.objects.all())
+    semester = serializers.IntegerField()
+    daily_schedules = serializers.ListField(
+        child=serializers.DictField(child=serializers.CharField())
+    )
+    semester_start_date = serializers.DateField()
+    semester_end_date = serializers.DateField()
+
+    def validate_daily_schedules(self, value):
+        LECTURE_SLOTS = Timetable.LECTURE_SLOTS
+        for schedule in value:
+            required_fields = ['day_of_week', 'subject', 'start_time']
+            if not all(field in schedule for field in required_fields):
+                raise serializers.ValidationError(f"Each schedule must include {required_fields}")
+            if schedule['day_of_week'] not in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+                raise serializers.ValidationError("Invalid day of week")
+            if schedule['start_time'] not in [slot[0] for slot in LECTURE_SLOTS]:
+                raise serializers.ValidationError(f"Start time must be one of {[slot[0] for slot in LECTURE_SLOTS]}")
+        return value
+
+    def validate(self, data):
+        section = data['section']
+        semester = data['semester']
+        program_duration = section.program.duration_years * 2
+        start_semester = (section.year - 1) * 2 + 1
+        end_semester = min(section.year * 2, program_duration)
+
+        if semester < start_semester or semester > end_semester:
+            raise serializers.ValidationError(f"Semester {semester} is not valid for {section} (valid range: {start_semester}-{end_semester})")
+
+        for schedule in data['daily_schedules']:
+            subject = Subject.objects.get(id=schedule['subject'])
+            if subject.semester != semester:
+                raise serializers.ValidationError(f"Subject {subject.name} (Semester {subject.semester}) does not match selected semester {semester}")
+        return data
+
+
+
+
+
+'''
+
 class TimetableCreateSerializer(serializers.Serializer):
     
     section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())
@@ -115,3 +160,8 @@ class TimetableCreateSerializer(serializers.Serializer):
             if subject.semester != semester:
                 raise serializers.ValidationError(f"Subject {subject.name} (Semester {subject.semester}) does not match selected semester {semester}")
         return data
+    
+
+previous 
+
+'''

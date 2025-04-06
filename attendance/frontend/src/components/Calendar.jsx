@@ -65,7 +65,7 @@ function Calendar() {
       setSections(sectionsRes.data);
       setTimeSlots(timeSlotsRes.data);
       if (timetableData.section && timetableData.semester) {
-        fetchSubjects(timetableData.section, timetableData.semester);
+        fetchSubjects(timetableData.section, timetableData.semester, timetableData.semester_start_date);
       }
     } catch (err) {
       console.error('Failed to fetch options:', err);
@@ -73,18 +73,17 @@ function Calendar() {
     }
   };
 
-  const fetchSubjects = async (sectionId, semester , semester_start_date) => {
+  const fetchSubjects = async (sectionId, semester, semester_start_date = timetableData.semester_start_date) => {
     const token = localStorage.getItem('access_token');
-    semester_start_date = semester_start_date | timetableData.semester_start_date
     try {
-      console.log(`Fetching subjects: section_id=${sectionId}, semester=${semester}`);
+      console.log(`Fetching subjects: section_id=${sectionId}, semester=${semester}, semester_start_date=${semester_start_date}`);
       const response = await axios.get('http://localhost:8000/api/subjects-for-section/', {
-        params: { section_id: sectionId, semester  , semester_start_date : timetableData.semester_start_date},
+        params: { section_id: sectionId, semester, semester_start_date },
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = Array.isArray(response.data) ? response.data : response.data.data || [];
       console.log('Subjects received:', data);
-      setSubjects(data);
+      setSubjects(data.filter(subject => subject.semester === parseInt(semester))); // Ensure only matching semester subjects
       setError('');
     } catch (err) {
       console.error('Failed to fetch subjects:', err.response?.data || err.message);
@@ -105,24 +104,26 @@ function Calendar() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const existingTimetable = timetableRes.data[0];
+        const startDate = existingTimetable?.semester_start_date || '2025-03-01';
+        const endDate = existingTimetable?.semester_end_date || '2025-08-31';
         setTimetableData(prev => ({
           ...prev,
           section: sectionId,
           semester,
-          semester_start_date: existingTimetable?.semester_start_date || '',
-          semester_end_date: existingTimetable?.semester_end_date || '',
+          semester_start_date: startDate,
+          semester_end_date: endDate,
         }));
-        fetchSubjects(sectionId, semester);
+        fetchSubjects(sectionId, semester, startDate);
       } catch (err) {
         console.error('Failed to fetch timetable for section:', err);
         setTimetableData(prev => ({
           ...prev,
           section: sectionId,
           semester,
-          semester_start_date: '', // Default if no timetable exists
-          semester_end_date: '',
+          semester_start_date: '2025-03-01', // Default if no timetable exists
+          semester_end_date: '2025-08-31',
         }));
-        fetchSubjects(sectionId, semester);
+        fetchSubjects(sectionId, semester, '2025-03-01');
       }
     }
   };
@@ -139,7 +140,7 @@ function Calendar() {
         section: timetableData.section,
         semester: parseInt(timetableData.semester),
         daily_schedules: timetableData.daily_schedules,
-        semester_start_date: timetableData.semester_start_date || '2025-03-01', // Default if not set
+        semester_start_date: timetableData.semester_start_date || '2025-03-01',
         semester_end_date: timetableData.semester_end_date || '2025-08-31',
       };
       if (editTimetableId) {
@@ -199,7 +200,7 @@ function Calendar() {
       semester_start_date: timetable.semester_start_date,
       semester_end_date: timetable.semester_end_date,
     });
-    fetchSubjects(timetable.section.id, timetable.semester , timetable.semester_start_date);
+    fetchSubjects(timetable.section.id, timetable.semester, timetable.semester_start_date);
     setShowTimetableForm(true);
   };
 
@@ -253,11 +254,7 @@ function Calendar() {
                 <p><strong>Schedule:</strong> {timetable.day_of_week}: {timetable.subject.name} at {timetable.start_time}</p>
               </div>
               <div className="space-x-2">
-
-
                 <button onClick={() => handleEditTimetable(timetable)} className="bg-yellow-600 text-white py-1 px-2 rounded-md hover:bg-yellow-700">Edit</button>
-
-
                 <button onClick={() => handleDeleteTimetable(timetable.id)} className="bg-red-600 text-white py-1 px-2 rounded-md hover:bg-red-700">Delete</button>
               </div>
             </li>

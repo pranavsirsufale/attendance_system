@@ -10,6 +10,8 @@
 from django.urls import path,include
 from . import views
 from rest_framework.routers import DefaultRouter
+from app.views import SectionSemesterWiseDataView
+
 
 router = DefaultRouter()
 router.register(r'teachers', views.TeacherViewSet)
@@ -34,6 +36,7 @@ urlpatterns = [
     path('subjects/', views.get_subjects, name='get_subjects'),
     path('time-slots/', views.get_time_slots, name='get_time_slots'),
     path('subjects-for-section/', views.get_subjects_for_section, name='get_subjects_for_section'),
+    path('section-semester-wise/', SectionSemesterWiseDataView.as_view(), name='section_semester_wise'),
 
     ]
 

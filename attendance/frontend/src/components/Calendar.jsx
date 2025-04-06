@@ -136,8 +136,10 @@ function Calendar() {
     }
   };
 
+
   const handleDateChange = (field) => (e) => {
     setTimetableData({ ...timetableData, [field]: e.target.value });
+
   };
 
   const handleTimetableSubmit = async (e) => {
@@ -229,10 +231,10 @@ function Calendar() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Teacher Calendar</h2>
+      <h2 className="text-3xl font-bold mb-6 text-gray-800">Teacher Calendar</h2>
       {error && <p className="text-red-600 mb-4">{error}</p>}
-      <div className="mb-4 flex space-x-4">
-        <Link to="/attendance-stats" className="text-blue-600 hover:underline">View Attendance Statistics</Link>
+      <div className="mb-6 flex justify-between items-center">
+        <Link to="/attendance-stats" className="text-blue-600 hover:underline text-lg">View Attendance Statistics</Link>
         <button
           onClick={() => {
             setEditTimetableId(null);
@@ -245,36 +247,37 @@ function Calendar() {
             });
             setShowTimetableForm(true);
           }}
-          className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+          className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 shadow-md"
         >
           Create Timetable
         </button>
       </div>
 
-      <h3 className="text-xl font-bold mb-2 text-gray-800">Your Timetables</h3>
+      <h3 className="text-2xl font-semibold mb-4 text-gray-800">Your Timetables</h3>
       {timetables.length > 0 ? (
-        <ul className="space-y-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {timetables.map((timetable) => (
-            <li key={timetable.id} className="p-4 bg-white rounded-lg shadow-md flex justify-between items-center">
-              <div>
-                <p><strong>Section:</strong> {timetable.section.name} (Year: {timetable.section.year}, Semester: {timetable.semester}, Program: {timetable.section.program})</p>
-                <p><strong>Period:</strong> {timetable.semester_start_date} to {timetable.semester_end_date}</p>
-                <p><strong>Schedule:</strong> {timetable.day_of_week}: {timetable.subject.name} at {timetable.start_time}</p>
+            <div key={timetable.id} className="p-6 bg-white rounded-lg shadow-lg">
+              <p className="text-lg font-semibold mb-2">{timetable.section.name}</p>
+              <p className="text-gray-700"><strong>Year:</strong> {timetable.section.year}</p>
+              <p className="text-gray-700"><strong>Semester:</strong> {timetable.semester}</p>
+              <p className="text-gray-700"><strong>Program:</strong> {timetable.section.program}</p>
+              <p className="text-gray-700"><strong>Period:</strong> {timetable.semester_start_date} to {timetable.semester_end_date}</p>
+              <p className="text-gray-700"><strong>Schedule:</strong> {timetable.day_of_week}: {timetable.subject.name} at {timetable.start_time}</p>
+              <div className="mt-4 flex justify-between">
+                <button onClick={() => handleEditTimetable(timetable)} className="bg-yellow-500 text-white py-2 px-4 rounded-lg hover:bg-yellow-600 shadow-md">Edit</button>
+                <button onClick={() => handleDeleteTimetable(timetable.id)} className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 shadow-md">Delete</button>
               </div>
-              <div className="space-x-2">
-                <button onClick={() => handleEditTimetable(timetable)} className="bg-yellow-600 text-white py-1 px-2 rounded-md hover:bg-yellow-700">Edit</button>
-                <button onClick={() => handleDeleteTimetable(timetable.id)} className="bg-red-600 text-white py-1 px-2 rounded-md hover:bg-red-700">Delete</button>
-              </div>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       ) : (
-        <p className="text-gray-600 mb-6">No timetables found.</p>
+        <p className="text-gray-600 mb-8">No timetables found.</p>
       )}
 
-      <div className="mb-4">
-        <label className="block text-gray-800">Filter Sessions by Section:</label>
-        <select value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)} className="w-full p-2 border rounded-md bg-white text-gray-800">
+      <div className="mb-6">
+        <label className="block text-lg font-medium text-gray-800 mb-2">Filter Sessions by Section:</label>
+        <select value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)} className="w-full p-3 border rounded-lg bg-white text-gray-800 shadow-sm">
           <option value="">All Sections</option>
           {sections.map((section) => (
             <option key={section.id} value={section.id}>{section.name} (Year: {section.year}, Program: {section.program})</option>
@@ -283,36 +286,36 @@ function Calendar() {
       </div>
 
       {showTimetableForm && (
-        <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4 text-gray-800">{editTimetableId ? 'Edit Timetable' : 'Create Timetable'}</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-2xl font-bold mb-6 text-gray-800">{editTimetableId ? 'Edit Timetable' : 'Create Timetable'}</h3>
             <form onSubmit={handleTimetableSubmit}>
-              <div className="mb-4">
-                <label className="block text-gray-800">Semester Period:</label>
-                <div className="flex space-x-2">
+              <div className="mb-6">
+                <label className="block text-lg font-medium text-gray-800 mb-2">Semester Period:</label>
+                <div className="flex space-x-4">
                   <input
                     type="date"
                     value={timetableData.semester_start_date}
                     onChange={handleDateChange('semester_start_date')}
-                    className="w-full p-2 border rounded-md text-gray-800"
+                    className="w-full p-3 border rounded-lg text-gray-800 shadow-sm"
                     required
                   />
-                  <span className="text-gray-800">to</span>
+                  <span className="text-gray-800 self-center">to</span>
                   <input
                     type="date"
                     value={timetableData.semester_end_date}
                     onChange={handleDateChange('semester_end_date')}
-                    className="w-full p-2 border rounded-md text-gray-800"
+                    className="w-full p-3 border rounded-lg text-gray-800 shadow-sm"
                     required
                   />
                 </div>
               </div>
-              <div className="mb-4">
-                <label className="block text-gray-800">Section and Semester:</label>
+              <div className="mb-6">
+                <label className="block text-lg font-medium text-gray-800 mb-2">Section and Semester:</label>
                 <select
                   value={timetableData.section && timetableData.semester ? `${timetableData.section}-${timetableData.semester}` : ''}
                   onChange={handleSectionSemesterChange}
-                  className="w-full p-2 border rounded-md bg-white text-gray-800"
+                  className="w-full p-3 border rounded-lg bg-white text-gray-800 shadow-sm"
                   required
                 >
                   <option value="">Select Section and Semester</option>
@@ -326,11 +329,11 @@ function Calendar() {
                 </select>
               </div>
               {timetableData.daily_schedules.map((schedule, index) => (
-                <div key={index} className="mb-4 flex space-x-2">
+                <div key={index} className="mb-6 flex space-x-4">
                   <select
                     value={schedule.day_of_week}
                     onChange={(e) => updateSchedule(index, 'day_of_week', e.target.value)}
-                    className="p-2 border rounded-md bg-white text-gray-800"
+                    className="p-3 border rounded-lg bg-white text-gray-800 shadow-sm"
                   >
                     {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day) => (
                       <option key={day} value={day}>{day}</option>
@@ -339,7 +342,7 @@ function Calendar() {
                   <select
                     value={schedule.subject}
                     onChange={(e) => updateSchedule(index, 'subject', e.target.value)}
-                    className="p-2 border rounded-md bg-white text-gray-800"
+                    className="p-3 border rounded-lg bg-white text-gray-800 shadow-sm"
                     required
                   >
                     <option value="">Select Subject</option>
@@ -350,7 +353,7 @@ function Calendar() {
                   <select
                     value={schedule.start_time}
                     onChange={(e) => updateSchedule(index, 'start_time', e.target.value)}
-                    className="p-2 border rounded-md bg-white text-gray-800"
+                    className="p-3 border rounded-lg bg-white text-gray-800 shadow-sm"
                     required
                   >
                     <option value="">Select Time</option>
@@ -363,11 +366,11 @@ function Calendar() {
               <button
                 type="button"
                 onClick={addSchedule}
-                className="bg-green-600 text-white py-1 px-2 rounded-md hover:bg-green-700 mb-4"
+                className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 shadow-md mb-6"
               >
                 Add Another Schedule
               </button>
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-end space-x-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -382,11 +385,11 @@ function Calendar() {
                     });
                     setError('');
                   }}
-                  className="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700"
+                  className="bg-gray-600 text-white py-2 px-6 rounded-lg hover:bg-gray-700 shadow-md"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">
+                <button type="submit" className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 shadow-md">
                   {editTimetableId ? 'Update Timetable' : 'Save Timetable'}
                 </button>
               </div>
@@ -396,24 +399,40 @@ function Calendar() {
       )}
 
       {sessions.length > 0 ? (
-        <ul className="space-y-4">
+        <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {sessions.map((session) => (
-            <li key={session.id} className="p-4 bg-white rounded-lg shadow-md">
-              <p><strong>Date:</strong> {session.date}</p>
-              <p><strong>Day:</strong> {session.timetable.day_of_week}</p>
-              <p><strong>Time:</strong> {session.timetable.start_time}</p>
-              <p><strong>Subject:</strong> {session.timetable.subject.name}</p>
-              <p><strong>Section:</strong> {session.timetable.section.name} (Year: {session.timetable.section.year}, Semester: {session.timetable.semester}, Program: {session.timetable.section.program})</p>
-              <p><strong>Period:</strong> {session.timetable.semester_start_date} to {session.timetable.semester_end_date}</p>
-              <p><strong>Status:</strong> {session.status}</p>
-              {session.status === 'Scheduled' ? (
-                <Link to={`/attendance/${session.id}`} className="text-blue-600 hover:underline">Mark Attendance</Link>
-              ) : (
-                <Link to={`/attendance/${session.id}`} className="text-green-600 hover:underline">Update Attendance</Link>
-              )}
+            <li key={session.id} className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 p-5 border border-gray-200">
+              <div className="mb-3">
+                <h3 className="text-xl font-semibold text-indigo-600">{session.timetable.subject.name}</h3>
+                <p className="text-sm text-gray-500">{session.timetable.section.name} • Year {session.timetable.section.year} • Semester {session.timetable.semester}</p>
+              </div>
+              <div className="space-y-1 text-gray-700 text-sm">
+                <p><strong>Date:</strong> {session.date}</p>
+                <p><strong>Day:</strong> {session.timetable.day_of_week}</p>
+                <p><strong>Time:</strong> {session.timetable.start_time}</p>
+                <p><strong>Program:</strong> {session.timetable.section.program}</p>
+                <p><strong>Period:</strong> {session.timetable.semester_start_date} → {session.timetable.semester_end_date}</p>
+                <p><strong>Status:</strong>
+                  <span className={`ml-1 font-semibold ${session.status === 'Scheduled' ? 'text-yellow-600' : 'text-green-700'}`}>
+                    {session.status}
+                  </span>
+                </p>
+              </div>
+              <div className="mt-4">
+                <Link
+                  to={`/attendance/${session.id}`}
+                  className={`inline-block px-4 py-2 rounded-full text-sm font-medium transition duration-200 ${session.status === 'Scheduled'
+                      ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                      : 'bg-green-500 text-white hover:bg-green-600'
+                    }`}
+                >
+                  {session.status === 'Scheduled' ? 'Mark Attendance' : 'Update Attendance'}
+                </Link>
+              </div>
             </li>
           ))}
         </ul>
+
       ) : (
         <p className="text-gray-600">No sessions found for this section.</p>
       )}

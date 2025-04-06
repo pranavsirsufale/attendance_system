@@ -420,7 +420,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-was working
+was working the first previous 
 
 
 
@@ -484,7 +484,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
         timetable_serializer = TimetableSerializer(created_timetables, many=True)
         return Response(timetable_serializer.data, status=status.HTTP_201_CREATED)
 
-previous than above 
+previous than above ( the second previous )
 
 '''
 

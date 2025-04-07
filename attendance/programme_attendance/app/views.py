@@ -868,6 +868,7 @@ def get_time_slots(request):
     return Response(time_slots)
 
 
+<<<<<<<<< Temporary merge branch 1
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Section, Subject, Student
@@ -897,7 +898,7 @@ class SectionSemesterWiseDataView(APIView):
             data[str(section)] = section_data
 
         return Response(data)
-
+=========
 
 
 #!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -908,192 +909,6 @@ class SectionSemesterWiseDataView(APIView):
 
 #### ADMIN VIEWS
 # (Keeping all other teacher-related views like TimetableViewSet, SubjectsForSectionView, etc., unchanged)
-
-
-import rest_framework
-
-
-# --- New Admin-Specific Views ---
-class AdminTeacherViewSet(viewsets.ModelViewSet):
-    """
-    Admin-only viewset for managing teachers.
-    """
-    queryset = Teacher.objects.all()
-    serializer_class = TeacherSerializer
-    permission_classes = [IsAuthenticated, IsAdmin]
-    #authentication_classes = [rest_framework.authentication.TokenAuthentication]
-
-class AdminStudentViewSet(viewsets.ModelViewSet):
-    """
-    Admin-only viewset for managing students.
-    """
-    queryset = Student.objects.all()
-    serializer_class = StudentSerializer
-    permission_classes = [IsAuthenticated, IsAdmin]
-
-class AdminProgramViewSet(viewsets.ModelViewSet):
-    """
-    Admin-only viewset for managing programs.
-    """
-    queryset = Program.objects.all()
-    serializer_class = ProgramSerializer
-    permission_classes = [IsAuthenticated, IsAdmin]
-
-class AdminSubjectViewSet(viewsets.ModelViewSet):
-    """
-    Admin-only viewset for managing subjects.
-    """
-    queryset = Subject.objects.all()
-    serializer_class = SubjectSerializer
-    permission_classes = [IsAuthenticated, IsAdmin]
-
-class AdminSectionViewSet(viewsets.ModelViewSet):
-    """
-    Admin-only viewset for managing sections.
-    """
-    queryset = Section.objects.all()
-    serializer_class = SectionSerializer
-    permission_classes = [IsAuthenticated, IsAdmin]
-
-
-
-'''
-first previous 
-
-class AdminTimetableViewSet(viewsets.ModelViewSet):
-    """
-    Admin-only viewset for managing timetables across all teachers.
-    """
-    queryset = Timetable.objects.all()
-    permission_classes = [IsAuthenticated, IsAdmin]
-
-    def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']:
-            return TimetableCreateSerializer
-        return TimetableSerializer
-
-    def perform_create(self, serializer):
-        validated_data = serializer.validated_data
-        teacher = validated_data['teacher']
-        daily_schedules = validated_data['daily_schedules']
-        section = validated_data['section']
-        semester_start_date = validated_data.get('semester_start_date')
-        semester_end_date = validated_data.get('semester_end_date')
-
-        if not daily_schedules:
-            raise ValidationError("At least one daily schedule is required.")
-
-        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
-        created_timetables = []
-        for schedule in daily_schedules:
-            timetable = Timetable.objects.create(
-                section=section,
-                teacher=teacher,
-                subject=Subject.objects.get(id=schedule['subject']),
-                day_of_week=schedule['day_of_week'],
-                start_time=schedule['start_time'],
-                semester_start_date=semester_start_date,
-                semester_end_date=semester_end_date
-            )
-            created_timetables.append(timetable)
-            start_date = semester_start_date
-            end_date = semester_end_date
-            current_date = start_date
-            target_day = day_of_week_map[timetable.day_of_week]
-            while current_date <= end_date:
-                if current_date.weekday() == target_day:
-                    Session.objects.get_or_create(
-                        timetable=timetable,
-                        date=current_date,
-                        defaults={'status': 'Scheduled'}
-                    )
-                current_date += timedelta(days=1)
-
-        timetable_serializer = TimetableSerializer(created_timetables, many=True)
-        return timetable_serializer.data
-
-'''
-
-
-class AdminTimetableViewSet(viewsets.ModelViewSet):
-    queryset = Timetable.objects.all()
-    permission_classes = [IsAuthenticated, IsAdmin]
-    def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']:
-            return TimetableCreateSerializer
-        return TimetableSerializer
-
-
-
-
-
-class AdminAttendanceOverview(APIView):
-    """
-    Admin-only view to get an overview of attendance across all sections.
-    """
-    permission_classes = [IsAuthenticated, IsAdmin]
-
-    def get(self, request):
-        period = request.query_params.get('period', 'semester')
-        today = timezone.now().date()
-
-        if period == 'weekly':
-            start_date = today - timedelta(days=today.weekday())
-            end_date = start_date + timedelta(days=6)
-        elif period == 'monthly':
-            start_date = today.replace(day=1)
-            end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
-        else:  # semester
-            timetables = Timetable.objects.all()
-            start_date = min(t.semester_start_date for t in timetables) if timetables else today
-            end_date = max(t.semester_end_date for t in timetables) if timetables else today
-
-        stats = (
-            Attendance.objects.filter(session__date__gte=start_date, session__date__lte=end_date)
-            .values('session__timetable__section__name')
-            .annotate(
-                total_sessions=Count('session'),
-                present=Count('session', filter=Q(status='Present')),
-                absent=Count('session', filter=Q(status='Absent'))
-            )
-        )
-
-        response = [
-            {
-                'section': stat['session__timetable__section__name'],
-                'total_sessions': stat['total_sessions'],
-                'present': stat['present'],
-                'absent': stat['absent'],
-                'attendance_percentage': round((stat['present'] / stat['total_sessions']) * 100, 2) if stat['total_sessions'] > 0 else 0
-            }
-            for stat in stats
-        ]
-
-        return Response({
-            'period': period,
-            'start_date': start_date.isoformat(),
-            'end_date': end_date.isoformat(),
-            'stats': response
-        })
-
-class AdminHolidayManagement(generics.ListCreateAPIView):
-    """
-    Admin-only view to list and create holidays (CalendarException).
-    """
-    queryset = CalendarException.objects.all()
-    serializer_class = CalendarExceptionSerializer
-    permission_classes = [IsAuthenticated, IsAdmin]
-
-    def perform_create(self, serializer):
-        holiday = serializer.save()
-        Session.objects.filter(date=holiday.date).update(status='Cancelled')
-
-
-
-
-
-
-
 
 
 
@@ -1109,3 +924,4 @@ class AdminHolidayManagement(generics.ListCreateAPIView):
 #? ╔═══════════════════════════════════════════════════════════════════════════╗
 #? ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
 #? ╚═══════════════════════════════════════════════════════════════════════════╝
+>>>>>>>>> Temporary merge branch 2

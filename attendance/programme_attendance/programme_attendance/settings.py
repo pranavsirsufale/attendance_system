@@ -9,6 +9,7 @@
 
 from pathlib import Path
 
+APPEND_SLASH = True
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 

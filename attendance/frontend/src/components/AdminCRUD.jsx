@@ -1,10 +1,9 @@
 
 
 
+
 /*
-
-
-second prvious 
+second
 // src/components/AdminCRUD.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -25,6 +24,7 @@ function AdminCRUD({ resource }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setItems(response.data);
+      console.log(response)
       setError('');
     } catch (err) {
       setError(`Failed to fetch ${resource}: ` + (err.response?.data?.detail || 'Unknown error'));
@@ -70,14 +70,13 @@ function AdminCRUD({ resource }) {
 
 export default AdminCRUD;
 
+
+
 */
 
 
-
-/* 
-
-first previous 
-
+/*
+first 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
@@ -254,6 +253,12 @@ export default AdminCRUD;
 
 */
 
+
+
+
+
+
+
 // src/components/AdminCRUD.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
@@ -264,13 +269,12 @@ function AdminCRUD({ resource }) {
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({});
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchItems();
   }, [resource]);
-
-
 
   const fetchItems = async () => {
     const token = localStorage.getItem("access_token");
@@ -280,24 +284,25 @@ function AdminCRUD({ resource }) {
       return;
     }
     try {
+      setLoading(true);
       const response = await axios.get(`http://localhost:8000/api/admin/${resource}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setItems(response.data);
       setError("");
     } catch (err) {
+      const message = err.response?.status === 404
+        ? "Resource not found on server"
+        : err.response?.data?.detail || err.message || "Unknown error";
+      setError(`Failed to load ${resource}: ${message} (Status: ${err.response?.status})`);
       if (err.response?.status === 401 || err.response?.status === 403) {
-        setError("Unauthorized access. Please log in again.");
         navigate("/");
-      } else {
-        setError("Failed to load data: " + (err.response?.data?.detail || "Unknown error"));
       }
+    } finally {
+      setLoading(false);
     }
   };
 
-
-
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("access_token");
@@ -344,7 +349,7 @@ function AdminCRUD({ resource }) {
     const fieldMap = {
       teachers: ["first_name", "last_name", "email", "phone", "is_admin"],
       students: ["roll_number", "first_name", "last_name", "email", "phone", "section"],
-      programs: ["name", "duration_years"],  // Changed 'duration' to 'duration_years'
+      programs: ["name", "duration_years"],
       subjects: ["name", "is_law_subject", "semester", "teacher"],
       timetables: ["section", "teacher", "subject", "day_of_week", "start_time", "semester_start_date", "semester_end_date"],
       sessions: ["timetable", "date", "status"],
@@ -371,8 +376,7 @@ function AdminCRUD({ resource }) {
 
   const renderTableHeaders = () => {
     if (items.length === 0) return null;
-    const sampleItem = items[0];
-    return Object.keys(sampleItem)
+    return Object.keys(items[0])
       .filter((key) => key !== "id")
       .map((key) => (
         <th key={key} className="p-2 text-left capitalize">
@@ -391,6 +395,7 @@ function AdminCRUD({ resource }) {
       ));
   };
 
+  if (loading) return <div className="p-6">Loading {resource}...</div>;
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">
@@ -452,6 +457,4 @@ function AdminCRUD({ resource }) {
 }
 
 export default AdminCRUD;
-
-
 

@@ -868,8 +868,7 @@ def get_time_slots(request):
     return Response(time_slots)
 
 
-<<<<<<< HEAD
-=======
+
 
 
 
@@ -898,8 +897,8 @@ def get_time_slots(request):
 #? ╚═══════════════════════════════════════════════════════════════════════════╝
 
 
-'''
->>>>>>> origin/main
+
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Section, Subject, Student
@@ -987,7 +986,7 @@ class AdminSectionViewSet(viewsets.ModelViewSet):
     queryset = Section.objects.all()
     serializer_class = SectionSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
-'''
+
 
 
 '''
@@ -1051,10 +1050,11 @@ class AdminTimetableViewSet(viewsets.ModelViewSet):
 class AdminTimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated, IsAdmin]
-    def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']:
-            return TimetableCreateSerializer
-        return TimetableSerializer
+    serializer_class = TimetableSerializer
+    # def get_serializer_class(self):
+    #     if self.action in ['create', 'update', 'partial_update']:
+    #         return TimetableCreateSerializer
+    #     return TimetableSerializer
 
 
 
@@ -1143,7 +1143,6 @@ class AdminHolidayManagement(generics.ListCreateAPIView):
 #? ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
 #? ╚═══════════════════════════════════════════════════════════════════════════╝
 
-'''
 
 
 

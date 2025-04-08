@@ -974,6 +974,15 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
         is_admin = validated_data.get('is_admin' , False)
 
         # Create a new User for the teacher
+        # username = email
+        # counter = 1
+        # while User.objects.filter(username = username).exists():
+        #     username = f'{base_username}{counter}'
+        #     counter += 1
+
+        
+
+
        
         try:
             new_user = User.objects.create_user(
@@ -982,6 +991,7 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
                 password = password,
                 first_name = first_name, 
                 last_name = last_name,
+                is_superuser = is_admin
                 
 
             )
@@ -1007,6 +1017,54 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
             # Clean up the User if Teacher creation fails 
             new_user.delete()
             raise
+
+
+    def perform_update(self,serializer):
+        # Extract validated data 
+        teacher = self.get_object() # the teacher instance being updated
+        user = teacher.user # the linked user instance
+        validated_data = serializer.validated_data
+        logger.info(f"Updating teacher ID  : {teacher.id} with data : {validated_data}")
+
+
+
+        # Update User fields if provided 
+        first_name = validated_data.get('first_name' , user.first_name)
+        last_name = validated_data.get('last_name' , user.last_name)
+        email = validated_data.get('email' , user.email)
+        password = validated_data.get('password')  # May be None or Empty
+        is_admin = validated_data.get('is_admin' , teacher.is_admin)
+
+        try:
+            user.first_name = first_name
+            user.last_name = last_name
+            user.email = email
+            user.is_superuser = is_admin
+            if password:            # Only update if provided and non-empty
+                user.set_password(password)
+            user.save()
+            logger.info(f"Updated User ID : {user.id}")
+
+        except Exception as e:
+            logger.error(f"failed to update user : {str(e)}")
+            raise
+
+        # Update Teacher fields 
+        try:
+            serializer.save(
+                first_name = first_name , 
+                last_name = last_name , 
+                email = email , 
+                phone = validated_data.get('phone' , teacher.phone),
+                is_admin = is_admin
+            )
+            logger.info(f"Updated teacher ID : {teacher.id}")
+        except Exception as e:
+            logger.error(f"Failed to update teacher : {str(e)}")
+            raise
+
+
+
 
        
 

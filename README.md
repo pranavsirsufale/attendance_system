@@ -21,13 +21,13 @@
 
 ## 📋 Overview
 
-The **Law College Attendance Management System** is a comprehensive solution designed to streamline attendance tracking, reporting, and analysis for law colleges. This system helps faculty, administrators, and students manage attendance records efficiently while ensuring compliance with attendance requirements.
+The **Manikchand Pahade Law College Attendance Management System** is a comprehensive solution designed to streamline attendance tracking, reporting, and analysis for law colleges. This system helps faculty, administrators, and students manage attendance records efficiently while ensuring compliance with attendance requirements.
 
 ## 🔧 Technology Stack
 
 | Component | Technology |
 |-----------|------------|
-| **Frontend** | React.js with Material-UI components |
+| **Frontend** | React.js with Material-UI components TailwindCSS |
 | **Backend** | Django (Python) |
 | **Database** | MySQL |
 | **API** | Django REST Framework |
@@ -38,7 +38,7 @@ The **Law College Attendance Management System** is a comprehensive solution des
 
 ### 👑 For Administrators
 - **User Management**: Create and manage accounts for faculty, staff, and students
-- **Course Management**: Set up courses, batches, and sections
+- **Course Management**: Set up courses, Program, and sections
 - **Attendance Policy Configuration**: Define attendance rules and minimum attendance requirements
 - **Reporting Dashboard**: Generate comprehensive reports on attendance patterns
 - **System Configuration**: Customize system settings according to institutional requirements
@@ -48,7 +48,7 @@ The **Law College Attendance Management System** is a comprehensive solution des
 - **Class Schedule View**: See upcoming classes and attendance statistics
 - **Attendance Verification**: Review and update attendance records
 - **Student Performance Tracking**: Monitor student attendance trends
-- **Leave Management**: Process and approve student leave applications
+
 
 ### 👨‍🎓 For Students
 - **Attendance Overview**: View personal attendance records across all courses
@@ -187,8 +187,8 @@ Response:
 ### Project Structure
 
 ```
-law-college-attendance/
-├── backend/
+attendance/
+├── programme_attendance/
 │   ├── app/
 │   │   ├── models.py
 │   │   ├── views.py
@@ -294,27 +294,27 @@ Regular database backups are essential:
 
 ```bash
 # Backup MySQL database
-mysqldump -u root -p attendance_db > attendance_backup_$(date +%Y%m%d).sql
+mysqldump -u root -p law_college > attendance_backup_$(date +%Y%m%d).sql
 
 # Restore from backup
-mysql -u root -p attendance_db < attendance_backup_20250401.sql
+mysql -u root -p law_college < attendance_backup_20250401.sql
 ```
 
 ## 🆘 Support and Maintenance
 
 For technical support or system maintenance:
-- 📧 Email: [support@yourinstitution.edu](mailto:support@yourinstitution.edu)
-- ☎️ Phone: (XXX) XXX-XXXX
-- 📚 Documentation: See the [wiki](https://github.com/yourinstitution/law-college-attendance/wiki) section of this repository
+- 📧 Email: [pranavsirsfuale@gmail.com](mailto:pranavsirsfuale@gmail.com)
+- ☎️ Phone: (+91) 8482852301
+- 📚 Documentation: See the [wiki](https://github.com/pranavsirsufale/attendance_system) section of this repository
 
 ## 📃 License
 
-This software is proprietary and licensed exclusively to your law college. Unauthorized distribution, modification, or use is prohibited.
+This software is proprietary and licensed exclusively to Manikchand Pahade law college. Unauthorized distribution, modification, or use is prohibited.
 
 ## 👏 Acknowledgments
 
-- Developed by [Your Development Team](https://github.com/yourdevelopmentteam)
-- Special thanks to the faculty and administrative staff for their input and testing feedback
+- Developed by [Pranav Sirsufale](https://www.linkedin.com/in/pranav-sirsufale-488ba4269/) ,[Rohan Managar](https://github.com/RohanMagar7)
+- Special thanks to [Dr. Bharti W. Gawali](https://bamu.irins.org/profile/57209) and the faculty and administrative staff for their input and testing feedback
 
 ---
 

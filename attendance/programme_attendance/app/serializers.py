@@ -188,7 +188,11 @@ previous
 
 
 class AdminTeacherSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only = True , required = True)
+    password = serializers.CharField(write_only = True , 
+    required = False ,
+    allow_blank = True , # allow empty string, 
+    default = None      # default to None if not p
+     )
 
     class Meta:
         model = Teacher

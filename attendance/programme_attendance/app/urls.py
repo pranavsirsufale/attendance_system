@@ -35,31 +35,32 @@ router.register(r'admin-attendance-stats', views.AdminAttendanceStatsView , base
 #!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
 
-# Admin routes
-admin_router = DefaultRouter()
-admin_router.register(r'teachers', views.AdminTeacherViewSet, basename='admin-teachers')
-admin_router.register(r'students', views.AdminStudentViewSet, basename='admin-students')
-admin_router.register(r'programs', views.AdminProgramViewSet, basename='admin-programs')
-admin_router.register(r'subjects', views.AdminSubjectViewSet, basename='admin-subjects')
-admin_router.register(r'sections', views.AdminSectionViewSet, basename='admin-sections')
-admin_router.register(r'timetables', views.AdminTimetableViewSet, basename='admin-timetables')
+# Admin routes with 'admin/' prefix
+router.register(r'admin/teachers', views.AdminTeacherViewSet, basename='admin-teachers')
+router.register(r'admin/students', views.AdminStudentViewSet, basename='admin-students')
+router.register(r'admin/programs', views.AdminProgramViewSet, basename='admin-programs')
+router.register(r'admin/subjects', views.AdminSubjectViewSet, basename='admin-subjects')
+router.register(r'admin/sections', views.AdminSectionViewSet, basename='admin-sections')
+router.register(r'admin/timetables', views.AdminTimetableViewSet, basename='admin-timetables')
 
 
+# Debug router setup
+logger.info('Router registry: %s', router.registry)
+logger.info('Router URLs: %s', router.urls)
+for url in router.urls:
+    logger.info('URL Pattern: %s, Callback: %s', url.pattern, url.callback)
 
-
-
-logger.info('Admin router URLs : %s' , admin_router.urls)
 
 urlpatterns = [
+    path('', include(router.urls)),
     # path('', views.home , name = 'home')
-    #ADMIN ROUTES 
-
-    path('api/admin/', include(admin_router.urls)),
+    # Manual admin routes
+    # path('api/admin/', include((admin_router_instance.urls, 'admin'), namespace='admin')),
     path('api/admin/attendance-overview/', views.AdminAttendanceOverview.as_view(), name='admin-attendance-overview'),
     path('api/admin/holidays/', views.AdminHolidayManagement.as_view(), name='admin-holidays'),
-    
+
+
     # EXISTING ROUTES 
-    path('', include(router.urls)),
     path('calendar/', views.TeacherCalendarView.as_view(), name='teacher_calendar'),
     path('mark-attendance/<int:session_id>/', views.MarkAttendanceView.as_view(), name='mark_attendance'),
     path('holidays/', views.HolidayListCreateView.as_view(), name='holiday_list_create'),

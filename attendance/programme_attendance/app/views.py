@@ -45,6 +45,7 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(mes
 #!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
 
+
 # Create your views here.
 def home(request):
     return HttpResponse('hello world this is home')
@@ -71,9 +72,13 @@ class SubjectViewSet(AdminCRUDViewSet):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
 
+
+'''
 class SessionViewSet(AdminCRUDViewSet):
     queryset = Session.objects.all()
     serializer_class = SessionSerializer
+
+'''
 
 class AdminAttendanceStatsView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -885,16 +890,6 @@ def get_time_slots(request):
 
 
 
-
-
-
-#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-#!                       █    DEVELOPED BY PRANAV SIRSUFALE   █
-#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-
-#? ╔═══════════════════════════════════════════════════════════════════════════╗
-#? ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
-#? ╚═══════════════════════════════════════════════════════════════════════════╝
 
 
 

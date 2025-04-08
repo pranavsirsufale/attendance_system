@@ -9,6 +9,13 @@
 from rest_framework import serializers
 from .models import Teacher,Student, Subject , Program , Timetable , Session, Attendance , Section , CalendarException
 
+
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █         TEACHER SERIALIZERS        █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+
+
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
@@ -174,7 +181,22 @@ previous
 
 '''
 
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █          ADMIN SERIALIZERS         █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
+
+
+class AdminTeacherSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only = True , required = True)
+
+    class Meta:
+        model = Teacher
+        fields = ['id','first_name' , 'last_name','email' ,'phone' , 'is_admin', 'password']
+        # fields = ['id' , 'first_name' , 'last_name' , 'password' , 'email']
+        read_only_fields = ['id']
+
+        
 
 
 #                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄

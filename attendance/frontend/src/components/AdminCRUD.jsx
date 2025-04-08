@@ -347,7 +347,7 @@ function AdminCRUD({ resource }) {
 
   const renderFields = () => {
     const fieldMap = {
-      teachers: ["first_name", "last_name", "email", "phone", "is_admin"],
+      teachers: ["first_name", "last_name", "phone", "email",'password', "is_admin"],
       students: ["roll_number", "first_name", "last_name", "email", "phone", "section"],
       programs: ["name", "duration_years"],
       subjects: ["name", "is_law_subject", "semester", "teacher"],

@@ -20,11 +20,13 @@ from rest_framework.decorators import api_view , permission_classes
 from rest_framework.exceptions import ValidationError
 from app.permissions import IsAdmin
 from django.db.models import Count, Q
+from django.contrib.auth.models import User
 from datetime import datetime, timedelta
 from .models import Session , Program, Attendance, Teacher, Student, Subject, Timetable, CalendarException , Section
 from .serializers import (
     SessionSerializer, AttendanceSerializer , TimetableCreateSerializer, TeacherSerializer, StudentSerializer,
     TimetableSerializer, CalendarExceptionSerializer, ProgramSerializer , SubjectSerializer , SectionSerializer
+    , AdminTeacherSerializer
 )
 import logging
 import traceback
@@ -941,14 +943,79 @@ import rest_framework
 
 
 # --- New Admin-Specific Views ---
+
+
 class AdminTeacherViewSet(viewsets.ModelViewSet):
     """
     Admin-only viewset for managing teachers.
     """
     queryset = Teacher.objects.all()
-    serializer_class = TeacherSerializer
+    serializer_class = AdminTeacherSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
     #authentication_classes = [rest_framework.authentication.TokenAuthentication]
+
+
+    def perform_create(self,serializer):
+        # logger.info(f"Creating teacher with user_id : {self.request.user}")
+        # print(self.request.user)
+        # serializer.save(user = self.request.user)
+
+
+        validated_data = serializer.validated_data
+
+        print(validated_data)
+        email = validated_data.get('email')
+        # username = validated_data.get('username')
+        first_name = validated_data.get('first_name')
+        # username = validated_data.get('email')
+        last_name = validated_data.get('last_name')
+        phone = validated_data.get('phone','')
+        password = validated_data.get('password')
+        is_admin = validated_data.get('is_admin' , False)
+
+        # Create a new User for the teacher
+       
+        try:
+            new_user = User.objects.create_user(
+                username = email , 
+                email = email , 
+                password = password,
+                first_name = first_name, 
+                last_name = last_name,
+                
+
+            )
+            logger.info(f"created new user for teacher : {new_user.id}")
+        except Exception as e:
+            logger.error(f"failed to create user : {str(e)}")
+            raise
+
+        try:
+            teacher = Teacher.objects.create(
+                user = new_user,
+                first_name = first_name ,
+                last_name = last_name , 
+                email = email ,
+                phone = phone ,
+                is_admin = is_admin
+            )
+            logger.info(f"Created teacher with ID :{teacher.id}")
+            # set the isntance on the serializer to return it in the 
+            serializer.instance = teacher
+        except Exception as e:
+            logger.error(f"Failed to create teacher : {str(e)}")
+            # Clean up the User if Teacher creation fails 
+            new_user.delete()
+            raise
+
+       
+
+
+
+
+
+
+
 
 class AdminStudentViewSet(viewsets.ModelViewSet):
     """

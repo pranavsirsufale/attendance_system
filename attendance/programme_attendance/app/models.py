@@ -3,14 +3,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 
-# Validate lecture time slots
-# LECTURE_SLOTS = [
-#     ('08:30:00', '08:30 AM - 09:30 AM'),
-#     ('09:30:00', '09:30 AM - 10:30 AM'),
-#     ('10:30:00', '10:30 AM - 11:30 AM'),
-#     ('12:00:00', '12:00 PM - 01:00 PM'),
-#     ('13:00:00', '01:00 PM - 02:00 PM'),
-# ]
+
 
 class Timetable(models.Model):
     LECTURE_SLOTS = [

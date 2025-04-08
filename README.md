@@ -1,4 +1,4 @@
-# Law College Attendance Management System
+# Manikchand Pahade Law College, Aurangabad Attendance Management System
 
 <div align="center">
   <img src="/api/placeholder/400/200" alt="Law College Attendance System Logo" width="200"/>
@@ -21,7 +21,7 @@
 
 ## 📋 Overview
 
-The **Manikchand Pahade Law College Attendance Management System** is a comprehensive solution designed to streamline attendance tracking, reporting, and analysis for law colleges. This system helps faculty, administrators, and students manage attendance records efficiently while ensuring compliance with attendance requirements.
+The **Manikchand Pahade Law College, Aurangabad Attendance Management System** is a comprehensive solution designed to streamline attendance tracking, reporting, and analysis for law colleges. This system helps faculty, administrators, and students manage attendance records efficiently while ensuring compliance with attendance requirements.
 
 ## 🔧 Technology Stack
 
@@ -50,12 +50,7 @@ The **Manikchand Pahade Law College Attendance Management System** is a comprehe
 - **Student Performance Tracking**: Monitor student attendance trends
 
 
-### 👨‍🎓 For Students
-- **Attendance Overview**: View personal attendance records across all courses
-- **Attendance Alerts**: Receive notifications about attendance shortages
-- **Leave Applications**: Submit leave requests electronically
-- **Course-wise Statistics**: Track attendance percentage course by course
-- **Mobile Accessibility**: Access attendance information on the go
+
 
 ## 💻 System Requirements
 
@@ -70,14 +65,14 @@ The **Manikchand Pahade Law College Attendance Management System** is a comprehe
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourinstitution/law-college-attendance.git
-   cd law-college-attendance
+   git clone https://github.com/pranavsirsufale/attendance_system.git
+   cd attendance
    ```
 
 2. Create a virtual environment:
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python -m venv att
+   source att/bin/activate  # On Windows: att\Scripts\activate.bat
    ```
 
 3. Install dependencies:
@@ -100,6 +95,10 @@ The **Manikchand Pahade Law College Attendance Management System** is a comprehe
    ```
 
 5. Run migrations:
+   ```bash
+   python manage.py makemigrations
+   ```
+
    ```bash
    python manage.py migrate
    ```

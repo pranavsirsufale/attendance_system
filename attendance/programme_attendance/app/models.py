@@ -4,14 +4,23 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 
 # Validate lecture time slots
-LECTURE_SLOTS = [
+# LECTURE_SLOTS = [
+#     ('08:30:00', '08:30 AM - 09:30 AM'),
+#     ('09:30:00', '09:30 AM - 10:30 AM'),
+#     ('10:30:00', '10:30 AM - 11:30 AM'),
+#     ('12:00:00', '12:00 PM - 01:00 PM'),
+#     ('13:00:00', '01:00 PM - 02:00 PM'),
+# ]
+
+class Timetable(models.Model):
+    LECTURE_SLOTS = [
     ('08:30:00', '08:30 AM - 09:30 AM'),
     ('09:30:00', '09:30 AM - 10:30 AM'),
     ('10:30:00', '10:30 AM - 11:30 AM'),
     ('12:00:00', '12:00 PM - 01:00 PM'),
     ('13:00:00', '01:00 PM - 02:00 PM'),
-]
-
+    ]
+    start_time = models.CharField(max_length=8, choices=LECTURE_SLOTS)
 
 class Program(models.Model):
     name = models.CharField(max_length=50, unique=True)  # e.g., "BALLB 5 Yr", "LLB 3 Yr"
@@ -23,10 +32,6 @@ class Program(models.Model):
     class Meta:
         verbose_name = "Program"
         verbose_name_plural = "Programs"
-
-
-
-    
 
 class Section(models.Model):
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="sections")
@@ -55,10 +60,12 @@ class Subject(models.Model):
 
 class Teacher(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)  # Authentication
-    first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15, null=True, blank=True)
+    is_admin = models.BooleanField(default = False)
+
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -96,6 +103,15 @@ class Timetable(models.Model):
         ('Friday', 'Friday'),
         ('Saturday', 'Saturday'),
     ]
+
+    LECTURE_SLOTS = [
+    ('08:30:00', '08:30 AM - 09:30 AM'),
+    ('09:30:00', '09:30 AM - 10:30 AM'),
+    ('10:30:00', '10:30 AM - 11:30 AM'),
+    ('12:00:00', '12:00 PM - 01:00 PM'),
+    ('13:00:00', '01:00 PM - 02:00 PM'),
+    ]
+    
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="timetable")
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="timetable")
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name="timetable")
@@ -138,7 +154,10 @@ class Attendance(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="attendance")
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="attendance")
     status = models.CharField(max_length=7, choices=STATUS_CHOICES, default='Absent')
-    timestamp = models.DateTimeField(auto_now=True)
+    # timestamp = models.DateField()  # Change from DateTimeField if needed
+    # timestamp = models.DateTimeField()
+    timestamp = models.DateTimeField()  # Should store both date & time
+
     recorded_by = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name="attendance_records")
 
     def __str__(self):

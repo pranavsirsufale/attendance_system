@@ -11,6 +11,15 @@ import AdminDashboard from './components/AdminDashboard';
 import AdminCRUD from './components/AdminCRUD'; // We'll create this
 import AdminAttendanceStats from './components/AdminAttendanceStats'; // We'll create this
 import ProfileIcon from './components/ProfileIcon';
+import TeacherCRUD from './components/admin/TeacherCRUD';
+import StudentCRUD from './components/admin/StudentCRUD';
+import ProgramCRUD from './components/admin/ProgramCRUD';
+import SubjectCRUD from './components/admin/SubjectCRUD';
+import TimetableCRUD from './components/admin/TimetableCRUD';
+import SessionCRUD from './components/admin/SessionCRUD';
+
+
+
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -57,12 +66,12 @@ function App() {
           {isAdmin && (
             <>
               <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/teachers" element={<AdminCRUD resource="teachers" />} />
-              <Route path="/admin/students" element={<AdminCRUD resource="students" />} />
-              <Route path="/admin/programs" element={<AdminCRUD resource="programs" />} />
-              <Route path="/admin/subjects" element={<AdminCRUD resource="subjects" />} />
-              <Route path="/admin/timetables" element={<AdminCRUD resource="timetables" />} />
-              <Route path="/admin/sessions" element={<AdminCRUD resource="sessions" />} />
+              <Route path="/admin/teachers" element={<TeacherCRUD resource="teachers" />} />
+              <Route path="/admin/students" element={<StudentCRUD resource="students" />} />
+              <Route path="/admin/programs" element={<ProgramCRUD resource="programs" />} />
+              <Route path="/admin/subjects" element={<SubjectCRUD resource="subjects" />} />
+              <Route path="/admin/timetables" element={<TimetableCRUD resource="timetables" />} />
+              <Route path="/admin/sessions" element={<SessionCRUD resource="sessions" />} />
               <Route path="/admin/attendance-stats" element={<AdminAttendanceStats />} />
             </>
           )}

@@ -69,14 +69,15 @@ class Teacher(models.Model):
 
 class Student(models.Model):
     roll_number = models.CharField(
-        max_length=10,
+        max_length=20,
         unique=True,
-        validators=[RegexValidator(r'^(G|NG)24\d{4}$', 'Roll number must be G24xxxx or NG24xxxx')]
+        #validators=[RegexValidator(r'^(G|NG)24\d{4}$', 'Roll number must be G24xxxx or NG24xxxx')]
     )  # e.g., G240001, NG240012
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length = 15)
+    semester = models.PositiveIntegerField(null= True , blank=True)
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="students")
     subjects = models.ManyToManyField(Subject, related_name="students", blank=True)
 
@@ -171,6 +172,9 @@ class CalendarException(models.Model):
     class Meta:
         verbose_name = "Calendar Exception"
         verbose_name_plural = "Calendar Exceptions"
+
+
+
 
 
 

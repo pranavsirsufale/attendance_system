@@ -53,11 +53,14 @@ for url in router.urls:
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('admin/semesters/', views.SemestersForSectionView.as_view(), name='semesters-for-section'),
     # path('', views.home , name = 'home')
     # Manual admin routes
     # path('api/admin/', include((admin_router_instance.urls, 'admin'), namespace='admin')),
     path('api/admin/attendance-overview/', views.AdminAttendanceOverview.as_view(), name='admin-attendance-overview'),
     path('api/admin/holidays/', views.AdminHolidayManagement.as_view(), name='admin-holidays'),
+    
+
 
 
     # EXISTING ROUTES 

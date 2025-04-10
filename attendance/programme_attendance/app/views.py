@@ -26,7 +26,7 @@ from .models import Session , Program, Attendance, Teacher, Student, Subject, Ti
 from .serializers import (
     SessionSerializer, AttendanceSerializer , TimetableCreateSerializer, TeacherSerializer, StudentSerializer,
     TimetableSerializer, CalendarExceptionSerializer, ProgramSerializer , SubjectSerializer , SectionSerializer
-    , AdminTeacherSerializer
+    , AdminTeacherSerializer , AdminStudentSerializer
 )
 import logging
 import traceback
@@ -751,9 +751,6 @@ class SubjectsForSectionView(APIView):
 '''
 
 
-
-
-
 class SubjectsForSectionView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -795,11 +792,6 @@ class SubjectsForSectionView(APIView):
 
         serializer = SubjectSerializer(subjects, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-
-
-
 
 
 '''
@@ -1065,6 +1057,34 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
 
 
 
+# -- new endpoint for semester ---
+class SemestersForSectionView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        section_id = request.query_params.get('section_id')
+        if not section_id :
+            logger.warning('Missing Section_id parametr')
+            return Response({'error' : 'section_id is required '} , status = status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            section = Section.objects.get(id = int(section_id))
+            program_duration = section.program.duration_years * 2  # e.g. 3 year = 6 sem
+            start_semester = (section.year - 1 ) * 2 + 1
+            end_semester = min( start_semester + 1 , program_duration)
+            semesters = list(range(start_semester , end_semester + 1))
+            logger.debug(f"Semesters for section {section.id} (Year {section.year}, Program {section.program.name}): {semesters}")
+            return Response({'semesters' : semesters } , status = status.HTTP_200_OK)
+            
+
+        
+        except Section.DoesNotExist:
+            logger.error(f"Section id = {section_id} not found")
+            return Response({'error' : f"Section with id = {section_id}"} , status = status.HTTP_404_NOT_FOUND)
+        except ValueError:
+            logger.error(f"Invalid section_id : {section_id}")
+            return Response({'error' : 'Section_id must be an integer'} , status = status.HTTP_400_BAD_REQUEST)
+        
 
        
 
@@ -1080,8 +1100,65 @@ class AdminStudentViewSet(viewsets.ModelViewSet):
     Admin-only viewset for managing students.
     """
     queryset = Student.objects.all()
-    serializer_class = StudentSerializer
+    serializer_class = AdminStudentSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
+    
+  
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        section_id = self.request.query_params.get('section')
+        semester = self.request.query_params.get('semester')
+        if section_id:
+            queryset = queryset.filter(section__id = section_id)
+            logger.debug(f"Filterring students by section_id  = {section_id}")
+    
+        if semester : 
+            queryset = queryset.filter(semester = semester)
+            logger.debug(f"Filtering students by semester = {semester}")
+        logger.debug(f"Students queryset : {queryset.count()} items" )
+        return queryset
+    
+
+    def perform_create(self,serializer):
+        validated_data = serializer.validated_data
+
+        logger.debug(f"validated data : {validated_data}")
+
+        section = validated_data['section']  # Now words with Primary related key
+        semester = validated_data['semester']
+        roll_number = validated_data.get('roll_number') 
+
+        # Auto - generate roll number if not provided
+        if not roll_number:
+            program_prefix = 'NG' if 'BALLB' in section.program.name else 'G'
+            year_suffix = str(timezone.now().year)[-2:] # e.g. , "25" from 2025
+            # section_year = str(section.year).zfill(2)   # e.g., "03" for year 3
+
+            # Count existing students in this section for a unique sequence
+            sequence = str(Student.objects.filter(section__program=section.program).count() + 1).zfill(3)
+            # roll_number = f"{program_code}{year_suffix}{section_year}{sequence}"  # e.g., "BA2503010"
+            roll_number = f"{program_prefix}{year_suffix}{sequence}"
+
+        # Assign subjects for the specific semester 
+        subjects = Subject.objects.filter(semester =semester)
+       
+        try:
+            # save with roll_numberr explicitly
+            student = serializer.save(roll_number = roll_number)
+            student.subjects.set(subjects)
+            logger.info(f"Created student ID: {student.id} with roll_no {roll_number} and subjects: {list(subjects.values_list('name', flat=True))}")
+        except Exception as e:
+            logger.error(f"Failed to create student : {str(e)}")
+            raise
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+
+
+
+
 
 class AdminProgramViewSet(viewsets.ModelViewSet):
     """
@@ -1107,6 +1184,21 @@ class AdminSectionViewSet(viewsets.ModelViewSet):
     serializer_class = SectionSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        program_id = self.request.query_params.get('program')
+        if program_id : 
+            try:
+                program = Program.objects.get(id = program_id)
+                max_year = program.duration_years
+                queryset = queryset.filter(program__id = program_id , year__lte = max_year)
+                logger.debug(f"Filtering sections for program_id={program_id} , max_year={max_year}")
+            
+
+            except Program.DoesNotExist:
+                logger.error(f"Program id = {program_id} not found ")
+        return queryset
+    
 
 
 '''

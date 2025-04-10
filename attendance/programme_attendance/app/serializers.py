@@ -31,7 +31,7 @@ class StudentSerializer(serializers.ModelSerializer):
 class ProgramSerializer(serializers.ModelSerializer):
     class Meta:
         model = Program
-        fields = ['id' , 'name' , 'duration']
+        fields = ['id' , 'name' , 'duration_years']
      
 class SubjectSerializer(serializers.ModelSerializer):
     teacher = TeacherSerializer(read_only = True)
@@ -90,10 +90,6 @@ class AttendanceSerializer(serializers.ModelSerializer):
         fields = ['id','student','session','status','timestamp','recorded_by']
         read_only_fields = ['timestamp' , 'recorded_by']
 
-
-
-
-# serializers.py
 class TimetableCreateSerializer(serializers.Serializer):
     section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())
     teacher = serializers.PrimaryKeyRelatedField(queryset=Teacher.objects.all())
@@ -133,7 +129,6 @@ class TimetableCreateSerializer(serializers.Serializer):
                 raise serializers.ValidationError(f"Subject {subject.name} (Semester {subject.semester}) does not match selected semester {semester}")
         return data
 
-
 '''
 
 class TimetableCreateSerializer(serializers.Serializer):
@@ -174,9 +169,7 @@ class TimetableCreateSerializer(serializers.Serializer):
                 raise serializers.ValidationError(f"Subject {subject.name} (Semester {subject.semester}) does not match selected semester {semester}")
         return data
     
-
 previous 
-
 
 
 '''
@@ -184,7 +177,6 @@ previous
 #!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 #!                       █          ADMIN SERIALIZERS         █
 #!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-
 
 
 class AdminTeacherSerializer(serializers.ModelSerializer):
@@ -200,7 +192,25 @@ class AdminTeacherSerializer(serializers.ModelSerializer):
         # fields = ['id' , 'first_name' , 'last_name' , 'password' , 'email']
         read_only_fields = ['id']
 
-        
+class AdminSectionSerializer(serializers.ModelSerializer):
+    program = ProgramSerializer()
+
+    class Meta:
+        model = Section
+        fields = ['id','program','name','year']
+
+class AdminStudentSerializer(serializers.ModelSerializer):
+    # section = AdminSectionSerializer(read_only = True )
+    section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())  # Accept section ID directly
+    subjects = SubjectSerializer(many = True , read_only = True )
+
+    class Meta:
+        model = Student
+       
+        fields = ['id', 'roll_number', 'first_name', 'last_name', 'email', 'phone', 'section', 'semester', 'subjects']
+        read_only_fields = ['id', 'subjects']
+        extra_kwargs = {'roll_number' : {'required' : False , 'allow_blank' : True , 'default' : ''}}
+   
 
 
 #                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄

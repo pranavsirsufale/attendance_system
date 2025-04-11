@@ -40,7 +40,8 @@ class Section(models.Model):
         verbose_name_plural = "Sections"
 
 class Subject(models.Model):
-    name = models.CharField(max_length=100, unique=True)  # e.g., "Law of Contract I"
+    name = models.CharField(max_length=100)  # e.g., "Law of Contract I"
+    #! it was earlier unique true but changed due to some semester has repeat subjects
     is_law_subject = models.BooleanField(default=True)  # True for law, False for non-law
     semester = models.PositiveIntegerField()  # 1 to 10 (depending on program)
 

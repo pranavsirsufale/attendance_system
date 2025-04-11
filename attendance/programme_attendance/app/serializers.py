@@ -65,6 +65,8 @@ class SectionSerializer(serializers.ModelSerializer):
         model = Section
         fields = ['id', 'name', 'year', 'program', 'available_semesters']
 
+
+'''
 class TimetableSerializer(serializers.ModelSerializer):
     section = SectionSerializer()
     subject = SubjectSerializer()
@@ -74,6 +76,27 @@ class TimetableSerializer(serializers.ModelSerializer):
     class Meta:
         model = Timetable
         fields = ['id', 'section', 'teacher', 'subject', 'semester', 'day_of_week', 'start_time', 'semester_start_date', 'semester_end_date']
+
+        
+we've changed the TimetableSerializer for admin timetable here is the first one
+'''
+
+#! we've changed the TimetableSerializer for admin timetable here is the second ( modified i
+#! in case if this does not work use the first )
+
+class TimetableSerializer(serializers.ModelSerializer):
+    section = SectionSerializer(read_only=True)
+    section_id = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all(), source='section', write_only=True)
+    teacher = TeacherSerializer(read_only=True)
+    teacher_id = serializers.PrimaryKeyRelatedField(queryset=Teacher.objects.all(), source='teacher', write_only=True)
+    subject = SubjectSerializer(read_only=True)
+    subject_id = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all(), source='subject', write_only=True)
+
+    class Meta:
+        model = Timetable
+        fields = ['id', 'section', 'section_id', 'teacher', 'teacher_id', 'subject', 'subject_id', 'day_of_week', 'start_time', 'semester_start_date', 'semester_end_date']
+
+
 
 class SessionSerializer(serializers.ModelSerializer):
     timetable = TimetableSerializer(read_only=True)

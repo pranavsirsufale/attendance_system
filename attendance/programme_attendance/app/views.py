@@ -18,6 +18,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import api_view , permission_classes
 from rest_framework.exceptions import ValidationError
+from rest_framework.pagination import PageNumberPagination
 from app.permissions import IsAdmin
 from django.db.models import Count, Q
 from django.contrib.auth.models import User
@@ -1176,6 +1177,18 @@ class AdminSubjectViewSet(viewsets.ModelViewSet):
     serializer_class = SubjectSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
 
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        semester = self.request.query_params.get('semester')
+        if semester:
+            try:
+                queryset = queryset.filter(semester = int(semester))
+            except ValueError:
+                ### Handle invalid semester value gracefully
+                queryset = queryset.none()
+        return queryset
+
 class AdminSectionViewSet(viewsets.ModelViewSet):
     """
     Admin-only viewset for managing sections.
@@ -1201,13 +1214,14 @@ class AdminSectionViewSet(viewsets.ModelViewSet):
     
 
 
+
+
+
 '''
-first previous 
+previous one without update funcionlity
 
 class AdminTimetableViewSet(viewsets.ModelViewSet):
-    """
-    Admin-only viewset for managing timetables across all teachers.
-    """
+    
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -1256,21 +1270,126 @@ class AdminTimetableViewSet(viewsets.ModelViewSet):
         timetable_serializer = TimetableSerializer(created_timetables, many=True)
         return timetable_serializer.data
 
-'''
 
+        
+'''
 
 class AdminTimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
+    permission_classes = [IsAuthenticated , IsAdmin]
+
+    def get_serializer_class(self):
+        if self.action in ['create' , 'update' , 'partial_update']:
+            return TimetableCreateSerializer # Use for wirte operation
+        return TimetableSerializer ### Use for read operation
+    
+
+    def perform_create(self,serializer):
+        validated_data = serializer.validated_data
+        teacher = validated_data['teacher']
+        daily_schedules = validated_data['daily_schedules']
+        section = validated_data['section']
+        semester_start_date = validated_data.get('semester_start_date')
+        semester_end_date = validated_data.get('semester_end_date')
+
+        if not daily_schedules:
+            raise ValidationError('At least one daily schedules is required ')
+
+
+        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
+        created_timetables = []
+
+        for schedule in daily_schedules:
+            timetable = Timetable.objects.create(
+                section = section , 
+                teacher = teacher , 
+                subject = Subject.objects.get(id = schedule['subject']),
+                day_of_week = schedule['day_of_week'] , 
+                start_time = schedule['start_time'],
+                semester_start_date = semester_start_date , 
+                semester_end_date = semester_end_date
+            )
+            created_timetables.append(timetable)
+            start_date = semester_start_date
+            end_date = semester_end_date
+            current_date = start_date 
+            target_day = day_of_week_map[timetable.day_of_week]
+            while current_date <= end_date:
+                if current_date.weekday() == target_day:
+                    Session.objects.get_or_create(
+                        timetable = timetable , 
+                        date = current_date, 
+                        defaults = {'status' :'Scheduled'}
+                    )
+                current_date += timedelta(days = 1)
+
+        # REturn serialized data for reponse
+        timetable_serializer = TimetableSerializer(created_timetables , many = True)
+        self.response_data = timetable_serializer.data # Store for response 
+
+    
+    def create(self,request,*args,**kwargs):
+        serializer = self.get_serializer(data = request.data)
+        serializer.is_valid(raise_exception = True)
+        self.perform_create(serializer)
+        return Response(self.response_data, status = status.HTTP_201_CREATED)
+    
+
+
+    def perform_update(self,serializer):
+        instance = serializer.instance
+        Session.objects.filter(timetable = instance).delete()
+        serializer.save()
+        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
+        start_date = instance.semester_start_date
+        end_date = instance.semester_end_date
+        current_date = start_date
+        target_day = day_of_week_map[instance.day_of_week]
+        while current_date <= end_date:
+            if current_date.weekday() == target_day :
+                Session.objects.get_or_create(
+                    timetable = instance ,
+                    date = current_date , 
+                    defaults = {'status' , 'Scheduled'}
+                )
+            current_date += timedelta(days = 1)
+
+    
+    def destroy(self,request , *args,**kwargs):
+        instance = self.get_object()
+        Session.objects.filter(timetable = instance).delete() ### Clear sessions
+        self.perform_destroy(instance)
+        return Response(status = status.HTTP_204_NO_CONTENT)
+    
+
+
+
+# Ensure semester For Section View is unchanged and works
+class SemestersForSectionView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
-    serializer_class = TimetableSerializer
-    # def get_serializer_class(self):
-    #     if self.action in ['create', 'update', 'partial_update']:
-    #         return TimetableCreateSerializer
-    #     return TimetableSerializer
 
+    def get(self, request):
+        section_id = request.query_params.get('section_id')
+        if not section_id:
+            logger.warning('Missing section_id parameter')
+            return Response({'error': 'section_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            section = Section.objects.get(id=int(section_id))
+            program_duration = section.program.duration_years * 2
+            start_semester = (section.year - 1) * 2 + 1
+            end_semester = min(start_semester + 1, program_duration)
+            semesters = list(range(start_semester, end_semester + 1))
+            logger.debug(f"Semesters for section {section.id}: {semesters}")
+            return Response({'semesters': semesters}, status=status.HTTP_200_OK)
+        except Section.DoesNotExist:
+            logger.error(f"Section id={section_id} not found")
+            return Response({'error': f"Section with id={section_id} not found"}, status=status.HTTP_404_NOT_FOUND)
+        except ValueError:
+            logger.error(f"Invalid section_id: {section_id}")
+            return Response({'error': 'section_id must be an integer'}, status=status.HTTP_400_BAD_REQUEST)      
 
-
-
+        
 
 class AdminAttendanceOverview(APIView):
     """
@@ -1336,8 +1455,56 @@ class AdminHolidayManagement(generics.ListCreateAPIView):
 
 
 
+class SessionPagination(PageNumberPagination):
+    page_size = 20 # default batch size 
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 
+
+# this admin SEssions view set can be used for all sessionsgetting
+'''
+
+
+class AdminSessionViewSet(viewsets.ModelViewSet):
+   
+    queryset = Session.objects.all()
+    serializer_class = SessionSerializer
+    permission_classes = [IsAuthenticated , IsAdmin]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        section_id = self.request.query_params.get('section_id')
+        if section_id:
+            queryset = queryset.filter(timetable__section_id = section_id)
+        return queryset
+    
+
+
+'''
+
+
+
+class AdminSessionViewSet(viewsets.ModelViewSet):
+    queryset = Session.objects.all()
+    serializer_class = SessionSerializer
+    permission_classes = [IsAuthenticated , IsAdmin]
+    pagination_class = SessionPagination # ADd pagination
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        section_id = self.request.query_params.get('section_id')
+        teacher_id = self.request.query_params.get('teacher_id') # add teacher filter
+        semester = self.request.query_params.get('semester')        # add semester filter
+
+        if section_id :
+            queryset = queryset.filter( timetable__section_id = section_id)
+        if teacher_id :
+            queryset = queryset.filter( timetable__teacher_id = teacher_id)
+        if semester :
+            queryset = queryset.filter( timetable__subject__semester = semester)
+
+        return queryset.order_by('date') # Order for consistency
 
 
 

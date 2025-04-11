@@ -42,6 +42,7 @@ router.register(r'admin/programs', views.AdminProgramViewSet, basename='admin-pr
 router.register(r'admin/subjects', views.AdminSubjectViewSet, basename='admin-subjects')
 router.register(r'admin/sections', views.AdminSectionViewSet, basename='admin-sections')
 router.register(r'admin/timetables', views.AdminTimetableViewSet, basename='admin-timetables')
+router.register(r'admin/sessions' , views.AdminSessionViewSet, basename = 'admin-sessions')
 
 
 # Debug router setup
@@ -54,12 +55,14 @@ for url in router.urls:
 urlpatterns = [
     path('', include(router.urls)),
     path('admin/semesters/', views.SemestersForSectionView.as_view(), name='semesters-for-section'),
+    path('semesters-for-section/' , views.SemestersForSectionView.as_view() ,name = 'semesters-for-section' ),
+    # path('api/semesterd-for-section' , views.SemestersForSectionView.as_view() , name = 'semester-for-section'),
     # path('', views.home , name = 'home')
     # Manual admin routes
     # path('api/admin/', include((admin_router_instance.urls, 'admin'), namespace='admin')),
     path('api/admin/attendance-overview/', views.AdminAttendanceOverview.as_view(), name='admin-attendance-overview'),
     path('api/admin/holidays/', views.AdminHolidayManagement.as_view(), name='admin-holidays'),
-    
+ 
 
 
 
@@ -75,7 +78,7 @@ urlpatterns = [
     path('subjects/', views.get_subjects, name='get_subjects'),
     path('time-slots/', views.get_time_slots, name='get_time_slots'),
     path('subjects-for-section/', views.get_subjects_for_section, name='get_subjects_for_section'),
-    path('section-semester-wise/', SectionSemesterWiseDataView.as_view(), name='section_semester_wise'),
+    path('section-semester-wise/', views.SectionSemesterWiseDataView.as_view(), name='section_semester_wise'),
 
     ]
 

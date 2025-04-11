@@ -1,3 +1,13 @@
+
+
+
+
+
+
+
+
+/*
+
 // src/components/admin/TeacherCRUD.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
@@ -148,3 +158,5 @@ function TeacherCRUD() {
 }
 
 export default TeacherCRUD;
+
+*/

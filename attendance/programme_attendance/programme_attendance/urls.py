@@ -1,3 +1,14 @@
+
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █    DEVELOPED BY PRANAV SIRSUFALE   █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+#? ╔═══════════════════════════════════════════════════════════════════════════╗
+#? ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
+#? ╚═══════════════════════════════════════════════════════════════════════════╝
+
+
+
 from django.contrib import admin
 from django.urls import path , include
 from rest_framework_simplejwt.views import TokenObtainPairView , TokenRefreshView
@@ -11,3 +22,12 @@ urlpatterns = [
     path('api/token?refresh/',TokenRefreshView.as_view() , name = 'token_refresh')
     
 ]
+
+
+#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#!                       █    DEVELOPED BY PRANAV SIRSUFALE   █
+#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+#? ╔═══════════════════════════════════════════════════════════════════════════╗
+#? ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
+#? ╚═══════════════════════════════════════════════════════════════════════════╝

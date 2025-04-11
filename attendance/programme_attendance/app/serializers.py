@@ -66,7 +66,7 @@ class SectionSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'year', 'program', 'available_semesters']
 
 
-'''
+
 class TimetableSerializer(serializers.ModelSerializer):
     section = SectionSerializer()
     subject = SubjectSerializer()
@@ -77,10 +77,12 @@ class TimetableSerializer(serializers.ModelSerializer):
         model = Timetable
         fields = ['id', 'section', 'teacher', 'subject', 'semester', 'day_of_week', 'start_time', 'semester_start_date', 'semester_end_date']
 
-        
+'''
 we've changed the TimetableSerializer for admin timetable here is the first one
 '''
 
+
+'''
 #! we've changed the TimetableSerializer for admin timetable here is the second ( modified i
 #! in case if this does not work use the first )
 
@@ -96,7 +98,9 @@ class TimetableSerializer(serializers.ModelSerializer):
         model = Timetable
         fields = ['id', 'section', 'section_id', 'teacher', 'teacher_id', 'subject', 'subject_id', 'day_of_week', 'start_time', 'semester_start_date', 'semester_end_date']
 
+'''
 
+        
 
 class SessionSerializer(serializers.ModelSerializer):
     timetable = TimetableSerializer(read_only=True)
@@ -234,6 +238,73 @@ class AdminStudentSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'subjects']
         extra_kwargs = {'roll_number' : {'required' : False , 'allow_blank' : True , 'default' : ''}}
    
+
+
+# New serializer for admin updates
+class AdminTimetableSerializer(serializers.ModelSerializer):
+    section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())
+    teacher = serializers.PrimaryKeyRelatedField(queryset=Teacher.objects.all())
+    semester = serializers.IntegerField(write_only=True)
+    daily_schedules = DailyScheduleSerializer(many=True, write_only=True)  # Write-only
+    semester_start_date = serializers.DateField()
+    semester_end_date = serializers.DateField()
+
+    class Meta:
+        model = Timetable
+        fields = ['id', 'section', 'teacher', 'semester', 'daily_schedules', 'semester_start_date', 'semester_end_date']
+
+    def validate(self, data):
+        section = data['section']
+        semester = data['semester']
+        program_duration = section.program.duration_years * 2
+        start_semester = (section.year - 1) * 2 + 1
+        end_semester = min(section.year * 2, program_duration)
+        if semester < start_semester or semester > end_semester:
+            raise serializers.ValidationError(f"Semester {semester} is not valid for {section} (valid range: {start_semester}-{end_semester})")
+        for schedule in data['daily_schedules']:
+            subject = schedule['subject']
+            if subject.semester != semester:
+                raise serializers.ValidationError(f"Subject {subject.name} (Semester {subject.semester}) does not match selected semester {semester}")
+        return data
+
+    def update(self, instance, validated_data):
+        # Delete all related timetables for this section/teacher/semester range
+        section = validated_data.get('section', instance.section)
+        teacher = validated_data.get('teacher', instance.teacher)
+        semester_start_date = validated_data.get('semester_start_date', instance.semester_start_date)
+        semester_end_date = validated_data.get('semester_end_date', instance.semester_end_date)
+        
+        Timetable.objects.filter(
+            section=section,
+            teacher=teacher,
+            semester_start_date=semester_start_date,
+            semester_end_date=semester_end_date
+        ).delete()
+
+        # Create new timetables based on daily_schedules
+        daily_schedules = validated_data.get('daily_schedules', [])
+        created_timetables = []
+        for schedule in daily_schedules:
+            timetable = Timetable.objects.create(
+                section=section,
+                teacher=teacher,
+                subject=schedule['subject'],
+                day_of_week=schedule['day_of_week'],
+                start_time=schedule['start_time'],
+                semester_start_date=semester_start_date,
+                semester_end_date=semester_end_date
+            )
+            created_timetables.append(timetable)
+
+        # Store created timetables for response
+        self.context['created_timetables'] = created_timetables
+        return created_timetables[0] if created_timetables else instance   
+
+
+
+
+
+
 
 
 #                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄

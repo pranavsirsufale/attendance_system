@@ -77,7 +77,9 @@ urlpatterns = [
     path('sections/', views.get_sections, name='get_sections'),
     path('subjects/', views.get_subjects, name='get_subjects'),
     path('time-slots/', views.get_time_slots, name='get_time_slots'),
-    path('subjects-for-section/', views.get_subjects_for_section, name='get_subjects_for_section'),
+    # path('subjects-for-section/', views.get_subjects_for_section, name='get_subjects_for_section'),
+    path('subjects-for-section/', views.SubjectsForSectionView.as_view(), name='get_subjects_for_section'),
+
     path('section-semester-wise/', views.SectionSemesterWiseDataView.as_view(), name='section_semester_wise'),
 
     ]

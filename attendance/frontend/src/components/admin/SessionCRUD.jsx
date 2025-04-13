@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-function SessionCRUD() {
+function SessionCRUD({notifyUser}) {
   const [items, setItems] = useState([]);
   const [timetables, setTimetables] = useState([]);
   const [teachers, setTeachers] = useState([]);
@@ -46,14 +46,19 @@ function SessionCRUD() {
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log("Sessions fetched:", response.data);
+      console.log("Sessions fetched:", response);
       setItems(response.data.results || response.data);
       setTotalPages(Math.ceil((response.data.count || response.data.length) / pageSize));
       setError("");
+      
+      if( response.status >= 200 && response.status <= 300 ){
+        notifyUser(response.data.message || `${response.data.count || 0 } Records found ✅`,'info')
+      }
     } catch (err) {
       const message = err.response?.status === 404 ? "Resource not found" : err.response?.data?.detail || "Unknown error";
       setError(`Failed to load ${resource}: ${message}`);
-      console.error("Fetch error:", err.response?.data || err.message);
+      notifyUser(`Failed to load ${resource}: ${message}` , 'error');
+
       if (err.response?.status === 401 || err.response?.status === 403) navigate("/");
     } finally {
       setLoading(false);
@@ -68,8 +73,10 @@ function SessionCRUD() {
       });
       setTeachers(response.data);
       console.log("Teachers fetched:", response.data);
+      
+      
     } catch (err) {
-      console.error("Teachers fetch error:", err.response?.data || err.message);
+      notifyUser("Teachers fetch error:"+err.response?.data || err.message ,'error');
     }
   };
 
@@ -82,7 +89,7 @@ function SessionCRUD() {
       setTimetables(response.data);
       console.log("Timetables fetched:", response.data);
     } catch (err) {
-      console.error("Timetables fetch error:", err.response?.data || err.message);
+      notifyUser("Timetables fetch error:" + err.response?.data || err.message,'error');
     }
   };
 
@@ -96,7 +103,8 @@ function SessionCRUD() {
       setSemesters(uniqueSemesters);
       console.log("Semesters fetched:", uniqueSemesters);
     } catch (err) {
-      console.error("Semesters fetch error:", err.response?.data || err.message);
+      
+      notifyUser("Semesters fetch error:" + err.response?.data || err.message, 'error') ;
     }
   };
 
@@ -106,19 +114,26 @@ function SessionCRUD() {
     try {
       console.log("Submitting:", formData);
       if (editingId) {
-        await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, formData, {
+        const response = await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        if( response.status >= 200 && response.status <= 300 ){
+          notifyUser(response.data.message || `Record has been updated successfully ✅ `,'success')
+        }
       } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, formData, {
+        const response = await axios.post(`http://localhost:8000/api/admin/${resource}/`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        if( response.status >= 200 && response.status <= 300 ){
+          notifyUser(response.data.message || "Record has been saved successfully ✅ ",'success')
+        }
       }
       setFormData({ timetable: "", date: "", status: "" });
       setEditingId(null);
       fetchItems();
     } catch (err) {
       setError("Failed to save data: " + JSON.stringify(err.response?.data || "Unknown error"));
+      notifyUser("Failed to save data: " + JSON.stringify(err.response?.data || "Unknown error") , 'error');
       console.error("Submit error:", err.response?.data || err.message);
     }
   };
@@ -131,6 +146,7 @@ function SessionCRUD() {
       status: item.status,
     });
     setEditingId(item.id);
+    notifyUser('Record has been fetched successfully ✅ ','info')
   };
 
   const handleDelete = async (id) => {
@@ -140,10 +156,13 @@ function SessionCRUD() {
         await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        if( response.status >= 200 && response.status <= 300 ){
+          notifyUser(response.data.message || 'Record has been deleted successfully ⚠ ','warning')
+        }
         fetchItems();
       } catch (err) {
         setError("Failed to delete: " + (err.response?.data?.detail || "Unknown error"));
-        console.error("Delete error:", err.response?.data || err.message);
+        notifyUser("Failed to delete: " + (err.response?.data?.detail || "Unknown error") , 'error' );
       }
     }
   };

@@ -158,6 +158,9 @@ function TimetableForm({ onClose }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log('Response:', response.data);
+      if ( response.status === 200){
+        notifyUser(response.data.message || `The Timetable Has Been Created for the section : ${section} , semester : ${semester} , The Duration of the Semester has been set from ${semesterStart} to ${semesterEnd} 📅 ` , 'info' )
+      }
       setSuccess('Semester timetable created successfully');
       setError('');
       setTimeout(onClose, 2000);
@@ -165,6 +168,7 @@ function TimetableForm({ onClose }) {
       console.error('Error response:', err.response ? err.response.data : err.message);
       setError(err.response?.data?.detail || 'Failed to create timetable');
       setSuccess('');
+      notifyUser(err.response?.data?.detail || 'Failed to create timetable ❌' , 'error')
     }
   };
 

@@ -5,7 +5,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-function TimetableCRUD() {
+function TimetableCRUD({notifyUser}) {
   const [items, setItems] = useState([]);
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
@@ -48,9 +48,14 @@ function TimetableCRUD() {
       });
       setItems(response.data);
       setError("");
+      if(response.status >= 200 && response.status <= 300){
+        notifyUser(response.data?.message || response.data.length + ' Records found ✅', 'info')
+
+      }
     } catch (err) {
       const message = err.response?.status === 404 ? "Resource not found" : err.response?.data?.detail || "Unknown error";
       setError(`Failed to load ${resource}: ${message}`);
+      notifyUser(`Failed to load ${resource}: ${message}` , 'error')
       if (err.response?.status === 401 || err.response?.status === 403) navigate("/");
     } finally {
       setLoading(false);
@@ -64,8 +69,11 @@ function TimetableCRUD() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSections(response.data);
+
+      
+
     } catch (err) {
-      console.error("Sections fetch error:", err.response?.data || err.message);
+      notifyUser("Sections fetch error:", err.response?.data || err.message , 'error');
     }
   };
 
@@ -196,13 +204,23 @@ function TimetableCRUD() {
       };
       console.log("Submitting payload:", payload);
       if (editingId) {
-        await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
+        const response = await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        
+      if( response.status >= 200 && response.status <= 300 ){
+        notifyUser(response.data.message || 'Record has been updated successfully ✅','success')
+      }
       } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
+        const response = await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        
+        
+      if( response.status >= 200 && response.status <= 300 ){
+        notifyUser(response.data.message || `Record has been saved successfully ✅`,'success')
+      }
       }
       resetForm();
       fetchItems();
@@ -228,19 +246,24 @@ function TimetableCRUD() {
       semester_end_date: item.semester_end_date,
     });
     setEditingId(item.id);
+    notifyUser('Record has been fetched successfully ✅' , 'info')
   };
 
   const handleDelete = async (id) => {
     const token = localStorage.getItem("access_token");
     if (window.confirm("Are you sure you want to delete this timetable?")) {
       try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        const response = await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        
+      if( response.status >= 200 && response.status <= 300 ){
+        notifyUser(response.data.message || 'Record has been deleted succssfully ⚠ ','warning')
+      }
         fetchItems();
       } catch (err) {
         setError("Failed to delete: " + (err.response?.data?.detail || "Unknown error"));
-        console.error("Delete error:", err.response?.data || err.message);
+        notifyUser("Failed to delete: " + (err.response?.data?.detail || "Unknown error") , 'error');
       }
     }
   };

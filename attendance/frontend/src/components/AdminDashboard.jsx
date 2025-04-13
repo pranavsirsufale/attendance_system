@@ -4,7 +4,7 @@ import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-function AdminDashboard() {
+function AdminDashboard({notifyUser}) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -36,6 +36,7 @@ function AdminDashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
+    notifyUser('logged out successfully 🔐 ' ,'warning')
     navigate("/");
   };
 

@@ -6,7 +6,7 @@ import { FaUserCircle, FaSignOutAlt, FaUserTag, FaClock } from 'react-icons/fa';
 import { MdAccessTime } from 'react-icons/md';
 import { motion, AnimatePresence } from 'framer-motion';
 
-function ProfileIcon() {
+function ProfileIcon({notifyUser}) {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -24,6 +24,8 @@ function ProfileIcon() {
         const response = await axios.get('http://localhost:8000/api/teacher-info/', {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        console.log(response)
         const last_login = convertToIndianFormat(response.data.last_login);
         const token_expiry = convertToIndianFormat(response.data.token_expiry);
         const data = { ...response.data, last_login, token_expiry };
@@ -31,6 +33,8 @@ function ProfileIcon() {
         setError('');
       } catch (err) {
         console.error('Failed to load profile:', err);
+        notifyUser('Failed to load profile:'+ err , 'error');
+        
         setError('Failed to load profile');
         navigate('/');
       }
@@ -73,6 +77,7 @@ function ProfileIcon() {
     setProfile(null);
     setShowDropdown(false);
     navigate('/');
+    notifyUser('logged out successfully 🔐' , 'warning')
   };
 
   return (

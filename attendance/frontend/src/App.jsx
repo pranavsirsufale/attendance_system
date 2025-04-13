@@ -22,12 +22,94 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaChalkboardTeacher } from 'react-icons/fa';
 import LandingPage from './components/pages/LandingPage';
 import { Switch } from '@headlessui/react';
+import { Bounce, toast , ToastContainer } from 'react-toastify';
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isLanding, setIsLanding] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  const [notification,setNotification] = useState('')
+
+  const notifyUser = (msg , type ) => {
+    if ( type === 'success'){
+      const notifySuccess = (msg) => toast.success(msg , {
+        position: "bottom-left",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "dark",
+        transition: Bounce,
+        })
+     
+      notifySuccess(msg)
+    }
+    if ( type === 'warning'){
+      const warnUser = (msg) => toast.warning(msg , {
+        position: "bottom-left",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "dark",
+        transition: Bounce,
+        })
+      warnUser(msg)
+    }
+    if ( type === 'error'){
+      const notifyError = (msg) => toast.error(msg , {
+        position: "bottom-left",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "dark",
+        transition: Bounce,
+        })
+      notifyError(msg)
+    }
+    if ( type === 'default'){
+      const notify = (msg) => toast(msg , {
+        position: "bottom-left",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "dark",
+        transition: Bounce,
+        })
+      notify(msg)
+
+    }
+    if (type === 'info') {
+      const informUser = (msg) => toast.info(msg , {
+        position: "bottom-left",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "dark",
+        transition: Bounce,
+        })
+      informUser(msg)
+    }
+   
+  } 
+
+  // const notify = (msg) => toast.success(msg)
+
+  console.log(notification)
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -146,27 +228,41 @@ function App() {
 
 
 
-                    <ProfileIcon />
+                    <ProfileIcon notifyUser={notifyUser} />
                   </div>
                 </nav>
 
+                <ToastContainer
+position="top-right"
+autoClose={5000}
+hideProgressBar={false}
+newestOnTop={false}
+closeOnClick={false}
+rtl={false}
+pauseOnFocusLoss
+draggable
+pauseOnHover
+theme="dark"
+transition={Bounce}
+/>
+
                 <AnimatePresence mode="wait">
                   <Routes>
-                    <Route path="/" element={<Login />} />
-                    <Route path="/calendar" element={<Calendar admin={isAdmin} />} />
-                    <Route path="/attendance/:sessionId" element={<AttendanceForm onClose={() => window.history.back()} />} />
-                    <Route path="/timetable" element={<TimetableForm onClose={() => window.history.back()} />} />
-                    <Route path="/attendance-stats" element={<AttendanceStats />} />
+                    <Route path="/" element={<Login notifyUser={notifyUser}  />} />
+                    <Route path="/calendar" element={<Calendar admin={isAdmin} notifyUser={notifyUser} />} />
+                    <Route path="/attendance/:sessionId" element={<AttendanceForm notifyUser={notifyUser} onClose={() => window.history.back()} />} />
+                    <Route path="/timetable" element={<TimetableForm notifyUser={notifyUser} onClose={() => window.history.back()} />} />
+                    <Route path="/attendance-stats" element={<AttendanceStats notifyUser={notifyUser} />} />
                     {isAdmin && (
                       <>
-                        <Route path="/admin" element={<AdminDashboard />} />
-                        <Route path="/admin/teachers" element={<TeacherCRUD resource="teachers" />} />
-                        <Route path="/admin/students" element={<StudentCRUD resource="students" />} />
-                        <Route path="/admin/programs" element={<ProgramCRUD resource="programs" />} />
-                        <Route path="/admin/subjects" element={<SubjectCRUD resource="subjects" />} />
-                        <Route path="/admin/timetables" element={<TimetableCRUD resource="timetables" />} />
-                        <Route path="/admin/sessions" element={<SessionCRUD resource="sessions" />} />
-                        <Route path="/admin/attendance-stats" element={<AdminAttendanceStats />} />
+                        <Route path="/admin" element={<AdminDashboard notifyUser={notifyUser} />} />
+                        <Route path="/admin/teachers" element={<TeacherCRUD resource="teachers" notifyUser={notifyUser} />} />
+                        <Route path="/admin/students" element={<StudentCRUD notifyUser={notifyUser}  resource="students" />} />
+                        <Route path="/admin/programs" element={<ProgramCRUD  notifyUser={notifyUser} resource="programs" />} />
+                        <Route path="/admin/subjects" element={<SubjectCRUD notifyUser={notifyUser} resource="subjects" />} />
+                        <Route path="/admin/timetables" element={<TimetableCRUD notifyUser={notifyUser} resource="timetables" />} />
+                        <Route path="/admin/sessions" element={<SessionCRUD notifyUser={notifyUser} resource="sessions" />} />
+                        <Route path="/admin/attendance-stats" element={<AdminAttendanceStats notifyUser={notifyUser} />} />
                       </>
                     )}
                   </Routes>

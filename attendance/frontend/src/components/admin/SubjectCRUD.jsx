@@ -6,7 +6,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-function SubjectCRUD() {
+function SubjectCRUD({notifyUser}) {
   const [items, setItems] = useState([]);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({});
@@ -32,10 +32,15 @@ function SubjectCRUD() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setItems(response.data);
+      if(response.status >= 200 && response.status <= 300){
+        notifyUser(`${response.data.length} records found` , 'info')
+      }
       setError("");
     } catch (err) {
       const message = err.response?.status === 404 ? "Resource not found" : err.response?.data?.detail || "Unknown error";
       setError(`Failed to load ${resource}: ${message}`);
+
+      notifyUser(`Failed to load ${resource}: ${message}`,'error')
       if (err.response?.status === 401 || err.response?.status === 403) navigate("/");
     } finally {
       setLoading(false);
@@ -52,13 +57,20 @@ function SubjectCRUD() {
         semester: parseInt(formData.semester),
       };
       if (editingId) {
-        await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
+        const response = await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        if(response.status >= 200 && response.status <= 300){
+          notifyUser('Record has been updated successfully ' , 'info')
+        }
       } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
+        const response = await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if(response.status >= 200 && response.status <= 300){
+          notifyUser('Record has been saved successfully ' , 'success')
+        }
       }
       setFormData({});
       setEditingId(null);
@@ -71,18 +83,25 @@ function SubjectCRUD() {
   const handleEdit = (item) => {
     setFormData(item);
     setEditingId(item.id);
+    notifyUser('Record has been fetched successfully ✅' , 'info')
   };
 
   const handleDelete = async (id) => {
     const token = localStorage.getItem("access_token");
     if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
       try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        const response = await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setItems(items.filter((item) => item.id !== id));
+
+        if(response.status >= 200 && response.status <= 300){
+          notifyUser('Record has removed successfully ' , 'warning')
+        }
+
       } catch (err) {
         setError("Failed to delete: " + (err.response?.data?.detail || "Unknown error"));
+        notifyUser("Failed to delete: " + (err.response?.data?.detail || "Unknown error"),'error');
       }
     }
   };

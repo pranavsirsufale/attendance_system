@@ -960,7 +960,6 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
 
         validated_data = serializer.validated_data
 
-        print(validated_data)
         email = validated_data.get('email')
         # username = validated_data.get('username')
         first_name = validated_data.get('first_name')
@@ -1059,6 +1058,26 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Failed to update teacher : {str(e)}")
             raise
+
+
+    def destroy(self,request , *args,**kwargs):
+        teacher = self.get_object()
+        user = teacher.user
+        logger.info(f"Deleting teaching ID : {teacher.id} and associated user ID: {user.id}")
+
+        try:
+            # Delete the teacher instance
+            teacher.delete()
+            logger.info(f"Delete teacher ID : {teacher.id}")
+
+            # Delete the associated User instance
+            user.delete()
+            logger.info(f"Deleted user ID : {user.id}")
+
+            return Response(status = status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            logger.error(f"Failed to delete teacher/user : {str(e)}")
+            return Response({"error" : f"Failed to delete : {str(e)}"})
 
 
 

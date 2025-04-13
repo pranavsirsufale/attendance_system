@@ -5,7 +5,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-function StudentCRUD() {
+function StudentCRUD({notifyUser}) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [programs, setPrograms] = useState([]);
@@ -125,9 +125,13 @@ function StudentCRUD() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setStudents(response.data);
-      console.log(`Students for section ${sectionId}, semester ${semester}:`, response.data);
+      if(response.status === 200){
+        notifyUser(`${response.data.length} records found successfully for the semester ${semester}` , 'info')
+      }
+   console.log(response)
     } catch (err) {
       setError(`Failed to load students: ${err.response?.data?.detail || err.message}`);
+      notifyUser(`Failed to load students: ${err.response?.data?.detail || err.message}` , 'error');
     }
   };
 
@@ -154,12 +158,19 @@ function StudentCRUD() {
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        console.log("Student updated:", response.data);
+        
+        if(response.status >= 200 && response.status <= 300){
+          notifyUser(response.data.message || 'User record has been updated' , 'info')
+        }
+
       } else {
         const response = await axios.post("http://localhost:8000/api/admin/students/", payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log("Student created with roll_number:", response.data.roll_number);
+        if(response.status >= 200 && response.status <= 300){
+        notifyUser("Student created with roll_number succesfully:" +  response.data.roll_number , 'success');
+        }
+      
       }
       resetFormAndLists();
       setFormData({ ...formData, first_name: "", last_name: "", email: "", phone: "", roll_number: "", section: formData.section, semester: formData.semester });

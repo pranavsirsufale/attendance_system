@@ -7,11 +7,13 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaSignInAlt } from 'react-icons/fa';
 
-function Login() {
+
+function Login({setNotification , notifyUser}) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -20,6 +22,13 @@ function Login() {
         username,
         password,
       });
+      
+      console.log(response)
+      if ( response.status === 200){
+        notifyUser('Logged in Succcessfully 👀 ' , 'success')
+
+      }
+
 
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
@@ -33,6 +42,9 @@ function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+     
+    
+     
       <motion.div
         initial={{ y: -40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
-function AdminAttendanceStats() {
+function AdminAttendanceStats({notifyUser}) {
   const [stats, setStats] = useState([]);
   const [period, setPeriod] = useState('semester');
   const [section, setSection] = useState('');
@@ -33,6 +33,12 @@ function AdminAttendanceStats() {
         setStartDate(response.data.start_date);
         setEndDate(response.data.end_date);
         setError('');
+        
+        if( response.status >= 200 && response.status <= 300 ){
+
+          notifyUser(`${response.data.stats.length} records found ✅` , 'info')
+        }
+
       } catch (err) {
         console.error('Failed to fetch stats:', err);
         setError(err.response?.data?.error || 'Failed to load attendance stats');

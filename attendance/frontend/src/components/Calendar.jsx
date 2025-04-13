@@ -13,8 +13,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+// import { ToastContainer, toast } from 'react-toastify';
 
-function Calendar(admin) {
+
+function Calendar({admin , notifyUser}) {
   const [sessions, setSessions] = useState([]);
   const [timetables, setTimetables] = useState([]);
   const [error, setError] = useState('');
@@ -33,6 +35,8 @@ function Calendar(admin) {
     semester_end_date: '',
   });
 
+  // const notify = () => toast('Logged in Succesfully 👀 ')
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,9 +52,12 @@ function Calendar(admin) {
       const url = selectedSection ? `http://localhost:8000/api/calendar/?section_id=${selectedSection}` : 'http://localhost:8000/api/calendar/';
       const response = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
       setSessions(response.data);
+      if(response.status >= 200 && response.status <= 300){
+        notifyUser(response.data.message || response.data.length + ' Records found ✅ ' , 'info')
+      }
       setError('');
     } catch (err) {
-      console.error('Failed to fetch sessions:', err);
+      notifyUser('Failed to fetch sessions:'+ err ,'error') ;
       setError('Failed to load sessions');
     }
   };
@@ -154,7 +161,7 @@ function Calendar(admin) {
         semester_end_date: timetableData.semester_end_date || '2025-08-31',
       };
       if (editTimetableId) {
-        await axios.put(`http://localhost:8000/api/timetables/${editTimetableId}/`, {
+        const updateTimetableResponse = await axios.put(`http://localhost:8000/api/timetables/${editTimetableId}/`, {
           section: data.section,
           subject: data.daily_schedules[0].subject,
           day_of_week: data.daily_schedules[0].day_of_week,
@@ -162,8 +169,14 @@ function Calendar(admin) {
           semester_start_date: data.semester_start_date,
           semester_end_date: data.semester_end_date,
         }, { headers: { Authorization: `Bearer ${token}` } });
+        
+        console.log('UPDATETIMETABLE RESONSE :' , updateTimetableResponse)
+        notifyUser(updateTimetableResponse.data.message || 'The timetable has been modified successfully !' , 'default')
+        
       } else {
-        await axios.post('http://localhost:8000/api/timetables/', data, { headers: { Authorization: `Bearer ${token}` } });
+        const createdTimetableResponse = await axios.post('http://localhost:8000/api/timetables/', data, { headers: { Authorization: `Bearer ${token}` } });
+        console.log('Created timetable response : ', createdTimetableResponse)
+        notifyUser(createdTimetableResponse.data.message || "Timetable has been created succesfully 📅" , 'default')
       }
       setShowTimetableForm(false);
       setEditTimetableId(null);
@@ -178,9 +191,13 @@ function Calendar(admin) {
       fetchSessions();
       fetchTimetables();
       setError('');
+
+      
+      
     } catch (err) {
       console.error('Failed to save timetable:', err);
       setError(err.response?.data?.detail || 'Failed to save timetable');
+      notifyUser(err.response?.data?.detail || 'Failed to save timetable' , 'error');
     }
   };
 
@@ -218,13 +235,18 @@ function Calendar(admin) {
     const token = localStorage.getItem('access_token');
     if (window.confirm('Are you sure you want to delete this timetable?')) {
       try {
-        await axios.delete(`http://localhost:8000/api/timetables/${timetableId}/`, { headers: { Authorization: `Bearer ${token}` } });
+        const deleteResponse = await axios.delete(`http://localhost:8000/api/timetables/${timetableId}/`, { headers: { Authorization: `Bearer ${token}` } });
         fetchTimetables();
         fetchSessions();
         setError('');
+        console.log('DELETE TIMETABLE RESPONSE :' , deleteResponse)
+        if(deleteResponse.status === 204 ){
+          notifyUser(deleteResponse.data.message || "The timetable has been deleted successfully !" , 'warning')
+        }
       } catch (err) {
         console.error('Failed to delete timetable:', err);
         setError('Failed to delete timetable');
+        notifyUser(err || 'Failed to delete timetable' , 'error')
       }
     }
   };

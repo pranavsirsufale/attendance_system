@@ -6,7 +6,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-function ProgramCRUD() {
+function ProgramCRUD({notifyUser}) {
   const [items, setItems] = useState([]);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({});
@@ -33,9 +33,14 @@ function ProgramCRUD() {
       });
       setItems(response.data);
       setError("");
+      
+      if( response.status >= 200 && response.status <= 300 ){
+        notifyUser(response.data.message || `${response.data.length} records found ✅`,'info')
+      }
     } catch (err) {
       const message = err.response?.status === 404 ? "Resource not found" : err.response?.data?.detail || "Unknown error";
       setError(`Failed to load ${resource}: ${message}`);
+      notifyUser(`Failed to load ${resource}: ${message}`, 'error');
       if (err.response?.status === 401 || err.response?.status === 403) navigate("/");
     } finally {
       setLoading(false);
@@ -48,13 +53,22 @@ function ProgramCRUD() {
     try {
       const payload = { ...formData, duration_years: parseInt(formData.duration_years) };
       if (editingId) {
-        await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
+        const programUpdateResponse = await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if(programUpdateResponse.status >= 200 && programUpdateResponse.status <= 300){
+          notifyUser(programUpdateResponse.data.message || "Program Record has been updated successfully ✅" , 'success')
+        }
+
       } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
+        const programSavedResponse = await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if(programSavedResponse.status >= 200 && programSavedResponse.status <= 300){
+          notifyUser(programSavedResponse.data.message || "Program Record has been saved successfully ✅" , 'success')
+        }
       }
       setFormData({});
       setEditingId(null);
@@ -67,18 +81,23 @@ function ProgramCRUD() {
   const handleEdit = (item) => {
     setFormData(item);
     setEditingId(item.id);
+    notifyUser('data has been fetched successfully ✅','info')
   };
 
   const handleDelete = async (id) => {
     const token = localStorage.getItem("access_token");
-    if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
+    if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?, by removing this Program might delete all the records related to this program `)) {
       try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        const deletedProgramResponse = await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setItems(items.filter((item) => item.id !== id));
+        if(deletedProgramResponse.status >= 200 && deletedProgramResponse.status <= 300){
+          notifyUser(deletedProgramResponse.data.message || "Program record has been deleted successfully ⚠ ", 'warning')
+        }
       } catch (err) {
         setError("Failed to delete: " + (err.response?.data?.detail || "Unknown error"));
+        notifyUser("Failed to delete: " + (err.response?.data?.detail || "Unknown error" ) , 'error');
       }
     }
   };

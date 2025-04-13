@@ -11,7 +11,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 
-function AttendanceForm({ onClose = () => {} }) {
+function AttendanceForm({ notifyUser,onClose = () => {} }) {
   const { sessionId } = useParams();
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState({});
@@ -71,14 +71,18 @@ function AttendanceForm({ onClose = () => {} }) {
     );
 
     try {
-      await axios.post(
+     const resonse = await axios.post(
         `http://localhost:8000/api/mark-attendance/${sessionId}/`,
         { attendance: attendanceData },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      if ( resonse.status === 200){
+        notifyUser(resonse.data.message , 'success')
+      }
       setError("");
       onClose();
     } catch (err) {
+      notifyUser(err.resonse?.data?.error || 'Failed to mark/update', 'error')
       console.error("Failed to mark attendance:", err);
       setError(err.response?.data?.error || "Failed to mark/update attendance");
     }

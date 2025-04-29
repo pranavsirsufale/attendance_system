@@ -230,6 +230,7 @@ class SessionViewSet(viewsets.ModelViewSet):
 
 class AttendanceViewSet(viewsets.ModelViewSet):
     queryset = Attendance.objects.all()
+    
     serializer_class = AttendanceSerializer
     permission_classes = [IsAuthenticated]
 
@@ -556,6 +557,12 @@ class TeacherCalendarView(generics.ListAPIView):
             queryset = queryset.filter(timetable__section_id=section_id)
         return queryset
 
+
+'''
+! this is the first previous to convert the string into boolean
+
+
+
 class MarkAttendanceView(generics.GenericAPIView):
     serializer_class = AttendanceSerializer
     permission_classes = [IsAuthenticated]
@@ -623,6 +630,88 @@ class MarkAttendanceView(generics.GenericAPIView):
         except Exception as e:
             logger.error(f"Error in MarkAttendanceView POST: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+'''
+
+
+
+class MarkAttendanceView(generics.GenericAPIView):
+    serializer_class = AttendanceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, session_id):
+        try:
+            session = Session.objects.get(id=session_id)
+            teacher = Teacher.objects.get(user=request.user)
+            if session.timetable.teacher != teacher:
+                return Response({"error": "Not authorized to mark this session"}, status=status.HTTP_403_FORBIDDEN)
+
+            students = Student.objects.filter(section=session.timetable.section)
+            existing_attendance = Attendance.objects.filter(session=session).select_related('student')
+            
+            attendance_data = [
+                {'student_id': a.student.id, 'status': 'Present' if a.status else 'Absent'} 
+                for a in existing_attendance
+            ] if existing_attendance.exists() else []
+
+            return Response({
+                "session": SessionSerializer(session).data,
+                "students": StudentSerializer(students, many=True).data,
+                "attendance": attendance_data
+            }, status=status.HTTP_200_OK)
+
+        except Session.DoesNotExist:
+            logger.error(f"Session {session_id} not found")
+            return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Teacher.DoesNotExist:
+            logger.error(f"Teacher not found for user: {request.user}")
+            return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error in MarkAttendanceView GET: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request, session_id):
+        try:
+            session = Session.objects.get(id=session_id)
+            teacher = Teacher.objects.get(user=request.user)
+            if session.timetable.teacher != teacher:
+                return Response({"error": "Not authorized to mark this session"}, status=status.HTTP_403_FORBIDDEN)
+
+            attendance_data = request.data.get('attendance', [])
+            if not attendance_data:
+                return Response({"error": "Attendance data required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            for entry in attendance_data:
+                student = Student.objects.get(id=entry['student_id'])
+                if student.section != session.timetable.section:
+                    continue
+                # Convert string status to boolean
+                status_value = True if entry['status'] == 'Present' else False
+                Attendance.objects.update_or_create(
+                    student=student,
+                    session=session,
+                    defaults={
+                        'status': status_value,
+                        'recorded_by': teacher,
+                        'timestamp': session.date
+                    })
+                
+            session.status = 'Completed'
+            session.save()
+            return Response({"message": "Attendance marked/updated successfully"}, status=status.HTTP_200_OK)
+        except Session.DoesNotExist:
+            return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Student.DoesNotExist:
+            return Response({"error": "Invalid student ID"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error in MarkAttendanceView POST: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
 
 class HolidayListCreateView(generics.ListCreateAPIView):
     queryset = CalendarException.objects.all()

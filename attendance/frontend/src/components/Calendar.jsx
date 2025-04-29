@@ -9,6 +9,8 @@
 
 
 
+/*
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
@@ -38,6 +40,8 @@ function Calendar({admin , notifyUser}) {
   // const notify = () => toast('Logged in Succesfully 👀 ')
 
   const navigate = useNavigate();
+
+  console.log('Is the guy Admin or not : ' , admin)
 
   useEffect(() => {
     fetchSessions();
@@ -285,9 +289,10 @@ function Calendar({admin , notifyUser}) {
           to="/attendance-stats"
           className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium transition-colors duration-200 flex items-center gap-2"
         >
-          <span className="material-icons">bar_chart</span>
-          View Attendance Statistics
+        View Attendance Statistics
         </Link>
+
+
         <motion.button
           whileHover={{ scale: 1.05, rotate: 2 }}
           whileTap={{ scale: 0.95 }}
@@ -306,6 +311,24 @@ function Calendar({admin , notifyUser}) {
         >
           Create Timetable
         </motion.button>
+
+
+        <Link
+        to='/admin'
+        >
+
+        <motion.button
+          
+          
+          className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-600 dark:to-purple-600 text-white py-2 px-6 rounded-full shadow-md hover:shadow-xl transition-all duration-300"
+        >
+         Admin Dashboard
+        </motion.button>
+        
+        </Link>
+
+
+
       </motion.div>
 
       <motion.h3
@@ -631,13 +654,13 @@ function Calendar({admin , notifyUser}) {
 export default Calendar;
 
 
+*/
 
 
 
 
-/*
-! First previous if want to be reverse just uncomment this the first previous
-! the second preious have been wrapped in a simple comment
+// ! First previous if want to be reverse just uncomment this the first previous
+// ! the second preious have been wrapped in a simple comment
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -1217,6 +1240,7 @@ export default Calendar;
 
 
 
+/*
 
 
 

@@ -43,7 +43,7 @@ function AttendanceForm({ notifyUser,onClose = () => {} }) {
           });
         } else {
           response.data.students.forEach((student) => {
-            initialAttendance[student.id] = "Present";
+            initialAttendance[student.id] = "Absent";
           });
         }
         setAttendance(initialAttendance);
@@ -120,6 +120,7 @@ function AttendanceForm({ notifyUser,onClose = () => {} }) {
               </tr>
             </thead>
             <tbody>
+              
               {students.map((student) => (
                 <tr key={student.id}>
                   <td className="border border-gray-300 px-4 py-2">{student.roll_number}</td>
@@ -134,8 +135,8 @@ function AttendanceForm({ notifyUser,onClose = () => {} }) {
                       }
                       className="p-2 border rounded-md bg-white text-gray-800"
                     >
-                      <option value="Present">Present</option>
                       <option value="Absent">Absent</option>
+                      <option value="Present">Present</option>
                     </select>
                   </td>
                 </tr>

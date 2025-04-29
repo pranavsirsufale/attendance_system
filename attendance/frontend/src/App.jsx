@@ -12,6 +12,7 @@ import AdminDashboard from './components/AdminDashboard';
 import AdminCRUD from './components/AdminCRUD';
 import AdminAttendanceStats from './components/AdminAttendanceStats';
 import ProfileIcon from './components/ProfileIcon';
+import Footer from './components/pages/Footer'
 import TeacherCRUD from './components/admin/TeacherCRUD';
 import StudentCRUD from './components/admin/StudentCRUD';
 import ProgramCRUD from './components/admin/ProgramCRUD';
@@ -23,6 +24,15 @@ import { FaChalkboardTeacher } from 'react-icons/fa';
 import LandingPage from './components/pages/LandingPage';
 import { Switch } from '@headlessui/react';
 import { Bounce, toast , ToastContainer } from 'react-toastify';
+import Lottie from 'react-lottie-player' //! for lottie animation
+import Particles from 'react-tsparticles'
+import {loadFull} from 'tsparticles' //! particles engine
+// Sample Lottie animation (law-themed scales of justice)
+// import lawAnimationData from "https://lottie.host/9c9f6f1d-3b3e-4b7e-9e1a-3f3d6b8e7f2a/justice-scales.json"; 
+
+
+// Placeholder: Replace with actual Lottie URL
+
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -31,82 +41,98 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [notification,setNotification] = useState('')
 
+
   const notifyUser = (msg , type ) => {
+
+    const toastConfigOptions = {
+      position: "bottom-left",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: false,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "dark",
+      transition: Bounce,
+      }
+
+      switch(type){
+        case 'success':
+          const notifySuccess = (msg) => toast.success(msg , toastConfigOptions)
+          notifySuccess(msg)
+        break;
+        case 'warning':
+          const warnUser = (msg) => toast.warning(msg ,toastConfigOptions)
+          warnUser(msg)
+          break;
+        case 'error':
+          const notifyError = (msg) => toast.error(msg ,toastConfigOptions )
+          notifyError(msg)
+          break;
+        case 'default':
+            const notify = (msg) => toast(msg , toastConfigOptions)
+            notify(msg)
+        case "info":
+          const informUser = (msg) => toast.info(msg , toastConfigOptions)
+          informUser(msg)
+
+      }
+
+
+    
+
+/*
     if ( type === 'success'){
-      const notifySuccess = (msg) => toast.success(msg , {
-        position: "bottom-left",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-        transition: Bounce,
-        })
-     
+      const notifySuccess = (msg) => toast.success(msg , toastConfigOptions)
       notifySuccess(msg)
     }
     if ( type === 'warning'){
-      const warnUser = (msg) => toast.warning(msg , {
-        position: "bottom-left",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-        transition: Bounce,
-        })
+      const warnUser = (msg) => toast.warning(msg ,toastConfigOptions)
       warnUser(msg)
     }
     if ( type === 'error'){
-      const notifyError = (msg) => toast.error(msg , {
-        position: "bottom-left",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-        transition: Bounce,
-        })
+      const notifyError = (msg) => toast.error(msg ,toastConfigOptions )
       notifyError(msg)
     }
     if ( type === 'default'){
-      const notify = (msg) => toast(msg , {
-        position: "bottom-left",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-        transition: Bounce,
-        })
+      const notify = (msg) => toast(msg , toastConfigOptions)
       notify(msg)
 
     }
     if (type === 'info') {
-      const informUser = (msg) => toast.info(msg , {
-        position: "bottom-left",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-        transition: Bounce,
-        })
+      const informUser = (msg) => toast.info(msg , toastConfigOptions)
       informUser(msg)
     }
+
+
+      */
    
   } 
 
+
+  const particlesInit = async ( main ) => {
+    await loadFull(main)
+  }
+
+
+// Animation variants for staggered effects
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+        delayChildren: 0.3,
+      },
+    },
+  };
+
+
+  const childVariants = {
+    hidden : { opacity : 0 , y : 20 },
+    visible : { opacity : 1 , y : 0}, 
+  }
+  
   // const notify = (msg) => toast.success(msg)
 
   console.log(notification)
@@ -152,6 +178,114 @@ function App() {
     <div className={darkMode ? 'dark bg-gray-900 text-white' : 'bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 text-gray-800'}>
       <AnimatePresence mode="wait">
         {isLanding ? (
+
+
+
+/*
+
+<motion.div
+      key="landing"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit={{ opacity: 0 }}
+      className="relative flex flex-col items-center justify-center h-screen bg-gradient-to-br from-indigo-200 via-purple-200 to-pink-200 dark:from-gray-900 dark:via-indigo-950 dark:to-purple-950 text-center px-4 overflow-hidden"
+    >
+      // Animated Particle Background 
+      <Particles
+        id="tsparticles"
+        init={particlesInit}
+        options={{
+          background: { color: { value: "transparent" } },
+          fpsLimit: 60,
+          particles: {
+            number: { value: 80, density: { enable: true, value_area: 800 } },
+            color: { value: ["#ffffff", "#a78bfa", "#f472b6"] },
+            shape: { type: "circle" },
+            opacity: { value: 0.5, random: true },
+            size: { value: 3, random: true },
+            move: {
+              enable: true,
+              speed: 2,
+              direction: "none",
+              random: true,
+              out_mode: "out",
+            },
+          },
+          interactivity: {
+            events: {
+              onhover: { enable: true, mode: "repulse" },
+              onclick: { enable: true, mode: "push" },
+            },
+            modes: {
+              repulse: { distance: 100, duration: 0.4 },
+              push: { quantity: 4 },
+            },
+          },
+          detectRetina: true,
+        }}
+        className="absolute inset-0 z-0"
+      />
+
+      // ⚖️ Animated 3D Cartoon Logo 
+      <motion.div
+        variants={childVariants}
+        onHoverStart={() => setIsLogoHovered(true)}
+        onHoverEnd={() => setIsLogoHovered(false)}
+        animate={{ rotateY: isLogoHovered ? 360 : 0 }}
+        transition={{ duration: 1.5, ease: "easeInOut" }}
+        className="relative w-32 h-32 mb-6 drop-shadow-2xl cursor-pointer"
+        title="Manikchand Pahade Law College Logo"
+      >
+        <Lottie
+          loop
+          animationData={lawAnimationData}
+          play
+          style={{ width: "100%", height: "100%" }}
+        />
+      </motion.div>
+
+      //{/* 🎓 College Name 
+      <motion.h1
+        variants={childVariants}
+        onClick={() => setIsLanding(false)}
+        className="text-4xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 to-purple-700 dark:from-indigo-300 dark:to-purple-300 mb-4 cursor-pointer hover:underline"
+        style={{ fontFamily: "'Montserrat', sans-serif" }}
+      >
+        Manikchand Pahade Law College
+      </motion.h1>
+
+      //{/* 📍 Description 
+      <motion.p
+        variants={childVariants}
+        className="text-lg md:text-xl text-gray-800 dark:text-gray-200 max-w-2xl mx-auto"
+        style={{ fontFamily: "'Open Sans', sans-serif" }}
+      >
+        Aurangabad's Premier Institution for Legal Education – Building Future
+        Legal Minds with Excellence and Integrity.
+      </motion.p>
+
+      //{/* ⚡ Interactive Entry Button 
+      <motion.button
+        variants={childVariants}
+        onClick={() => setIsLanding(false)}
+        whileHover={{
+          scale: 1.1,
+          boxShadow: "0px 0px 15px rgba(0, 0, 0, 0.3)",
+          backgroundImage:
+            "linear-gradient(to right, #7c3aed, #db2777)",
+        }}
+        whileTap={{ scale: 0.95 }}
+        className="mt-10 bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700 text-white py-3 px-10 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 text-lg font-semibold"
+        style={{ fontFamily: "'Poppins', sans-serif" }}
+      >
+        Enter Attendance System
+      </motion.button>
+    </motion.div>
+
+    */
+
+
           <motion.div
             key="landing"
             initial={{ opacity: 0 }}
@@ -189,6 +323,13 @@ function App() {
               Enter Attendance System
             </motion.button>
           </motion.div>
+
+
+
+
+
+
+
         ) : (
           <motion.div
             key="app"
@@ -269,6 +410,9 @@ transition={Bounce}
                 </AnimatePresence>
               </div>
             </Router>
+
+
+            <Footer/>
           </motion.div>
         )}
       </AnimatePresence>

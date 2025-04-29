@@ -108,6 +108,12 @@ class SessionSerializer(serializers.ModelSerializer):
         model = Session
         fields = ['id','timetable','date','status']
 
+
+
+
+'''
+! the first previous the attendance serializer ( for storing the boolean in database and char in frontend)
+
 class AttendanceSerializer(serializers.ModelSerializer):
     student = StudentSerializer(read_only=True)
     session = SessionSerializer(read_only=True)
@@ -116,6 +122,47 @@ class AttendanceSerializer(serializers.ModelSerializer):
         model = Attendance
         fields = ['id','student','session','status','timestamp','recorded_by']
         read_only_fields = ['timestamp' , 'recorded_by']
+
+'''
+
+
+class AttendanceSerializer(serializers.ModelSerializer):
+    student = StudentSerializer(read_only=True)
+    session = SessionSerializer(read_only=True)
+    recorded_by = TeacherSerializer(read_only=True)
+    
+    # Add a custom status field to override the boolean
+    status = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Attendance
+        fields = ['id', 'student', 'session', 'status', 'timestamp', 'recorded_by']
+        read_only_fields = ['timestamp', 'recorded_by']
+
+    def get_status(self, obj):
+        return "Present" if obj.status else "Absent"
+
+    def to_internal_value(self, data):
+        internal = super().to_internal_value(data)
+
+        # map incoming status string to boolean
+        status = data.get('status')
+        if status == "Present":
+            internal['status'] = True
+        elif status == "Absent":
+            internal['status'] = False
+        else:
+            raise serializers.ValidationError({
+                'status': 'Status must be either "Present" or "Absent".'
+            })
+
+        return internal
+
+
+
+
+
+
 
 class TimetableCreateSerializer(serializers.Serializer):
     section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())

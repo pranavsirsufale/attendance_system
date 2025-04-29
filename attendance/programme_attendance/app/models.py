@@ -141,27 +141,61 @@ class Session(models.Model):
         verbose_name = "Session"
         verbose_name_plural = "Sessions"
 
+
+'''
+!! the first previous attendance model with string ( status )
+
+
 class Attendance(models.Model):
     STATUS_CHOICES = [
         ('Present', 'Present'),
         ('Absent', 'Absent'),
     ]
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="attendance")
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="attendance", db_index=True)
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="attendance")
     status = models.CharField(max_length=7, choices=STATUS_CHOICES, default='Absent')
-    # timestamp = models.DateField()  # Change from DateTimeField if needed
-    # timestamp = models.DateTimeField()
-    timestamp = models.DateTimeField()  # Should store both date & time
-
+    
+    # status = models.BooleanField(default=False , db_index= True)
+    
+    
+    timestamp = models.DateTimeField(db_index=True) 
     recorded_by = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name="attendance_records")
 
     def __str__(self):
         return f"{self.student} - {self.session} - {self.status}"
 
     class Meta:
+
         unique_together = ('student', 'session')
         verbose_name = "Attendance"
         verbose_name_plural = "Attendance"
+
+    
+    # def get_status_display(self):
+    #     return "Present" if self.status else 'Absent'
+    
+'''
+
+class Attendance(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="attendance", db_index=True)
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="attendance")
+    
+    # Updated: store boolean instead of string
+    status = models.BooleanField(default=False, db_index=True)  # False = Absent, True = Present
+
+    timestamp = models.DateTimeField(db_index=True) 
+    recorded_by = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True,db_index= True ,  related_name="attendance_records")
+
+    def __str__(self):
+        return f"{self.student} - {self.session} - {'Present' if self.status else 'Absent'}"
+
+    class Meta:
+        unique_together = ('student', 'session')
+        verbose_name = "Attendance"
+        verbose_name_plural = "Attendance"
+
+
+
 
 class CalendarException(models.Model):
     date = models.DateField(unique=True)

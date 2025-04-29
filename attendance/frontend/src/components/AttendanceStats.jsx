@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
-function AttendanceStats() {
+function AttendanceStats({notifyUser}) {
   const [stats, setStats] = useState([]);
   const [period, setPeriod] = useState('semester');
   const [startDate, setStartDate] = useState('');
@@ -18,6 +18,7 @@ function AttendanceStats() {
       const token = localStorage.getItem('access_token');
       if (!token) {
         setError('Please log in first');
+        notifyUser('Please log in first' ,'warning')
         return;
       }
 
@@ -31,8 +32,12 @@ function AttendanceStats() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setStats(response.data.stats);
+        console.log(response)
         setResponseStartDate(response.data.start_date);
         setResponseEndDate(response.data.end_date);
+        if(response.status >= 200 && response.status <= 300){
+          notifyUser(`${response.data.stats.length} records found for the duration ${response.data.start_date} - ${response.data.end_date} successfully ✅ ` ,'info')
+        }
         setError('');
       } catch (err) {
         console.error('Failed to fetch stats:', err);
@@ -84,6 +89,7 @@ function AttendanceStats() {
               setPeriod(e.target.value);
               setCustomRange(false);
             }}
+            
             className="p-3 border border-indigo-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500 transition-all duration-200"
           >
             <option value="weekly">Weekly</option>

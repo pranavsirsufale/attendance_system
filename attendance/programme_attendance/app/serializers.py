@@ -110,7 +110,6 @@ class SessionSerializer(serializers.ModelSerializer):
 
 
 
-
 '''
 ! the first previous the attendance serializer ( for storing the boolean in database and char in frontend)
 
@@ -157,11 +156,6 @@ class AttendanceSerializer(serializers.ModelSerializer):
             })
 
         return internal
-
-
-
-
-
 
 
 class TimetableCreateSerializer(serializers.Serializer):
@@ -349,7 +343,17 @@ class AdminTimetableSerializer(serializers.ModelSerializer):
 
 
 
-
+class AttendanceStatsSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    roll_number = serializers.CharField()
+    program = serializers.CharField()
+    year = serializers.IntegerField()
+    semester = serializers.IntegerField()
+    total_sessions = serializers.IntegerField()
+    present = serializers.IntegerField()
+    absent = serializers.IntegerField()
+    attendance_percentage = serializers.FloatField()
+    recorded_by = serializers.CharField()
 
 
 

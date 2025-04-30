@@ -20,19 +20,21 @@ from rest_framework.decorators import api_view , permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from app.permissions import IsAdmin
-from django.db.models import Count, Q
+from django.db.models import Count, Q , F , ExpressionWrapper , FloatField , CharField , Value
 from django.contrib.auth.models import User
 from datetime import datetime, timedelta
 from .models import Session , Program, Attendance, Teacher, Student, Subject, Timetable, CalendarException , Section
 from .serializers import (
     SessionSerializer, AttendanceSerializer , TimetableCreateSerializer, TeacherSerializer, StudentSerializer,
     TimetableSerializer, CalendarExceptionSerializer, ProgramSerializer , SubjectSerializer , SectionSerializer
-    , AdminTeacherSerializer , AdminStudentSerializer , AdminTimetableSerializer
+    , AdminTeacherSerializer , AdminStudentSerializer , AdminTimetableSerializer, AttendanceStatsSerializer
 )
+from django.db.models.functions import Concat
 import logging
 import traceback
 import sys
 import jwt
+import pandas as pd
 
 
 
@@ -46,6 +48,22 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(mes
 #!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 #!                       █    THE TEACHER VIEWS APPEAR HERE   █
 #!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+
+
+
+class SessionPagination(PageNumberPagination):
+    page_size = 20 # default batch size 
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class AttendanceStatsPagination(PageNumberPagination):
+    page_size = 20 
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 
 
 
@@ -82,6 +100,10 @@ class SessionViewSet(AdminCRUDViewSet):
     serializer_class = SessionSerializer
 
 '''
+
+
+'''
+#? thiis was the previous adminattendancestatsview 
 
 class AdminAttendanceStatsView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -141,6 +163,276 @@ class AdminAttendanceStatsView(viewsets.ViewSet):
             'end_date': end_date.isoformat(),
             'stats': response
         })        
+
+'''
+
+
+# AdminAttendanceStatsView
+class AdminAttendanceStatsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+    pagination_class = AttendanceStatsPagination
+
+    def get(self, request):
+        period = request.query_params.get('period', 'semester')
+        section_id = request.query_params.get('section')
+        subject_id = request.query_params.get('subject')
+        teacher_id = request.query_params.get('teacher')
+        program_id = request.query_params.get('program')
+        year = request.query_params.get('year')
+        semester = request.query_params.get('semester')
+        date = request.query_params.get('date')
+        end_date = request.query_params.get('end_date')
+
+        sessions = Session.objects.select_related('timetable__section__program', 'timetable__subject', 'timetable__teacher').filter(status='Completed')
+
+        if section_id:
+            sessions = sessions.filter(timetable__section_id=section_id)
+        if subject_id:
+            sessions = sessions.filter(timetable__subject_id=subject_id)
+        if teacher_id:
+            sessions = sessions.filter(timetable__teacher_id=teacher_id)
+        if program_id:
+            sessions = sessions.filter(timetable__section__program_id=program_id)
+        if year:
+            sessions = sessions.filter(timetable__section__year=year)
+        if semester:
+            sessions = sessions.filter(timetable__subject__semester=semester)
+
+        if period == 'daily' and date:
+            sessions = sessions.filter(date=date)
+            if not end_date:
+                end_date = (datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+        elif period == 'weekly':
+            start_date = datetime.now().date() - timedelta(days=datetime.now().weekday())
+            end_date = start_date + timedelta(days=7)
+            sessions = sessions.filter(date__range=[start_date, end_date])
+        elif period == 'monthly':
+            start_date = datetime.now().date().replace(day=1)
+            end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+            sessions = sessions.filter(date__range=[start_date, end_date])
+        elif period == 'semester' and semester:
+            start_date = sessions.filter(timetable__subject__semester=semester).order_by('date').first().date if sessions.exists() else datetime.now().date()
+            end_date = sessions.filter(timetable__subject__semester=semester).order_by('-date').first().date if sessions.exists() else datetime.now().date()
+            sessions = sessions.filter(date__range=[start_date, end_date])
+        else:
+            start_date = sessions.order_by('date').first().date if sessions.exists() else datetime.now().date()
+            end_date = sessions.order_by('-date').first().date if sessions.exists() else datetime.now().date()
+
+        stats = (
+            Attendance.objects.filter(session__in=sessions)
+            .select_related('student', 'recorded_by')
+            .values('student__first_name', 'student__last_name', 'student__roll_number')
+            .annotate(
+                name=Concat(F('student__first_name'), Value(' '), F('student__last_name'), output_field=CharField()),
+                roll_number=F('student__roll_number'),
+                total_sessions=Count('session'),
+                present=Count('session', filter=Q(status=True)),  # BooleanField: True = Present
+                absent=Count('session', filter=Q(status=False)),  # BooleanField: False = Absent
+                recorded_by=Concat(F('recorded_by__first_name'), Value(' '), F('recorded_by__last_name'), output_field=CharField()),
+                program=F('student__section__program__name'),
+                year=F('student__section__year'),
+                semester=F('student__semester'),
+                attendance_percentage=ExpressionWrapper(
+                    (F('present') * 100.0) / F('total_sessions'),
+                    output_field=FloatField()
+                )
+            )
+            .order_by('roll_number')
+        )
+
+        viz_data = {
+            'total_sessions': stats.aggregate(total=Count('total_sessions'))['total'] or 0,
+            'total_present': stats.aggregate(total=Count('present'))['total'] or 0,
+            'total_absent': stats.aggregate(total=Count('absent'))['total'] or 0,
+            'by_subject': (
+                Attendance.objects.filter(session__in=sessions)
+                .values('session__timetable__subject__name')
+                .annotate(
+                    present=Count('session', filter=Q(status=True)),
+                    absent=Count('session', filter=Q(status=False))
+                )
+                .order_by('session__timetable__subject__name')
+            ),
+            'by_teacher': (
+                Attendance.objects.filter(session__in=sessions)
+                .values('session__timetable__teacher__first_name', 'session__timetable__teacher__last_name')
+                .annotate(
+                    present=Count('session', filter=Q(status=True)),
+                    absent=Count('session', filter=Q(status=False))
+                )
+                .order_by('session__timetable__teacher__first_name')
+            ),
+            'by_date': (
+                Attendance.objects.filter(session__in=sessions)
+                .values('session__date')
+                .annotate(
+                    present=Count('session', filter=Q(status=True)),
+                    absent=Count('session', filter=Q(status=False))
+                )
+                .order_by('session__date')
+            ) if period in ['daily', 'weekly', 'monthly'] else [],
+        }
+
+        paginator = self.pagination_class()
+        paginated_stats = paginator.paginate_queryset(stats, request)
+        serializer = AttendanceStatsSerializer(paginated_stats, many=True)
+
+        return paginator.get_paginated_response({
+            'stats': serializer.data,
+            'start_date': start_date,
+            'end_date': end_date,
+            'viz_data': viz_data,
+        })
+
+
+# AdminAttendanceExportView
+class AdminAttendanceExportView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        period = request.query_params.get('period', 'semester')
+        section_id = request.query_params.get('section')
+        subject_id = request.query_params.get('subject')
+        teacher_id = request.query_params.get('teacher')
+        program_id = request.query_params.get('program')
+        year = request.query_params.get('year')
+        semester = request.query_params.get('semester')
+        date = request.query_params.get('date')
+        end_date = request.query_params.get('end_date')
+        export_format = request.query_params.get('format', 'csv')
+
+        sessions = Session.objects.select_related('timetable__section__program', 'timetable__subject', 'timetable__teacher').filter(status='Completed')
+        if section_id:
+            sessions = sessions.filter(timetable__section_id=section_id)
+        if subject_id:
+            sessions = sessions.filter(timetable__subject_id=subject_id)
+        if teacher_id:
+            sessions = sessions.filter(timetable__teacher_id=teacher_id)
+        if program_id:
+            sessions = sessions.filter(timetable__section__program_id=program_id)
+        if year:
+            sessions = sessions.filter(timetable__section__year=year)
+        if semester:
+            sessions = sessions.filter(timetable__subject__semester=semester)
+        if period == 'daily' and date:
+            sessions = sessions.filter(date=date)
+            if not end_date:
+                end_date = (datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+        elif period == 'weekly':
+            start_date = datetime.now().date() - timedelta(days=datetime.now().weekday())
+            end_date = start_date + timedelta(days=7)
+            sessions = sessions.filter(date__range=[start_date, end_date])
+        elif period == 'monthly':
+            start_date = datetime.now().date().replace(day=1)
+            end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+            sessions = sessions.filter(date__range=[start_date, end_date])
+        else:
+            start_date = sessions.order_by('date').first().date if sessions.exists() else datetime.now().date()
+            end_date = sessions.order_by('-date').first().date if sessions.exists() else datetime.now().date()
+
+        stats = (
+            Attendance.objects.filter(session__in=sessions)
+            .select_related('student', 'recorded_by')
+            .values('student__first_name', 'student__last_name', 'student__roll_number', 'student__section__program__name', 'student__section__year', 'student__semester')
+            .annotate(
+                name=Concat(F('student__first_name'), Value(' '), F('student__last_name'), output_field=CharField()),
+                roll_number=F('student__roll_number'),
+                program=F('student__section__program__name'),
+                year=F('student__section__year'),
+                semester=F('student__semester'),
+                total_sessions=Count('session'),
+                present=Count('session', filter=Q(status=True)),
+                absent=Count('session', filter=Q(status=False)),
+                recorded_by=Concat(F('recorded_by__first_name'), Value(' '), F('recorded_by__last_name'), output_field=CharField()),
+                attendance_percentage=ExpressionWrapper(
+                    (F('present') * 100.0) / F('total_sessions'),
+                    output_field=FloatField()
+                )
+            )
+            .order_by('roll_number')
+        )
+
+        df = pd.DataFrame(list(stats))
+        if df.empty:
+            return Response({'error': 'No data to export'}, status=status.HTTP_404_NOT_FOUND)
+
+        if export_format == 'excel':
+            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename=attendance_report.xlsx'
+            df.to_excel(response, index=False, engine='xlsxwriter')
+            return response
+        else:
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename=attendance_report.csv'
+            df.to_csv(response, index=False)
+            return response
+
+
+# AdminStudentSearchView
+class AdminStudentSearchView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+    pagination_class = AttendanceStatsPagination
+
+    def get(self, request):
+        roll_number = request.query_params.get('roll_number')
+        semester = request.query_params.get('semester')
+        year = request.query_params.get('year')
+        program_id = request.query_params.get('program')
+        name = request.query_params.get('name')
+        email = request.query_params.get('email')
+        phone = request.query_params.get('phone')
+
+        students = Student.objects.select_related('section__program').all()
+
+        if roll_number:
+            students = students.filter(roll_number__icontains=roll_number)
+        if semester:
+            students = students.filter(semester=semester)
+        if year:
+            students = students.filter(section__year=year)
+        if program_id:
+            students = students.filter(section__program_id=program_id)
+        if name:
+            students = students.filter(
+                Q(first_name__icontains=name) | Q(last_name__icontains=name)
+            )
+        if email:
+            students = students.filter(email__icontains=email)
+        if phone:
+            students = students.filter(phone__icontains=phone)
+
+        stats = (
+            Attendance.objects.filter(student__in=students)
+            .select_related('student', 'recorded_by')
+            .values('student__first_name', 'student__last_name', 'student__roll_number', 'student__email', 'student__phone', 'student__section__program__name', 'student__section__year', 'student__semester')
+            .annotate(
+                name=Concat(F('student__first_name'), Value(' '), F('student__last_name'), output_field=CharField()),
+                roll_number=F('student__roll_number'),
+                email=F('student__email'),
+                phone=F('student__phone'),
+                program=F('student__section__program__name'),
+                year=F('student__section__year'),
+                semester=F('student__semester'),
+                total_sessions=Count('session'),
+                present=Count('session', filter=Q(status=True)),
+                absent=Count('session', filter=Q(status=False)),
+                recorded_by=Concat(F('recorded_by__first_name'), Value(' '), F('recorded_by__last_name'), output_field=CharField()),
+                attendance_percentage=ExpressionWrapper(
+                    (F('present') * 100.0) / F('total_sessions'),
+                    output_field=FloatField()
+                )
+            )
+            .order_by('roll_number')
+        )
+
+        paginator = self.pagination_class()
+        paginated_stats = paginator.paginate_queryset(stats, request)
+        serializer = AttendanceStatsSerializer(paginated_stats, many=True)
+
+        return paginator.get_paginated_response({
+            'stats': serializer.data,
+        })
+
 
 class TeacherAttendanceStatsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -237,9 +529,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(recorded_by=Teacher.objects.get(user=self.request.user))
 
-
-
-
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated]
@@ -326,7 +615,6 @@ class TimetableViewSet(viewsets.ModelViewSet):
 
         timetable_serializer = TimetableSerializer(created_timetables, many=True)
         return timetable_serializer.data
-
 
 
 '''
@@ -519,11 +807,6 @@ previous than above ( the second previous )
 '''
 
 
-
-
-
-
-
 class TeacherViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Teacher.objects.all()
     serializer_class = TeacherSerializer
@@ -556,7 +839,6 @@ class TeacherCalendarView(generics.ListAPIView):
         if section_id:
             queryset = queryset.filter(timetable__section_id=section_id)
         return queryset
-
 
 '''
 ! this is the first previous to convert the string into boolean
@@ -635,7 +917,6 @@ class MarkAttendanceView(generics.GenericAPIView):
 '''
 
 
-
 class MarkAttendanceView(generics.GenericAPIView):
     serializer_class = AttendanceSerializer
     permission_classes = [IsAuthenticated]
@@ -707,10 +988,6 @@ class MarkAttendanceView(generics.GenericAPIView):
         except Exception as e:
             logger.error(f"Error in MarkAttendanceView POST: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
-
 
 
 class HolidayListCreateView(generics.ListCreateAPIView):
@@ -1030,6 +1307,9 @@ import rest_framework
 
 # --- New Admin-Specific Views ---
 
+# first adminteacherviewset
+
+'''
 
 class AdminTeacherViewSet(viewsets.ModelViewSet):
     """
@@ -1168,6 +1448,105 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
             logger.error(f"Failed to delete teacher/user : {str(e)}")
             return Response({"error" : f"Failed to delete : {str(e)}"})
 
+'''
+
+class AdminTeacherViewSet(viewsets.ModelViewSet):
+    queryset = Teacher.objects.all()
+    serializer_class = AdminTeacherSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def perform_create(self, serializer):
+        validated_data = serializer.validated_data
+        email = validated_data.get('email')
+        first_name = validated_data.get('first_name')
+        last_name = validated_data.get('last_name')
+        phone = validated_data.get('phone', '')
+        password = validated_data.get('password')
+        is_admin = validated_data.get('is_admin', False)
+
+        try:
+            new_user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                is_superuser=is_admin
+            )
+            logger.info(f"Created new user for teacher: {new_user.id}")
+        except Exception as e:
+            logger.error(f"Failed to create user: {str(e)}")
+            raise
+
+        try:
+            teacher = Teacher.objects.create(
+                user=new_user,
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                phone=phone,
+                is_admin=is_admin
+            )
+            logger.info(f"Created teacher with ID: {teacher.id}")
+            serializer.instance = teacher
+        except Exception as e:
+            logger.error(f"Failed to create teacher: {str(e)}")
+            new_user.delete()
+            raise
+
+    def perform_update(self, serializer):
+        teacher = self.get_object()
+        user = teacher.user
+        validated_data = serializer.validated_data
+        logger.info(f"Updating teacher ID: {teacher.id} with data: {validated_data}")
+
+        first_name = validated_data.get('first_name', user.first_name)
+        last_name = validated_data.get('last_name', user.last_name)
+        email = validated_data.get('email', user.email)
+        password = validated_data.get('password')
+        is_admin = validated_data.get('is_admin', teacher.is_admin)
+
+        try:
+            user.first_name = first_name
+            user.last_name = last_name
+            user.email = email
+            user.is_superuser = is_admin
+            if password:
+                user.set_password(password)
+            user.save()
+            logger.info(f"Updated User ID: {user.id}")
+        except Exception as e:
+            logger.error(f"Failed to update user: {str(e)}")
+            raise
+
+        try:
+            serializer.save(
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                phone=validated_data.get('phone', teacher.phone),
+                is_admin=is_admin
+            )
+            logger.info(f"Updated teacher ID: {teacher.id}")
+        except Exception as e:
+            logger.error(f"Failed to update teacher: {str(e)}")
+            raise
+
+    def destroy(self, request, *args, **kwargs):
+        teacher = self.get_object()
+        user = teacher.user
+        logger.info(f"Deleting teacher ID: {teacher.id} and associated user ID: {user.id}")
+
+        try:
+            teacher.delete()
+            logger.info(f"Deleted teacher ID: {teacher.id}")
+            user.delete()
+            logger.info(f"Deleted user ID: {user.id}")
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            logger.error(f"Failed to delete teacher/user: {str(e)}")
+            return Response({"error": f"Failed to delete: {str(e)}"})
+
 
 
 # -- new endpoint for semester ---
@@ -1197,11 +1576,11 @@ class SemestersForSectionView(APIView):
         except ValueError:
             logger.error(f"Invalid section_id : {section_id}")
             return Response({'error' : 'Section_id must be an integer'} , status = status.HTTP_400_BAD_REQUEST)
-        
-
-    
 
 
+# firest adminstudentviewset
+
+'''
 
 class AdminStudentViewSet(viewsets.ModelViewSet):
     """
@@ -1258,6 +1637,54 @@ class AdminStudentViewSet(viewsets.ModelViewSet):
             logger.info(f"Created student ID: {student.id} with roll_no {roll_number} and subjects: {list(subjects.values_list('name', flat=True))}")
         except Exception as e:
             logger.error(f"Failed to create student : {str(e)}")
+            raise
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+
+'''
+
+class AdminStudentViewSet(viewsets.ModelViewSet):
+    queryset = Student.objects.all()
+    serializer_class = AdminStudentSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        section_id = self.request.query_params.get('section')
+        semester = self.request.query_params.get('semester')
+        if section_id:
+            queryset = queryset.filter(section__id=section_id)
+            logger.debug(f"Filtering students by section_id={section_id}")
+        if semester:
+            queryset = queryset.filter(semester=semester)
+            logger.debug(f"Filtering students by semester={semester}")
+        logger.debug(f"Students queryset: {queryset.count()} items")
+        return queryset
+
+    def perform_create(self, serializer):
+        validated_data = serializer.validated_data
+        logger.debug(f"Validated data: {validated_data}")
+
+        section = validated_data['section']
+        semester = validated_data['semester']
+        roll_number = validated_data.get('roll_number')
+
+        if not roll_number:
+            program_prefix = 'NG' if 'BALLB' in section.program.name else 'G'
+            year_suffix = str(timezone.now().year)[-2:]
+            sequence = str(Student.objects.filter(section__program=section.program).count() + 1).zfill(3)
+            roll_number = f"{program_prefix}{year_suffix}{sequence}"
+
+        subjects = Subject.objects.filter(semester=semester)
+
+        try:
+            student = serializer.save(roll_number=roll_number)
+            student.subjects.set(subjects)
+            logger.info(f"Created student ID: {student.id} with roll_no {roll_number} and subjects: {list(subjects.values_list('name', flat=True))}")
+        except Exception as e:
+            logger.error(f"Failed to create student: {str(e)}")
             raise
 
     def perform_update(self, serializer):
@@ -1521,8 +1948,6 @@ class AdminTimetableViewSet(viewsets.ModelViewSet):
         self.perform_destroy(instance)
         return Response(status = status.HTTP_204_NO_CONTENT)
     
-
-
 # Ensure semester For Section View is unchanged and works
 class SemestersForSectionView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -1548,7 +1973,10 @@ class SemestersForSectionView(APIView):
             logger.error(f"Invalid section_id: {section_id}")
             return Response({'error': 'section_id must be an integer'}, status=status.HTTP_400_BAD_REQUEST)      
 
-        
+
+
+#! first adminattendanceoverview
+'''
 
 class AdminAttendanceOverview(APIView):
     """
@@ -1599,6 +2027,60 @@ class AdminAttendanceOverview(APIView):
             'stats': response
         })
 
+'''
+
+
+class AdminAttendanceOverview(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        period = request.query_params.get('period', 'semester')
+        today = timezone.now().date()
+
+        if period == 'weekly':
+            start_date = today - timedelta(days=today.weekday())
+            end_date = start_date + timedelta(days=6)
+        elif period == 'monthly':
+            start_date = today.replace(day=1)
+            end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+        else:
+            timetables = Timetable.objects.all()
+            start_date = min(t.semester_start_date for t in timetables) if timetables else today
+            end_date = max(t.semester_end_date for t in timetables) if timetables else today
+
+        stats = (
+            Attendance.objects.filter(session__date__gte=start_date, session__date__lte=end_date)
+            .values('session__timetable__section__name')
+            .annotate(
+                total_sessions=Count('session'),
+                present=Count('session', filter=Q(status=True)),
+                absent=Count('session', filter=Q(status=False))
+            )
+        )
+
+        response = [
+            {
+                'section': stat['session__timetable__section__name'],
+                'total_sessions': stat['total_sessions'],
+                'present': stat['present'],
+                'absent': stat['absent'],
+                'attendance_percentage': round((stat['present'] / stat['total_sessions']) * 100, 2) if stat['total_sessions'] > 0 else 0
+            }
+            for stat in stats
+        ]
+
+        return Response({
+            'period': period,
+            'start_date': start_date.isoformat(),
+            'end_date': end_date.isoformat(),
+            'stats': response
+        })
+
+
+
+
+
+
 class AdminHolidayManagement(generics.ListCreateAPIView):
     """
     Admin-only view to list and create holidays (CalendarException).
@@ -1610,12 +2092,6 @@ class AdminHolidayManagement(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         holiday = serializer.save()
         Session.objects.filter(date=holiday.date).update(status='Cancelled')
-
-
-class SessionPagination(PageNumberPagination):
-    page_size = 20 # default batch size 
-    page_size_query_param = 'page_size'
-    max_page_size = 100
 
 
 # this admin SEssions view set can be used for all sessionsgetting
@@ -1639,6 +2115,10 @@ class AdminSessionViewSet(viewsets.ModelViewSet):
 
 '''
 
+
+
+#first adminsessionviewset
+'''
 class AdminSessionViewSet(viewsets.ModelViewSet):
     queryset = Session.objects.all()
     serializer_class = SessionSerializer
@@ -1660,6 +2140,28 @@ class AdminSessionViewSet(viewsets.ModelViewSet):
 
         return queryset.order_by('date') # Order for consistency
 
+'''
+
+class AdminSessionViewSet(viewsets.ModelViewSet):
+    queryset = Session.objects.all()
+    serializer_class = SessionSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+    pagination_class = SessionPagination
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        section_id = self.request.query_params.get('section_id')
+        teacher_id = self.request.query_params.get('teacher_id')
+        semester = self.request.query_params.get('semester')
+
+        if section_id:
+            queryset = queryset.filter(timetable__section_id=section_id)
+        if teacher_id:
+            queryset = queryset.filter(timetable__teacher_id=teacher_id)
+        if semester:
+            queryset = queryset.filter(timetable__subject__semester=semester)
+
+        return queryset.order_by('date')
 
 
 

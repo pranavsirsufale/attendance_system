@@ -1,16 +1,12 @@
 //                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 //                       █    DEVELOPED BY PRANAV SIRSUFALE   █
 //                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-
 // ╔═══════════════════════════════════════════════════════════════════════════╗
 // ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
 // ╚═══════════════════════════════════════════════════════════════════════════╝
-
-
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
-
 function AttendanceForm({ notifyUser,onClose = () => {} }) {
   const { sessionId } = useParams();
   const [students, setStudents] = useState([]);
@@ -172,7 +168,6 @@ export default AttendanceForm;
 //                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 //                       █    DEVELOPED BY PRANAV SIRSUFALE   █
 //                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-
 // ╔═══════════════════════════════════════════════════════════════════════════╗
 // ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
 // ╚═══════════════════════════════════════════════════════════════════════════╝

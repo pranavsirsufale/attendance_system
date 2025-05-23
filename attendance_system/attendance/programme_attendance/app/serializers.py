@@ -340,11 +340,11 @@ class AdminTimetableSerializer(serializers.ModelSerializer):
         return created_timetables[0] if created_timetables else instance   
 
 
-
 class AttendanceStatsSerializer(serializers.Serializer):
     student_id = serializers.IntegerField()
     name = serializers.CharField()
     roll_number = serializers.CharField()
+    subject_name = serializers.CharField()
     program = serializers.CharField()
     year = serializers.IntegerField()
     semester = serializers.IntegerField()
@@ -352,9 +352,5 @@ class AttendanceStatsSerializer(serializers.Serializer):
     present = serializers.IntegerField()
     absent = serializers.IntegerField()
     attendance_percentage = serializers.FloatField()
-    recorded_by = serializers.CharField()
-
-
-
-
-
+    recorded_by_name = serializers.CharField()
+    

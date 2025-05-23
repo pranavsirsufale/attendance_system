@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+body {
+  @apply bg-gray-100 text-gray-800;
+}
+
+@keyframes gradient {
+  0% { border-image: linear-gradient(to right, #4f46e5, #c084fc); }
+  50% { border-image: linear-gradient(to right, #c084fc, #4f46e5); }
+  100% { border-image: linear-gradient(to right, #4f46e5, #c084fc); }
+}
+
+.animate-gradient {
+  border-image: linear-gradient(to right, #4f46e5, #c084fc) 1;
+  animation: gradient 3s infinite;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}

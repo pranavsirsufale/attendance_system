@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Details of Student </title>
+
+</head>
+<body>
+{% extends 'master.html' %}
+    {% block title %}
+    details  of 
+
+    {{student.first_name }}
+    {{student.last_name}}
+     
+
+    {% endblock %}
+
+    {% block content %}
+    
+    <h1> {{student.first_name }} {{ student.last_name }} </h1>
+
+    <p>
+        Phone : {{ student.phone }}
+    </p>
+
+    <p>
+        Email : {{ student.email}}
+    </p>
+
+    <p>
+        Student Since : {{ student.joined_date}}
+    </p>
+
+    {% endblock %}

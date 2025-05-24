@@ -35,8 +35,7 @@ urlpatterns = [
     path('admin/attendance-stats/', views.AdminAttendanceStatsView.as_view(), name='admin-attendance-stats'),
     path('teacher-attendance-stats/', views.TeacherAttendanceStatsView.as_view(), name='teacher_attendance_stats'),
     
-    # path('admin/attendance-export/', views.AdminAttendanceExportView.as_view(), name='admin-attendance-export'),
-    # path('admin-student-search/', views.AdminStudentSearchView.as_view(), name='admin-student-search'),  # Updated route
+    
     path('admin/attendance-overview/', views.AdminAttendanceOverview.as_view(), name='admin-attendance-overview'),
     path('admin/holidays/', views.AdminHolidayManagement.as_view(), name='admin-holidays'),
     path('admin/semesters/', views.SemestersForSectionView.as_view(), name='admin-semesters'),

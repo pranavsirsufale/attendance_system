@@ -60,7 +60,7 @@ function AdminAttendanceStats({ notifyUser }) {
       setTotalCount(response.data.count);
       setError('');
       notifyUser(
-        `${response.data.results.stats.length} records found for ${period} period ${response.data.results.start_date} - ${response.data.results.end_date} ✅`,
+        `${response.data.results.stats.length} records found for ${period} period ${response.data.results.start_date} - ${response.data.results.end_date}  `,
         'info'
       );
     } catch (err) {
@@ -627,6 +627,9 @@ export default AdminAttendanceStats;
 
 
 
+
+
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -635,7 +638,8 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 function AdminAttendanceStats({ notifyUser }) {
-  const [teacherStats, setTeacherStats] = useState({});
+  const [teacherSubjects, setTeacherSubjects] = useState([]);
+  const [teacherStats, setTeacherStats] = useState([]);
   const [studentStats, setStudentStats] = useState([]);
   const [period, setPeriod] = useState('semester');
   const [section, setSection] = useState('');
@@ -660,7 +664,9 @@ function AdminAttendanceStats({ notifyUser }) {
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [selectedTeacherName, setSelectedTeacherName] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState(null);
 
   const fetchTeachers = async () => {
     const token = localStorage.getItem('access_token');
@@ -713,6 +719,32 @@ function AdminAttendanceStats({ notifyUser }) {
     }
   };
 
+  const fetchTeacherSubjects = async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('Please log in first');
+      notifyUser('Please log in first', 'warning');
+      return;
+    }
+
+    if (!selectedTeacher) return;
+
+    try {
+      const response = await axios.get(`http://localhost:8000/api/teacher-subjects/?teacher=${selectedTeacher}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTeacherSubjects(response.data.subjects);
+      setError('');
+      notifyUser(
+        `Loaded ${response.data.subjects.length} subjects for teacher`,
+        'info'
+      );
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to load subjects');
+      notifyUser('Failed to load subjects', 'error');
+    }
+  };
+
   const fetchTeacherStats = async () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -721,7 +753,9 @@ function AdminAttendanceStats({ notifyUser }) {
       return;
     }
 
-    let url = `http://localhost:8000/api/admin/attendance-stats/?period=${period}&page=${teacherPage}`;
+    if (!selectedSubject) return;
+
+    let url = `http://localhost:8000/api/admin/attendance-stats/?period=${period}&page=${teacherPage}&subject_name=${encodeURIComponent(selectedSubject)}`;
     if (section) url += `&section=${section}`;
     if (subject) url += `&subject=${subject}`;
     if (selectedTeacher) url += `&teacher=${selectedTeacher}`;
@@ -742,6 +776,8 @@ function AdminAttendanceStats({ notifyUser }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTeacherStats(response.data.results.stats);
+      setSelectedTeacherName(response.data.results.stats.recorded_by_name)
+      console.log(response.data.results)
       setTeacherStartDate(response.data.results.start_date);
       setTeacherEndDate(response.data.results.end_date);
       setTeacherNextPage(response.data.next);
@@ -749,7 +785,7 @@ function AdminAttendanceStats({ notifyUser }) {
       setTeacherTotalCount(response.data.count);
       setError('');
       notifyUser(
-        `Loaded stats for ${Object.keys(response.data.results.stats).length} subjects for ${period} period ${response.data.results.start_date} - ${response.data.results.end_date} ✅`,
+        `Loaded ${response.data.results.stats.length} records for ${selectedSubject} (${period} period: ${response.data.results.start_date} - ${response.data.results.end_date})  `,
         'info'
       );
     } catch (err) {
@@ -796,7 +832,7 @@ function AdminAttendanceStats({ notifyUser }) {
       setStudentTotalCount(1);
       setError('');
       notifyUser(
-        `Attendance stats for ${selectedStudentData.first_name} ${selectedStudentData.last_name} loaded ✅`,
+        `Attendance stats for ${selectedStudentData.first_name} ${selectedStudentData.last_name} loaded`,
         'info'
       );
     } catch (err) {
@@ -812,16 +848,31 @@ function AdminAttendanceStats({ notifyUser }) {
 
   useEffect(() => {
     if (selectedTeacher) {
+      fetchTeacherSubjects();
+    } else {
+      setTeacherSubjects([]);
+      setTeacherStats([]);
+      setTeacherStartDate('');
+      setTeacherEndDate('');
+      setTeacherTotalCount(0);
+      setTeacherNextPage(null);
+      setTeacherPrevPage(null);
+      setSelectedSubject(null);
+    }
+  }, [selectedTeacher]);
+
+  useEffect(() => {
+    if (selectedSubject) {
       fetchTeacherStats();
     } else {
-      setTeacherStats({});
+      setTeacherStats([]);
       setTeacherStartDate('');
       setTeacherEndDate('');
       setTeacherTotalCount(0);
       setTeacherNextPage(null);
       setTeacherPrevPage(null);
     }
-  }, [period, section, subject, selectedTeacher, program, year, semester, date, teacherPage]);
+  }, [period, section, subject, selectedTeacher, selectedSubject, program, year, semester, date, teacherPage]);
 
   useEffect(() => {
     if (selectedStudent) {
@@ -836,9 +887,9 @@ function AdminAttendanceStats({ notifyUser }) {
     }
   }, [period, section, subject, selectedStudent, program, year, semester, date, studentPage]);
 
-  const handleTeacherExport = async (format, subject) => {
+  const handleTeacherExport = async (format) => {
     const token = localStorage.getItem('access_token');
-    let url = `http://localhost:8000/api/admin/attendance-export/?period=${period}&format=${format}`;
+    let url = `http://localhost:8000/api/admin/attendance-export/?period=${period}&format=${format}&subject_name=${encodeURIComponent(selectedSubject)}`;
     if (section) url += `&section=${section}`;
     if (subject) url += `&subject=${subject}`;
     if (selectedTeacher) url += `&teacher=${selectedTeacher}`;
@@ -855,7 +906,7 @@ function AdminAttendanceStats({ notifyUser }) {
       const blob = new Blob([response.data], { type: response.headers['content-type'] });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.download = `teacher_attendance_report_${subject || 'all'}.${format}`;
+      link.download = `teacher_attendance_report_${selectedSubject}.${format}`;
       link.click();
       notifyUser(`Exported teacher attendance report as ${format}`, 'success');
     } catch (err) {
@@ -911,11 +962,17 @@ function AdminAttendanceStats({ notifyUser }) {
   const handleTeacherSelect = (teacherId) => {
     setSelectedTeacher(teacherId);
     setTeacherPage(1);
+    setSelectedSubject(null);
   };
 
   const handleStudentSelect = (studentId) => {
     setSelectedStudent(studentId);
     setStudentPage(1);
+  };
+
+  const handleSubjectSelect = (subject) => {
+    setSelectedSubject(subject);
+    setTeacherPage(1);
   };
 
   return (
@@ -939,7 +996,7 @@ function AdminAttendanceStats({ notifyUser }) {
       <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
         <FormControl sx={{ minWidth: 120 }}>
           <InputLabel>Period</InputLabel>
-          <Select value={period} onChange={(e) => { setPeriod(e.target.value); setTeacherPage(1); setStudentPage(1); }}>
+          <Select value={period} onChange={(e) => { setPeriod(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}>
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="daily">Daily</MenuItem>
             <MenuItem value="weekly">Weekly</MenuItem>
@@ -951,19 +1008,19 @@ function AdminAttendanceStats({ notifyUser }) {
           label="Section ID"
           type="number"
           value={section}
-          onChange={(e) => { setSection(e.target.value); setTeacherPage(1); setStudentPage(1); }}
+          onChange={(e) => { setSection(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
           sx={{ minWidth: 120 }}
         />
         <TextField
           label="Subject ID"
           type="number"
           value={subject}
-          onChange={(e) => { setSubject(e.target.value); setTeacherPage(1); setStudentPage(1); }}
+          onChange={(e) => { setSubject(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
           sx={{ minWidth: 120 }}
         />
         <FormControl sx={{ minWidth: 120 }}>
           <InputLabel>Program</InputLabel>
-          <Select value={program} onChange={(e) => { setProgram(e.target.value); setTeacherPage(1); setStudentPage(1); }}>
+          <Select value={program} onChange={(e) => { setProgram(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}>
             <MenuItem value="">All</MenuItem>
             <MenuItem value="1">BALLB 5 Yr</MenuItem>
             <MenuItem value="2">LLB 3 Yr</MenuItem>
@@ -973,14 +1030,14 @@ function AdminAttendanceStats({ notifyUser }) {
           label="Year"
           type="number"
           value={year}
-          onChange={(e) => { setYear(e.target.value); setTeacherPage(1); setStudentPage(1); }}
+          onChange={(e) => { setYear(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
           sx={{ minWidth: 120 }}
         />
         <TextField
           label="Semester"
           type="number"
           value={semester}
-          onChange={(e) => { setSemester(e.target.value); setTeacherPage(1); setStudentPage(1); }}
+          onChange={(e) => { setSemester(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
           sx={{ minWidth: 120 }}
         />
         {period === 'daily' && (
@@ -988,7 +1045,7 @@ function AdminAttendanceStats({ notifyUser }) {
             label="Date"
             type="date"
             value={date}
-            onChange={(e) => { setDate(e.target.value); setTeacherPage(1); setStudentPage(1); }}
+            onChange={(e) => { setDate(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
             InputLabelProps={{ shrink: true }}
             sx={{ minWidth: 120 }}
           />
@@ -1030,91 +1087,127 @@ function AdminAttendanceStats({ notifyUser }) {
         )}
       </Box>
 
-      {Object.keys(teacherStats).length > 0 && (
+      {teacherSubjects.length > 0 && (
         <>
           <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            Period: {teacherStartDate} to {teacherEndDate} | Showing {Object.values(teacherStats).flat().length} of {teacherTotalCount} records
+            Period: {teacherStartDate || 'N/A'} to {teacherEndDate || 'N/A'} | Total Records: {teacherTotalCount}
           </Typography>
-          {Object.entries(teacherStats).map(([subject, stats]) => (
-            <Box key={subject} sx={{ mb: 4 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Subject: {subject}
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Button
-                  variant="contained"
-                  onClick={() => handleTeacherExport('csv', subject)}
-                  sx={{ mr: 2 }}
-                >
-                  Export as CSV
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={() => handleTeacherExport('excel', subject)}
-                >
-                  Export as Excel
-                </Button>
-              </Box>
-              <Box sx={{ overflowX: 'auto' }}>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ background: 'linear-gradient(to right, #3f51b5, #9c27b0)' }}>
-                      <TableCell sx={{ color: '#fff' }}>Student Name</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Student ID</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Roll Number</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Program</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Year</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Semester</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Total Sessions</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Present</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Absent</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Attendance %</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Recorded By</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {stats.map((stat, index) => (
-                      <motion.tr
-                        key={index}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <TableCell>{stat.name}</TableCell>
-                        <TableCell>{stat.student_id}</TableCell>
-                        <TableCell>{stat.roll_number}</TableCell>
-                        <TableCell>{stat.program}</TableCell>
-                        <TableCell>{stat.year}</TableCell>
-                        <TableCell>{stat.semester}</TableCell>
-                        <TableCell>{stat.total_sessions}</TableCell>
-                        <TableCell>{stat.present}</TableCell>
-                        <TableCell>{stat.absent}</TableCell>
-                        <TableCell>{stat.attendance_percentage.toFixed(2)}%</TableCell>
-                        <TableCell>{stat.recorded_by_name}</TableCell>
-                      </motion.tr>
-                    ))}
-                  </TableBody>
-                </Table>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-                  <Button
-                    variant="contained"
-                    onClick={handleTeacherPrevPage}
-                    disabled={!teacherPrevPage}
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Subjects Taught ({teacherSubjects.length})
+            </Typography>
+            <Grid container spacing={2}>
+              {teacherSubjects.map((subject) => (
+                <Grid item xs={12} sm={6} md={4} key={subject}>
+                  <Card
+                    sx={{
+                      cursor: 'pointer',
+                      minWidth: '300px',
+                      minHeight: '100px',
+                      bgcolor: selectedSubject === subject ? 'primary.light' : 'white',
+                      '&:hover': { bgcolor: 'grey.100' },
+                    }}
+                    onClick={() => handleSubjectSelect(subject)}
                   >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="contained"
-                    onClick={handleTeacherNextPage}
-                    disabled={!teacherNextPage}
-                  >
-                    Next
-                  </Button>
-                </Box>
-              </Box>
-            </Box>
-          ))}
+                    <CardContent>
+                      <Typography variant="h6">{subject}</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+            {selectedSubject && (
+              <Button
+                variant="outlined"
+                onClick={() => setSelectedSubject(null)}
+                sx={{ mt: 2 }}
+              >
+                Clear Subject Filter
+              </Button>
+            )}
+          </Box>
         </>
+      )}
+
+      {selectedSubject && teacherStats.length > 0 && (
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Subject: {selectedSubject}
+            
+          </Typography>
+          
+          
+          <Box sx={{ mb: 2 }}>
+            <Button
+              variant="contained"
+              onClick={() => handleTeacherExport('csv')}
+              sx={{ mr: 2 }}
+            >
+              Export as CSV
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => handleTeacherExport('excel')}
+            >
+              Export as Excel
+            </Button>
+          </Box>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ background: 'linear-gradient(to right, #3f51b5, #9c27b0)' }}>
+                  <TableCell sx={{ color: '#fff' }}>Student Name</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Student ID</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Roll Number</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Program</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Semester</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Total Sessions</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Present</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Absent</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Attendance %</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Recorded By</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {teacherStats.map((stat, index) => (
+                  <motion.tr
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <TableCell>{stat.name}</TableCell>
+                    <TableCell>{stat.student_id}</TableCell>
+                    <TableCell>{stat.roll_number}</TableCell>
+                    <TableCell>{stat.program}</TableCell>
+                    <TableCell>{stat.semester}</TableCell>
+                    <TableCell>{stat.total_sessions}</TableCell>
+                    <TableCell>{stat.present}</TableCell>
+                    <TableCell>{stat.absent}</TableCell>
+                    <TableCell>{stat.attendance_percentage.toFixed(2)}%</TableCell>
+                    <TableCell>{stat.recorded_by_name}</TableCell>
+                  </motion.tr>
+                ))}
+              </TableBody>
+            </Table>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+              <Button
+                variant="contained"
+                onClick={handleTeacherPrevPage}
+                disabled={!teacherPrevPage}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleTeacherNextPage}
+                disabled={!teacherNextPage}
+              >
+                Next
+              </Button>
+            </Box>
+          </Box>
+        </Box>
       )}
 
       <Box sx={{ mt: 4, mb: 4 }}>
@@ -1204,7 +1297,6 @@ function AdminAttendanceStats({ notifyUser }) {
                   <TableCell sx={{ color: '#fff' }}>Student ID</TableCell>
                   <TableCell sx={{ color: '#fff' }}>Roll Number</TableCell>
                   <TableCell sx={{ color: '#fff' }}>Program</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Year</TableCell>
                   <TableCell sx={{ color: '#fff' }}>Semester</TableCell>
                   <TableCell sx={{ color: '#fff' }}>Total Sessions</TableCell>
                   <TableCell sx={{ color: '#fff' }}>Present</TableCell>
@@ -1224,7 +1316,6 @@ function AdminAttendanceStats({ notifyUser }) {
                     <TableCell>{stat.student_id}</TableCell>
                     <TableCell>{stat.roll_number}</TableCell>
                     <TableCell>{stat.program}</TableCell>
-                    <TableCell>{stat.year}</TableCell>
                     <TableCell>{stat.semester}</TableCell>
                     <TableCell>{stat.total_sessions}</TableCell>
                     <TableCell>{stat.present}</TableCell>

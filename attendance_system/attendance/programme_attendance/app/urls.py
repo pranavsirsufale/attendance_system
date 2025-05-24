@@ -21,6 +21,7 @@ router.register(r'admin/sessions', views.AdminSessionViewSet, basename='admin-se
 
 urlpatterns = [
     path('teacher-info/', views.teacher_info, name='teacher-info'),
+    path('teacher-subjects/', views.TeacherSubjectsView.as_view(), name='teacher-subjects'),
     path('calendar/', views.TeacherCalendarView.as_view(), name='teacher-calendar'),
     path('mark-attendance/<int:session_id>/', views.MarkAttendanceView.as_view(), name='mark-attendance'),
     path('holidays/', views.HolidayListCreateView.as_view(), name='holidays'),

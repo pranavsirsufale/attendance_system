@@ -95,6 +95,30 @@ class TeacherListView(APIView):
             logger.error(f"Error in TeacherListView: {str(e)}")
             return Response({"error": str(e)}, status=500)    
 
+
+class TeacherSubjectsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            teacher_id = request.query_params.get('teacher')
+            if not teacher_id:
+                return Response({"error": "Teacher ID is required"}, status=400)
+
+            subjects = (
+                Session.objects.filter(timetable__teacher_id=teacher_id, status='Completed')
+                .values('timetable__subject__name')
+                .distinct()
+                .order_by('timetable__subject__name')
+            )
+            subject_list = [subject['timetable__subject__name'] for subject in subjects]
+            return Response({"subjects": subject_list}, status=200)
+        except Exception as e:
+            logger.error(f"Error in TeacherSubjectsView: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=500)
+
+
+
         
 class SessionPagination(PageNumberPagination):
     page_size = 20 # default batch size 
@@ -330,6 +354,7 @@ class AdminAttendanceStatsView(APIView):
             period = request.query_params.get('period', 'semester')
             section_id = request.query_params.get('section')
             subject_id = request.query_params.get('subject')
+            subject_name = request.query_params.get('subject_name')
             teacher_id = request.query_params.get('teacher')
             program_id = request.query_params.get('program')
             year = request.query_params.get('year')
@@ -343,6 +368,8 @@ class AdminAttendanceStatsView(APIView):
                 sessions = sessions.filter(timetable__section_id=section_id)
             if subject_id:
                 sessions = sessions.filter(timetable__subject_id=subject_id)
+            if subject_name:
+                sessions = sessions.filter(timetable__subject__name=subject_name)
             if teacher_id:
                 sessions = sessions.filter(timetable__teacher_id=teacher_id)
             if program_id:
@@ -417,16 +444,8 @@ class AdminAttendanceStatsView(APIView):
                     'absent',
                     'attendance_percentage'
                 )
-                .order_by('subject_name', 'roll_number')
+                .order_by('roll_number')
             )
-
-            # Group stats by subject_name
-            stats_by_subject = {}
-            for stat in stats:
-                subject = stat['subject_name']
-                if subject not in stats_by_subject:
-                    stats_by_subject[subject] = []
-                stats_by_subject[subject].append(stat)
 
             viz_data = {
                 'total_sessions': stats.aggregate(total=Count('total_sessions'))['total'] or 0,
@@ -462,13 +481,11 @@ class AdminAttendanceStatsView(APIView):
             }
 
             paginator = self.pagination_class()
-            paginated_stats = {}
-            for subject, subject_stats in stats_by_subject.items():
-                paginated_stats[subject] = paginator.paginate_queryset(subject_stats, request)
-                paginated_stats[subject] = AttendanceStatsSerializer(paginated_stats[subject], many=True).data
+            paginated_stats = paginator.paginate_queryset(stats, request)
+            serializer = AttendanceStatsSerializer(paginated_stats, many=True)
 
             return paginator.get_paginated_response({
-                'stats': paginated_stats,
+                'stats': serializer.data,
                 'start_date': start_date,
                 'end_date': end_date,
                 'viz_data': viz_data,
@@ -476,7 +493,6 @@ class AdminAttendanceStatsView(APIView):
         except Exception as e:
             logger.error(f"Error in AdminAttendanceStatsView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
-
 
 
 

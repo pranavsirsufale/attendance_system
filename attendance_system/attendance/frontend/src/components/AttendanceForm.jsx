@@ -110,6 +110,8 @@ function AttendanceForm({ notifyUser,onClose = () => {} }) {
           <table className="table-auto w-full border-collapse border border-gray-300">
             <thead>
               <tr className="bg-gray-100">
+
+                <th className="border border-gray-300 px-4 py-2 text-left">Student ID</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Roll Number</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Attendance</th>
@@ -119,10 +121,17 @@ function AttendanceForm({ notifyUser,onClose = () => {} }) {
               
               {students.map((student) => (
                 <tr key={student.id}>
+
+
+                  <td className="border border-gray-300 px-4 py-2">{student.id}</td>
+                  
                   <td className="border border-gray-300 px-4 py-2">{student.roll_number}</td>
+
+
                   <td className="border border-gray-300 px-4 py-2">
                     {student.first_name} {student.last_name}
                   </td>
+
                   <td className="border border-gray-300 px-4 py-2">
                     <select
                       value={attendance[student.id] || "Present"}

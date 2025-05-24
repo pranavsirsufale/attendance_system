@@ -526,48 +526,57 @@ function Calendar(admin) {
           transition={{ staggerChildren: 0.1 }}
         >
           {sessions.map((session) => (
+
+
             <motion.li
-              key={session.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-indigo-100"
-              whileHover={{ y: -5 }}
-            >
-              <div className="mb-4">
-                <h3 className="text-xl font-semibold text-indigo-600">{session.timetable.subject.name}</h3>
-                <p className="text-sm text-gray-500">{session.timetable.section.name} • Year {session.timetable.section.year} • Semester {session.timetable.semester}</p>
-              </div>
-              <div className="space-y-2 text-gray-600 text-sm">
-                <p><span className="font-medium text-indigo-700">Date:</span> {session.date}</p>
-                <p><span className="font-medium text-indigo-700">Day:</span> {session.timetable.day_of_week}</p>
-                <p><span className="font-medium text-indigo-700">Time:</span> {session.timetable.start_time}</p>
-                <p><span className="font-medium text-indigo-700">Program:</span> {session.timetable.section.program}</p>
-                <p><span className="font-medium text-indigo-700">Period:</span> {session.timetable.semester_start_date} → {session.timetable.semester_end_date}</p>
-                <p><span className="font-medium text-indigo-700">Status:</span>
-                  <span className={`ml-1 font-semibold ${session.status === 'Scheduled' ? 'text-yellow-600' : 'text-green-600'}`}>
-                    {session.status}
-                  </span>
-                </p>
-              </div>
-              <motion.div 
-                className="mt-4"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Link
-                  to={`/attendance/${session.id}`}
-                  className={`inline-block w-full text-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                    session.status === 'Scheduled'
-                      ? 'bg-yellow-400 text-white hover:bg-yellow-500'
-                      : 'bg-green-500 text-white hover:bg-green-600'
-                  }`}
-                >
-                  {session.status === 'Scheduled' ? 'Mark Attendance' : 'Update Attendance'}
-                </Link>
-              </motion.div>
-            </motion.li>
+  key={session.id}
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  whileHover={{ y: -5 }}
+  className="bg-gradient-to-br from-indigo-200 via-indigo-100 to-white rounded-3xl shadow-2xl hover:shadow-indigo-300 transition-all duration-300 p-6 border border-indigo-300/50"
+>
+  <div className="mb-4">
+    <h3 className="text-2xl font-bold text-indigo-700 drop-shadow-sm">{session.timetable.subject.name}</h3>
+    <p className="text-sm text-indigo-500">{session.timetable.section.name} • Year {session.timetable.section.year} • Semester {session.timetable.semester}</p>
+  </div>
+
+  <div className="space-y-2 text-indigo-700 text-sm">
+    <p><span className="font-semibold">📅 Date:</span> {session.date}</p>
+    <p><span className="font-semibold">📆 Day:</span> {session.timetable.day_of_week}</p>
+    <p><span className="font-semibold">⏰ Time:</span> {session.timetable.start_time}</p>
+    <p><span className="font-semibold">🎓 Program:</span> {session.timetable.section.program}</p>
+    <p><span className="font-semibold">🗓️ Period:</span> {session.timetable.semester_start_date} → {session.timetable.semester_end_date}</p>
+    <p>
+      <span className="font-semibold">📌 Status:</span>
+      <span className={`ml-1 font-bold ${session.status === 'Scheduled' ? 'text-yellow-600' : 'text-green-600'}`}>
+        {session.status}
+      </span>
+    </p>
+  </div>
+
+  <motion.div 
+    className="mt-5"
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+  >
+    <Link
+      to={`/attendance/${session.id}`}
+      className={`inline-block w-full text-center px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-md ${
+        session.status === 'Scheduled'
+          ? 'bg-yellow-400 text-white hover:bg-yellow-500'
+          : 'bg-green-500 text-white hover:bg-green-600'
+      }`}
+    >
+      {session.status === 'Scheduled' ? '📋 Mark Attendance' : '✏️ Update Attendance'}
+    </Link>
+  </motion.div>
+</motion.li>
+
           ))}
         </motion.ul>
+
+
+
       ) : (
         <motion.p 
           initial={{ opacity: 0 }}

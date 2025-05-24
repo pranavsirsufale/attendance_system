@@ -95,10 +95,7 @@ function App() {
     visible: { opacity: 1, y: 0 },
   };
 
-  // const notify = (msg) => toast.success(msg)
-
-  console.log(notification);
-
+  
   useEffect(() => {
     const checkAdmin = async () => {
       const token = localStorage.getItem("access_token");

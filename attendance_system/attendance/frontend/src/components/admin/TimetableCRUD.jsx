@@ -92,8 +92,7 @@ function TimetableCRUD({notifyUser}) {
   const fetchSemesters = async (sectionId) => {
     const token = localStorage.getItem("access_token");
     try {
-      console.log(`Fetching semesters for section_id=${sectionId}`);
-      const response = await axios.get(`http://localhost:8000/api/semesters-for-section/?section_id=${sectionId}`, {
+      const response = await axios.get(`http://localhost:8000/api/admin/semesters/?section_id=${sectionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSemesters(response.data.semesters || []);

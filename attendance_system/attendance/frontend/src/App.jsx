@@ -18,6 +18,7 @@ import SubjectCRUD from "./components/admin/SubjectCRUD";
 import TimetableCRUD from "./components/admin/TimetableCRUD";
 import SessionCRUD from "./components/admin/SessionCRUD";
 import { motion, AnimatePresence } from "framer-motion";
+import AddBulkStudents from "./components/utilities/AddBulkStudents";
 import { FaChalkboardTeacher } from "react-icons/fa";
 import LandingPage from "./components/pages/LandingPage";
 import { Switch } from "@headlessui/react";
@@ -272,6 +273,8 @@ function App() {
                             />
                           }
                         />
+
+
                         <Route
                           path="/admin/sessions"
                           element={
@@ -281,12 +284,22 @@ function App() {
                             />
                           }
                         />
+
+
                         <Route
                           path="/admin/attendance-stats"
                           element={
                             <AdminAttendanceStats notifyUser={notifyUser} />
                           }
                         />
+                        <Route
+                          path="/admin/add-builk-student"
+                          element={
+                            <AddBulkStudents notifyUser={notifyUser} />
+                          }
+                        />
+
+
                       </>
                     )}
                   </Routes>

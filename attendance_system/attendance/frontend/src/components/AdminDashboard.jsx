@@ -187,6 +187,8 @@ function AdminDashboard({notifyUser}) {
               View/Edit Sessions
             </Link>
           </motion.div>
+
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -203,6 +205,28 @@ function AdminDashboard({notifyUser}) {
               View Attendance Stats
             </Link>
           </motion.div>
+
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+            className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
+          >
+            <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
+              Add Bulk Students
+            </h3>
+            <Link
+              to="/admin/add-builk-student"
+              className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-200 font-medium transition-colors duration-200 hover:underline"
+            >
+              Add Build Students
+            </Link>
+          </motion.div>
+
+
+
+
         </motion.div>
       )}
     </div>

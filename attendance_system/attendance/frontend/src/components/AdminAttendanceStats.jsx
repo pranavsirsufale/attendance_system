@@ -288,6 +288,39 @@ function AdminAttendanceStats({ notifyUser }) {
     setTeacherPage(1);
   };
 
+
+  const handleTeacherExport = async (format) => {
+    const token = localStorage.getItem('access_token');
+    let url = `http://localhost:8000/api/admin/attendance-export/?`;
+    if (section) url += `§section=${section}`;
+    if (selectedSubject) {
+        // Remove semester suffix
+        const cleanSubject = selectedSubject.replace(/\s*\(sem\s*-\s*[IVX]+\)\s*$/, '');
+        url += `&subject_name=${encodeURIComponent(cleanSubject)}`;
+    }
+    if (selectedTeacher) url += `&teacher=${selectedTeacher}`;
+    if (program) url += `&program=${program}`;
+    if (year) url += `&year=${year}`;
+    if (semester) url += `&semester=${semester}`;
+    if (period === 'daily' && date) url += `&date=${date}`;
+
+    try {
+        const response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${token}` },
+            responseType: 'blob',
+        });
+        const blob = new Blob([response.data], { type: response.headers['content-type'] });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = `attendance_report_${selectedSubject}_${selectedTeacher}.${format}`;
+        link.click();
+        notifyUser(`Exported attendance report as ${format}`, 'success');
+    } catch (err) {
+        notifyUser('Failed to export report', 'error');
+        console.error(err);
+    }
+};
+
   return (
     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
       <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
@@ -307,16 +340,19 @@ function AdminAttendanceStats({ notifyUser }) {
       </AnimatePresence>
 
       <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-        <FormControl sx={{ minWidth: 120 }}>
+        
+       <FormControl sx={{ minWidth: 120 }}>
           <InputLabel>Period</InputLabel>
-          <Select value={period} onChange={(e) => { setPeriod(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}>
+          <Select value={period} onChange={(e) => { setPeriod(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); setStartDate(''); setEndDate(''); }}>
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="daily">Daily</MenuItem>
             <MenuItem value="weekly">Weekly</MenuItem>
             <MenuItem value="monthly">Monthly</MenuItem>
             <MenuItem value="semester">Semester</MenuItem>
+            <MenuItem value="custom">Custom Range</MenuItem>
           </Select>
         </FormControl>
+
         <TextField
           label="Section ID"
           type="number"
@@ -448,6 +484,13 @@ function AdminAttendanceStats({ notifyUser }) {
             Subject: {selectedSubject}
             
           </Typography>
+          <Button
+              variant="contained"
+              onClick={() => handleTeacherExport('csv')}
+              sx={{ mr: 2 }}
+            >
+              Export as CSV
+            </Button>
           
           
           

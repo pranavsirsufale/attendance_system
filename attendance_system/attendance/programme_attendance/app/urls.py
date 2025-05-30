@@ -1,6 +1,10 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
+from django.http import HttpResponse
+
+
+
 
 router = DefaultRouter()
 router.register(r'teachers', views.TeacherViewSet, basename='teacher')
@@ -18,6 +22,7 @@ router.register(r'admin/subjects', views.AdminSubjectViewSet, basename='admin-su
 router.register(r'admin/sections', views.AdminSectionViewSet, basename='admin-section')
 router.register(r'admin/timetables', views.AdminTimetableViewSet, basename='admin-timetable')
 router.register(r'admin/sessions', views.AdminSessionViewSet, basename='admin-session')
+# router.register(r'admin/attendance/export/',views.AdminAttendanceExportView, basename='admin-attendance')
 
 urlpatterns = [
     path('teacher-info/', views.teacher_info, name='teacher-info'),
@@ -29,12 +34,16 @@ urlpatterns = [
     path('class-hourly-stats/<int:session_id>/', views.ClassHourlyStatsView.as_view(), name='class-hourly-stats'),
     path('subjects-for-section/', views.SubjectsForSectionView.as_view(), name='subjects-for-section'),
     path('sections/', views.get_sections, name='get-sections'),
+    path('sections-for-program/',views.SectionForProgramView.as_view(),name = 'sections-for-program'),
     path('subjects-for-section-alt/', views.get_subjects_for_section, name='get-subjects-for-section'),
     path('subjects/', views.get_subjects, name='get-subjects'),
+    path('admin/attendance-export/',views.AdminAttendanceExportView.as_view(),name='admin-attendance-export-csv'),
     path('time-slots/', views.get_time_slots, name='get-time-slots'),
     path('admin/attendance-stats/', views.AdminAttendanceStatsView.as_view(), name='admin-attendance-stats'),
     path('teacher-attendance-stats/', views.TeacherAttendanceStatsView.as_view(), name='teacher_attendance_stats'),
     
+    # path('semesters-for-section/' , views.SemestersForSectionView.as_view() , name = 'semester-for-section'),
+    path('students/bulk/',views.BulkStudentUploadView.as_view() , name='students-bulk'),
     
     path('admin/attendance-overview/', views.AdminAttendanceOverview.as_view(), name='admin-attendance-overview'),
     path('admin/holidays/', views.AdminHolidayManagement.as_view(), name='admin-holidays'),
@@ -98,7 +107,6 @@ urlpatterns = [
     path('', include(router.urls)),
     path('admin/semesters/', views.SemestersForSectionView.as_view(), name='semesters-for-section'),
     path('semesters-for-section/' , views.SemestersForSectionView.as_view() ,name = 'semesters-for-section' ),
-    # path('api/semesterd-for-section' , views.SemestersForSectionView.as_view() , name = 'semester-for-section'),
     # path('', views.home , name = 'home')
     # Manual admin routes
     # path('api/admin/', include((admin_router_instance.urls, 'admin'), namespace='admin')),

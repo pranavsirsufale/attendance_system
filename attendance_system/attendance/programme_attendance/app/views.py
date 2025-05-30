@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
-from django.http import HttpResponse
+from django.http import HttpResponse,StreamingHttpResponse
 from django.utils import timezone
 from rest_framework import viewsets, generics, status , serializers
 from rest_framework.permissions import IsAuthenticated
@@ -19,10 +19,15 @@ from .serializers import (
     , AdminTeacherSerializer , AdminStudentSerializer , AdminTimetableSerializer,AttendanceStatsSerializer
 )
 from django.db.models.functions import Concat
+from django.db import IntegrityError
 import logging
 import traceback
 import sys
 import jwt
+import csv
+from io import StringIO 
+import re
+
 
 
 
@@ -148,6 +153,7 @@ class ProgramViewSet(AdminCRUDViewSet):
 class SubjectViewSet(AdminCRUDViewSet):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
+    permission_classes = [IsAuthenticated]
 
 
 
@@ -300,6 +306,8 @@ class AdminAttendanceStatsView(APIView):
         except Exception as e:
             logger.error(f"Error in AdminAttendanceStatsView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
+
+
 
 
 
@@ -877,7 +885,7 @@ class ClassHourlyStatsView(generics.GenericAPIView):
 
 class SectionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Section.objects.all()
-    serializer_class = SectionSerializer #serializers.ModelSerializer(Section, fields='__all__')
+    serializer_class = SectionSerializer 
     permission_classes = [IsAuthenticated]
 
 class SubjectViewSet(viewsets.ModelViewSet):
@@ -1212,12 +1220,22 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
 
 
 
+class SemesterForSectionViewTest(APIView):
+    permission_classes = [IsAuthenticated,IsAdmin]
+
+    def get(self,request):
+        section = request.query_params.get('section_id')
+        print(section)
+
+        return Response({"data":'section has found good !!!!!!!!'})
+
 # -- new endpoint for semester ---
 class SemestersForSectionView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
     def get(self, request):
         section_id = request.query_params.get('section_id')
+        print('I got section Id here ',section_id)
         if not section_id :
             logger.warning('Missing Section_id parametr')
             return Response({'error' : 'section_id is required '} , status = status.HTTP_400_BAD_REQUEST)
@@ -1233,6 +1251,7 @@ class SemestersForSectionView(APIView):
             
         except Section.DoesNotExist:
             logger.error(f"Section id = {section_id} not found")
+            # print('printing section id not found')
             return Response({'error' : f"Section with id = {section_id}"} , status = status.HTTP_404_NOT_FOUND)
         except ValueError:
             logger.error(f"Invalid section_id : {section_id}")
@@ -1547,7 +1566,24 @@ class AdminTimetableViewSet(viewsets.ModelViewSet):
         self.perform_destroy(instance)
         return Response(status = status.HTTP_204_NO_CONTENT)
     
+class SectionForProgramView(APIView):
+    permission_classes = [IsAuthenticated,IsAdmin]
+    
+    def get(self,request):
+        program_id = request.query_params.get('program_id')
+        if not program_id:
+            return Response({'error':"program_id is required" }, status = status.HTTP_400_BAD_REQUEST)
 
+        try:
+            sections = Section.objects.filter(program_id = program_id)
+            print(sections)
+            serializer = SectionSerializer(sections , many = True)
+            return Response(serializer.data)            
+        except Program.DoesNotExist:
+            return Response({"error":f"Program with ID {program_id} not found"}, status=status.HTTP_404_NOT_FOUND)
+        except ValueError as e:
+            return Response({"error":"the program Id must be an integer"},status = status.HTTP_400_BAD_REQUEST)
+        
 
 # Ensure semester For Section View is unchanged and works
 class SemestersForSectionView(APIView):
@@ -1621,6 +1657,187 @@ class AdminAttendanceOverview(APIView):
             'stats': response
         })
 
+
+
+# admin attendance export by teacher-subject
+class AdminAttendanceExportView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        try:
+            logger.info("Starting AdminAttendanceExportView")
+            period = request.query_params.get('period', 'semester')
+            section_id = request.query_params.get('section')
+            subject_id = request.query_params.get('subject')
+            subject_name = request.query_params.get('subject_name')
+            teacher_id = request.query_params.get('teacher')
+            program_id = request.query_params.get('program')
+            year = request.query_params.get('year')
+            semester = request.query_params.get('semester')
+            date = request.query_params.get('date')
+            end_date = request.query_params.get('end_date')
+            start_date = request.query_params.get('start_date')
+            format = request.query_params.get('format', 'csv')
+
+            logger.info(f"Parameters: period={period}, teacher_id={teacher_id}, subject_name={subject_name}")
+            if not teacher_id or not subject_name:
+                logger.warning("Missing teacher_id or subject_name")
+                return Response({"error": "Teacher ID and subject name are required"}, status=400)
+
+            # Validate teacher_id
+            try:
+                teacher = Teacher.objects.get(id=teacher_id)
+                logger.info(f"Teacher found: {teacher.id}")
+            except Teacher.DoesNotExist:
+                logger.error(f"Teacher id={teacher_id} not found")
+                return Response({"error": f"Teacher with id={teacher_id} not found"}, status=404)
+
+            sessions = Session.objects.select_related('timetable__section__program', 'timetable__subject', 'timetable__teacher').filter(status='Completed')
+            logger.info(f"Initial sessions count: {sessions.count()}")
+
+            if section_id:
+                sessions = sessions.filter(timetable__section_id=section_id)
+            if subject_id:
+                sessions = sessions.filter(timetable__subject_id=subject_id)
+            if subject_name:
+                sessions = sessions.filter(timetable__subject__name=subject_name)
+            if teacher_id:
+                sessions = sessions.filter(timetable__teacher_id=teacher_id)
+            if program_id:
+                sessions = sessions.filter(timetable__section__program_id=program_id)
+            if year:
+                sessions = sessions.filter(timetable__section__year=year)
+            if semester:
+                sessions = sessions.filter(timetable__subject__semester=semester)
+            
+            if start_date and end_date:
+                try:
+                    sessions = sessions.filter(date__range=[start_date,end_date])
+                except ValueError:
+                    logger.error(f"Invalid date range : {start_date} to {end_date}")
+                    return Response({"error":"Invalid date range"},status = 400)
+
+            if period == 'daily' and date:
+                try:
+                    sessions = sessions.filter(date=date)
+                except ValueError:
+                    logger.error(f"Invalid date format: {date}")
+                    return Response({"error": "Invalid date format"}, status=400)
+                if not end_date:
+                    end_date = (datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+            elif period == 'weekly':
+                start_date = datetime.now().date() - timedelta(days=datetime.now().weekday())
+                end_date = start_date + timedelta(days=7)
+                sessions = sessions.filter(date__range=[start_date, end_date])
+            elif period == 'monthly':
+                start_date = datetime.now().date().replace(day=1)
+                end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+                sessions = sessions.filter(date__range=[start_date, end_date])
+            elif period == 'semester' and semester:
+                try:
+                    start_date = sessions.filter(timetable__subject__semester=semester).order_by('date').first().date if sessions.exists() else datetime.now().date()
+                    end_date = sessions.filter(timetable__subject__semester=semester).order_by('-date').first().date if sessions.exists() else datetime.now().date()
+                    sessions = sessions.filter(date__range=[start_date, end_date])
+                except ValueError:
+                    logger.error(f"Invalid semester: {semester}")
+                    return Response({"error": "Invalid semester"}, status=400)
+            else:
+                start_date = sessions.order_by('date').first().date if sessions.exists() else datetime.now().date()
+                end_date = sessions.order_by('-date').first().date if sessions.exists() else datetime.now().date()
+
+            logger.info(f"Filtered sessions count: {sessions.count()}")
+
+            stats = (
+                Attendance.objects.filter(session__in=sessions)
+                .select_related('student', 'recorded_by')
+                .values(
+                    'student_id',
+                    'student__first_name',
+                    'student__last_name',
+                    'student__roll_number',
+                    'student__section__program__name',
+                    'student__section__year',
+                    'student__semester',
+                    'session__timetable__subject__name',
+                    'recorded_by__first_name',
+                    'recorded_by__last_name'
+                )
+                .annotate(
+                    name=Concat(F('student__first_name'), Value(' '), F('student__last_name'), output_field=CharField()),
+                    roll_number=F('student__roll_number'),
+                    program=F('student__section__program__name'),
+                    year=F('student__section__year'),
+                    semester=F('student__semester'),
+                    subject_name=F('session__timetable__subject__name'),
+                    recorded_by_name=Concat(F('recorded_by__first_name'), Value(' '), F('recorded_by__last_name'), output_field=CharField()),
+                    total_sessions=Count('session'),
+                    present=Count('session', filter=Q(status=True)),
+                    absent=Count('session', filter=Q(status=False)),
+                    attendance_percentage=ExpressionWrapper(
+                        (F('present') * 100.0) / F('total_sessions'),
+                        output_field=FloatField()
+                    )
+                )
+                .values(
+                    'student_id',
+                    'name',
+                    'roll_number',
+                    'program',
+                    'year',
+                    'semester',
+                    'subject_name',
+                    'recorded_by_name',
+                    'total_sessions',
+                    'present',
+                    'absent',
+                    'attendance_percentage'
+                )
+                .order_by('roll_number')
+            )
+
+            logger.info(f"Stats count: {stats.count()}")
+
+            if format == 'csv':
+                def stream_csv():
+                    buffer = StringIO()
+                    writer = csv.writer(buffer)
+                    writer.writerow([
+                        'Student Name', 'Student ID', 'Roll Number', 'Program', 'Year', 'Semester',
+                        'Subject', 'Total Sessions', 'Present', 'Absent', 'Attendance %', 'Recorded By'
+                    ])
+
+                    for stat in stats.iterator():
+                        writer.writerow([
+                            stat['name'],
+                            stat['student_id'],
+                            stat['roll_number'],
+                            stat['program'],
+                            stat['year'],
+                            stat['semester'],
+                            stat['subject_name'],
+                            stat['total_sessions'],
+                            stat['present'],
+                            stat['absent'],
+                            f"{stat['attendance_percentage']:.2f}%",
+                            stat['recorded_by_name']
+                        ])
+                        buffer.seek(0)
+                        yield buffer.read()
+                        buffer.truncate(0)
+                        buffer.seek(0)
+
+                response = StreamingHttpResponse(stream_csv(), content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename="attendance_report_{subject_name}_{teacher_id}.csv"'
+                return response
+            else:
+                logger.warning("Unsupported format requested")
+                return Response({"error": "Only CSV format is supported"}, status=400)
+
+        except Exception as e:
+            logger.error(f"Error in AdminAttendanceExportView: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=500)
+
+
 class AdminHolidayManagement(generics.ListCreateAPIView):
     queryset = CalendarException.objects.all()
     serializer_class = CalendarExceptionSerializer
@@ -1634,6 +1851,82 @@ class SessionPagination(PageNumberPagination):
     page_size = 20 # default batch size 
     page_size_query_param = 'page_size'
     max_page_size = 100
+
+
+class BulkStudentUploadView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def post(self, request):
+        try:
+            students_data = request.data
+            if not isinstance(students_data, list):
+                return Response({"error": "Expected a list of students"}, status=400)
+
+            # Validate data
+            errors = []
+            student_objects = []
+            existing_ids = set(Student.objects.values_list('id', flat=True))
+
+            for i, student in enumerate(students_data):
+                # Required fields
+                required_fields = ['id', 'first_name', 'roll_number', 'section_id', 'semester']
+                missing_fields = [field for field in required_fields if field not in student or student[field] is None]
+                if missing_fields:
+                    errors.append(f"Row {i+1}: Missing fields: {', '.join(missing_fields)}")
+                    continue
+
+                # Validate ID
+                if not isinstance(student['id'], int):
+                    errors.append(f"Row {i+1}: Invalid ID (must be integer)")
+                    continue
+                if student['id'] in existing_ids:
+                    errors.append(f"Row {i+1}: Duplicate ID {student['id']}")
+                    continue
+
+                # Validate section
+                try:
+                    section = Section.objects.get(id=student['section_id'])
+                except Section.DoesNotExist:
+                    errors.append(f"Row {i+1}: Invalid section_id")
+                    continue
+
+                # Validate semester (1-10 based on section year)
+                year = section.year
+                valid_semesters = [year * 2 - 1, year * 2]
+                if student['semester'] not in valid_semesters:
+                    errors.append(f"Row {i+1}: Invalid semester for year {year}")
+                    continue
+
+                # Validate email format if provided
+                if student.get('email') and not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', student['email']):
+                    errors.append(f"Row {i+1}: Invalid email format")
+                    continue
+
+                student_objects.append(Student(
+                    id=student['id'],
+                    first_name=student['first_name'],
+                    last_name=student.get('last_name', ''),
+                    roll_number=student['roll_number'],
+                    email=student.get('email', ''),
+                    phone=student.get('phone', ''),
+                    section_id=student['section_id'],
+                    semester=student['semester']
+                ))
+
+            if errors:
+                return Response({"error": "; ".join(errors)}, status=400)
+
+            # Bulk create students
+            try:
+                Student.objects.bulk_create(student_objects)
+                return Response({"added": len(student_objects)}, status=201)
+            except IntegrityError as e:
+                logger.error(f"IntegrityError during bulk create: {str(e)}")
+                return Response({"error": "Database error, possible duplicate data"}, status=400)
+
+        except Exception as e:
+            logger.error(f"Error in BulkStudentUploadView: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=500)
 
 
 # this admin SEssions view set can be used for all sessionsgetting
@@ -1654,6 +1947,12 @@ class AdminSessionViewSet(viewsets.ModelViewSet):
 
 
 '''
+
+class TestExportView(APIView):
+    permission_classes = [IsAuthenticated,IsAdmin]
+    def get(self,request):
+        return Response({"message":"Test export view works"})
+
 
 class AdminSessionViewSet(viewsets.ModelViewSet):
     queryset = Session.objects.all()

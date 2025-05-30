@@ -7,7 +7,9 @@ from django.core.validators import RegexValidator
 
 class Semester(models.Model):
     semester = models.PositiveIntegerField(unique=True)
+    subject = models.CharField(max_length=50)
 
+    
 class Timetable(models.Model):
     LECTURE_SLOTS = [
     ('08:30:00', '08:30 AM - 09:30 AM'),
@@ -43,9 +45,9 @@ class Section(models.Model):
         verbose_name_plural = "Sections"
 
 class Subject(models.Model):
-    name = models.CharField(max_length=100  )  # e.g., "Law of Contract I"
+    name = models.CharField(max_length=100 , unique=True,null= False , blank=False )  # e.g., "Law of Contract I"
     #! it was earlier unique true but changed due to some semester has repeat subjects
-    is_law_subject = models.BooleanField(default=True)  # True for law, False for non-law
+    is_law_subject = models.BooleanField(default=True , blank=False)  # True for law, False for non-law
     semester = models.PositiveIntegerField()  # 1 to 10 (depending on program)
 
     def __str__(self):

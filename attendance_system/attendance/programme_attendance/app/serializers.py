@@ -57,8 +57,6 @@ class SectionSerializer(serializers.ModelSerializer):
         model = Section
         fields = ['id', 'name', 'year', 'program', 'available_semesters']
 
-
-
 class TimetableSerializer(serializers.ModelSerializer):
     section = SectionSerializer()
     subject = SubjectSerializer()

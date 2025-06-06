@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
 from django.http import HttpResponse,StreamingHttpResponse
 from django.utils import timezone
@@ -19,7 +20,7 @@ from .serializers import (
     , AdminTeacherSerializer , AdminStudentSerializer , AdminTimetableSerializer,AttendanceStatsSerializer
 )
 from django.db.models.functions import Concat
-from django.db import IntegrityError
+from django.db import IntegrityError,transaction
 import logging
 import traceback
 import sys
@@ -142,9 +143,11 @@ class TeacherViewSet(AdminCRUDViewSet):
     queryset = Teacher.objects.all()
     serializer_class = TeacherSerializer
 
-class StudentViewSet(AdminCRUDViewSet):
-    queryset = Student.objects.all()
-    serializer_class = StudentSerializer
+# class StudentViewSet(AdminCRUDViewSet):
+#     queryset = Student.objects.all()
+#     serializer_class = StudentSerializer
+
+  
 
 class ProgramViewSet(AdminCRUDViewSet):
     queryset = Program.objects.all()
@@ -386,13 +389,13 @@ class TeacherAttendanceStatsView(APIView):
 
 
 
-class StudentViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Student.objects.all()
-    serializer_class = StudentSerializer
-    permission_classes = [IsAuthenticated]
+# class StudentViewSet(viewsets.ReadOnlyModelViewSet):
+#     queryset = Student.objects.all()
+#     serializer_class = StudentSerializer
+#     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        return Student.objects.filter(section__timetable__teacher__user = self.request.user ).distinct()
+#     def get_queryset(self):
+#         return Student.objects.filter(section__timetable__teacher__user = self.request.user ).distinct()
 
 class SessionViewSet(viewsets.ModelViewSet):
     queryset = Session.objects.all()
@@ -1261,9 +1264,9 @@ class SemestersForSectionView(APIView):
     
 
 class AdminStudentViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsAdmin]
     queryset = Student.objects.all()
     serializer_class = AdminStudentSerializer
-    permission_classes = [IsAuthenticated, IsAdmin]
     
   
 
@@ -1656,6 +1659,97 @@ class AdminAttendanceOverview(APIView):
             'end_date': end_date.isoformat(),
             'stats': response
         })
+
+
+class PassStudentsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def post(self, request):
+        try:
+            students_data = request.data
+            if not isinstance(students_data, list):
+                return Response({"error": "Expected a list of students"}, status=400)
+
+            errors = []
+            updated_students = []
+
+            with transaction.atomic():
+                for student_data in students_data:
+                    # Required fields
+                    required_fields = ['id', 'semester', 'section_id']
+                    missing_fields = [field for field in required_fields if field not in student_data or student_data[field] is None]
+                    if missing_fields:
+                        errors.append(f"ID {student_data.get('id', 'unknown')}: Missing {', '.join(missing_fields)}")
+                        continue
+
+                    # Validate student
+                    try:
+                        student = Student.objects.get(id=student_data['id'])
+                    except Student.DoesNotExist:
+                        errors.append(f"ID {student_data['id']}: Not found")
+                        continue
+
+                    # Get current section
+                    try:
+                        current_section = Section.objects.get(id=student.section_id)
+                    except Section.DoesNotExist:
+                        errors.append(f"ID {student_data['id']}: Current section invalid")
+                        continue
+
+                    program_id = current_section.program_id
+                    current_year = current_section.year
+                    section_name = current_section.name
+                    current_semester = student.semester
+                    new_semester = student_data['semester']
+
+                    # Validate semester
+                    if new_semester != current_semester + 1:
+                        errors.append(f"ID {student_data['id']}: Expected semester {current_semester + 1}")
+                        continue
+
+                    # Check max semester
+                    max_semester = 6 if program_id == 2 else 10
+                    if new_semester > max_semester:
+                        errors.append(f"ID {student_data['id']}: Final semester reached")
+                        continue
+
+                    # Determine expected year
+                    new_year = current_year if new_semester % 2 == 0 else current_year + 1
+
+                    # Validate new section
+                    new_section_id = student_data['section_id']
+                    try:
+                        new_section = Section.objects.get(id=new_section_id, program_id=program_id, year=new_year)
+                    except Section.DoesNotExist:
+                        # Try same section name
+                        try:
+                            new_section = Section.objects.get(name=section_name, program_id=program_id, year=new_year)
+                            new_section_id = new_section.id
+                        except Section.DoesNotExist:
+                            # Fallback to any section
+                            new_section = Section.objects.filter(program_id=program_id, year=new_year).first()
+                            if not new_section:
+                                errors.append(f"ID {student_data['id']}: No section for Year {new_year}")
+                                continue
+                            new_section_id = new_section.id
+
+                    # Update student
+                    student.semester = new_semester
+                    student.section_id = new_section_id
+                    updated_students.append(student)
+
+                if errors:
+                    return Response({"error": "; ".join(errors)}, status=400)
+
+                # Save updates
+                for student in updated_students:
+                    student.save()
+
+                return Response({"updated": len(updated_students)}, status=200)
+
+        except Exception as e:
+            logger.error(f"Error in PassStudentsView: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=500)
 
 
 

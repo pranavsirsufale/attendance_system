@@ -26,6 +26,7 @@ import { Bounce, toast, ToastContainer } from "react-toastify";
 import Lottie from "react-lottie-player"; //! for lottie animation
 import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles"; //! particles engine
+import PassStudents from "./components/utilities/PassStudents";
 // Sample Lottie animation (law-themed scales of justice)
 // import lawAnimationData from "https://lottie.host/9c9f6f1d-3b3e-4b7e-9e1a-3f3d6b8e7f2a/justice-scales.json";
 
@@ -292,10 +293,17 @@ function App() {
                             <AdminAttendanceStats notifyUser={notifyUser} />
                           }
                         />
+
                         <Route
                           path="/admin/add-builk-student"
                           element={
                             <AddBulkStudents notifyUser={notifyUser} />
+                          }
+                        />
+                        <Route
+                          path="/admin/pass-students"
+                          element={
+                            <PassStudents notifyUser={notifyUser} />
                           }
                         />
 

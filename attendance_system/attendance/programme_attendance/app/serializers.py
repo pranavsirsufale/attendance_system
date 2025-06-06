@@ -264,14 +264,19 @@ class AdminSectionSerializer(serializers.ModelSerializer):
         fields = ['id','program','name','year']
 
 class AdminStudentSerializer(serializers.ModelSerializer):
-    # section = AdminSectionSerializer(read_only = True )
-    section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())  # Accept section ID directly
+    section = AdminSectionSerializer()
+    # section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())  # Accept section ID directly
+    
     subjects = SubjectSerializer(many = True , read_only = True )
-
+    # section_data = SectionSerializer( read_only = True)
+    # print(section_data)
+    
+    print(section)
     class Meta:
         model = Student
+        # section = Section
        
-        fields = ['id', 'roll_number', 'first_name', 'last_name', 'email', 'phone', 'section', 'semester', 'subjects']
+        fields = ['id', 'roll_number', 'first_name', 'last_name', 'email', 'phone', 'section','semester', 'subjects']
         read_only_fields = ['id', 'subjects']
         extra_kwargs = {'roll_number' : {'required' : False , 'allow_blank' : True , 'default' : ''}}
    

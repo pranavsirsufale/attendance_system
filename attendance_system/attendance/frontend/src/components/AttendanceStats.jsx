@@ -1,206 +1,611 @@
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Button, TextField, Select, MenuItem, FormControl, InputLabel, Box, Typography, Table, TableBody, TableCell, TableHead, TableRow, Card, CardContent, Grid } from '@mui/material';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-function AttendanceStats({notifyUser}) {
-  const [stats, setStats] = useState([]);
+function AttendanceStats({ notifyUser }) {
+  const [teacherSubjects, setTeacherSubjects] = useState([]);
+  const [teacherStats, setTeacherStats] = useState([]);
+  const [studentStats, setStudentStats] = useState([]);
   const [period, setPeriod] = useState('semester');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [customRange, setCustomRange] = useState(false);
+  const [section, setSection] = useState('');
+  const [subject, setSubject] = useState('');
+  const [program, setProgram] = useState('');
+  const [year, setYear] = useState('');
+  const [semester, setSemester] = useState('');
+  const [date, setDate] = useState('');
   const [error, setError] = useState('');
-  const [responseStartDate, setResponseStartDate] = useState('');
-  const [responseEndDate, setResponseEndDate] = useState('');
+  const [teacherStartDate, setTeacherStartDate] = useState('');
+  const [teacherEndDate, setTeacherEndDate] = useState('');
+  const [studentStartDate, setStudentStartDate] = useState('');
+  const [studentEndDate, setStudentEndDate] = useState('');
+  const [teacherPage, setTeacherPage] = useState(1);
+  const [studentPage, setStudentPage] = useState(1);
+  const [teacherNextPage, setTeacherNextPage] = useState(null);
+  const [teacherPrevPage, setTeacherPrevPage] = useState(null);
+  const [studentNextPage, setStudentNextPage] = useState(null);
+  const [studentPrevPage, setStudentPrevPage] = useState(null);
+  const [teacherTotalCount, setTeacherTotalCount] = useState(0);
+  const [studentTotalCount, setStudentTotalCount] = useState(0);
+  const [students, setStudents] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [loggedInTeacherId, setLoggedInTeacherId] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
+  // Filter state for attendance period
+  const [attendanceFilter, setAttendanceFilter] = useState('semester');
+  const [attendanceDate, setAttendanceDate] = useState('');
+  const [attendanceYear, setAttendanceYear] = useState('');
+
+  // Add state for custom range filter
+  const [attendanceRangeStart, setAttendanceRangeStart] = useState('');
+  const [attendanceRangeEnd, setAttendanceRangeEnd] = useState('');
+
+  // Fetch logged-in teacher's ID
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchProfile = async () => {
+      setProfileLoading(true);
       const token = localStorage.getItem('access_token');
       if (!token) {
         setError('Please log in first');
-        notifyUser('Please log in first' ,'warning')
+        notifyUser('Please log in first', 'warning');
+        setProfileLoading(false);
         return;
       }
-
-      let url = `http://localhost:8000/api/teacher-attendance-stats/?period=${period}`;
-      if (customRange && startDate && endDate) {
-        url += `&start_date=${startDate}&end_date=${endDate}`;
-      }
-
       try {
-        const response = await axios.get(url, {
+        const response = await axios.get('http://localhost:8000/api/teacher-info/', {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setStats(response.data.stats);
-        console.log(response)
-        setResponseStartDate(response.data.start_date);
-        setResponseEndDate(response.data.end_date);
-        if(response.status >= 200 && response.status <= 300){
-          notifyUser(`${response.data.stats.length} records found for the duration ${response.data.start_date} - ${response.data.end_date} successfully ✅ ` ,'info')
-        }
-        setError('');
+        setLoggedInTeacherId(response.data.id);
       } catch (err) {
-        console.error('Failed to fetch stats:', err);
-        setError(err.response?.data?.error || 'Failed to load attendance stats');
+        setError('Failed to load profile');
+        notifyUser('Failed to load profile', 'error');
+      } finally {
+        setProfileLoading(false);
       }
     };
-    fetchStats();
-  }, [period, startDate, endDate, customRange]);
+    fetchProfile();
+  }, []);
+
+  // Fetch students (unchanged)
+  const fetchStudents = async (page = 1) => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('Please log in first');
+      notifyUser('Please log in first', 'warning');
+      return;
+    }
+    try {
+      const response = await axios.get(`http://localhost:8000/api/students/?page=${page}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const studentsData = response.data.results?.students || [];
+      const totalCount = response.data.results?.total_count || 0;
+      setStudents(studentsData);
+      setStudentTotalCount(totalCount);
+      setStudentNextPage(response.data.next);
+      setStudentPrevPage(response.data.previous);
+      setError('');
+      notifyUser(
+        studentsData.length > 0 
+          ? `Loaded ${studentsData.length} of ${totalCount} students` 
+          : `No students found (Total: ${totalCount}).`,
+        studentsData.length > 0 ? 'info' : 'warning'
+      );
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to load students');
+      notifyUser('Failed to load students', 'error');
+    }
+  };
+
+  // Fetch teacher's subjects using logged-in teacher ID
+  const fetchTeacherSubjects = async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('Please log in first');
+      notifyUser('Please log in first', 'warning');
+      return;
+    }
+    if (!loggedInTeacherId) return;
+    try {
+      const response = await axios.get(`http://localhost:8000/api/teacher-subjects/?teacher=${loggedInTeacherId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTeacherSubjects(response.data.subjects);
+      setError('');
+      notifyUser(
+        `Loaded ${response.data.subjects.length} subjects for teacher`,
+        'info'
+      );
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to load subjects');
+      notifyUser('Failed to load subjects', 'error');
+    }
+  };
+
+  // Fetch teacher stats using logged-in teacher ID
+  const fetchTeacherStats = async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('Please log in first');
+      notifyUser('Please log in first', 'warning');
+      return;
+    }
+    if (!selectedSubject) return;
+    let url = `http://localhost:8000/api/teacher-attendance-stats/?period=${attendanceFilter}&page=${teacherPage}&subject_name=${encodeURIComponent(selectedSubject)}`;
+    if (attendanceFilter === 'daily' && attendanceDate) {
+      url += `&date=${attendanceDate}`;
+    }
+    if (attendanceFilter === 'yearly' && attendanceYear) {
+      url += `&year=${attendanceYear}`;
+    }
+    if (attendanceFilter === 'range' && attendanceRangeStart && attendanceRangeEnd) {
+      url += `&start_date=${attendanceRangeStart}&end_date=${attendanceRangeEnd}`;
+    }
+    if (loggedInTeacherId) url += `&teacher=${loggedInTeacherId}`;
+    try {
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTeacherStats(response.data.results.stats);
+      setTeacherStartDate(response.data.results.start_date || '');
+      setTeacherEndDate(response.data.results.end_date || '');
+      setTeacherNextPage(response.data.next);
+      setTeacherPrevPage(response.data.previous);
+      setTeacherTotalCount(response.data.count);
+      setError('');
+      notifyUser(
+        `Loaded ${response.data.results.stats.length} records for ${selectedSubject} (${attendanceFilter} period: ${response.data.results.start_date || 'N/A'} - ${response.data.results.end_date || 'N/A'})  `,
+        'info'
+      );
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to load attendance stats');
+      notifyUser('Failed to load attendance stats', 'error');
+    }
+  };
+
+  const fetchStudentStats = async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('Please log in first');
+      notifyUser('Please log in first', 'warning');
+      return;
+    }
+
+    const selectedStudentData = students.find(student => student.id === selectedStudent);
+    if (!selectedStudentData) return;
+
+    let url = `http://localhost:8000/api/attendance-stats/${selectedStudentData.roll_number}/?period=${period}&page=${studentPage}`;
+    if (section) url += `&section=${section}`;
+    if (subject) url += `&subject=${subject}`;
+    if (program) url += `&program=${program}`;
+    if (year) url += `&year=${year}`;
+    if (semester) url += `&semester=${semester}`;
+    if (period === 'daily' && date) {
+      url += `&date=${date}`;
+      const selectedDate = new Date(date);
+      const nextDay = new Date(selectedDate);
+      nextDay.setDate(selectedDate.getDate() + 1);
+      const computedEndDate = nextDay.toISOString().split('T')[0];
+      url += `&end_date=${computedEndDate}`;
+    }
+
+    try {
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setStudentStats([response.data]);
+      setStudentStartDate(response.data.start_date);
+      setStudentEndDate(response.data.end_date);
+      setStudentNextPage(null);
+      setStudentPrevPage(null);
+      setStudentTotalCount(1);
+      setError('');
+      notifyUser(
+        `Attendance stats for ${selectedStudentData.first_name} ${selectedStudentData.last_name} loaded`,
+        'info'
+      );
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to load student attendance stats');
+      notifyUser('Failed to load student attendance stats', 'error');
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents(studentPage);
+  }, [studentPage]);
+
+  useEffect(() => {
+    if (loggedInTeacherId) {
+      fetchTeacherSubjects();
+    } else {
+      setTeacherSubjects([]);
+      setTeacherStats([]);
+      setTeacherStartDate('');
+      setTeacherEndDate('');
+      setTeacherTotalCount(0);
+      setTeacherNextPage(null);
+      setTeacherPrevPage(null);
+      setSelectedSubject(null);
+    }
+  }, [loggedInTeacherId]);
+
+  useEffect(() => {
+    if (selectedSubject) {
+      fetchTeacherStats();
+    } else {
+      setTeacherStats([]);
+      setTeacherStartDate('');
+      setTeacherEndDate('');
+      setTeacherTotalCount(0);
+      setTeacherNextPage(null);
+      setTeacherPrevPage(null);
+    }
+  }, [attendanceFilter, attendanceDate, attendanceYear, selectedSubject, teacherPage]);
+
+  useEffect(() => {
+    if (selectedStudent) {
+      fetchStudentStats();
+    } else {
+      setStudentStats([]);
+      setStudentStartDate('');
+      setStudentEndDate('');
+      setStudentTotalCount(0);
+      setStudentNextPage(null);
+      setStudentPrevPage(null);
+    }
+  }, [period, section, subject, selectedStudent, program, year, semester, date, studentPage]);
+
+
+  const handleTeacherNextPage = () => {
+    if (teacherNextPage) setTeacherPage(teacherPage + 1);
+  };
+
+  const handleTeacherPrevPage = () => {
+    if (teacherPrevPage) setTeacherPage(teacherPage - 1);
+  };
+
+  const handleStudentNextPage = () => {
+    if (studentNextPage) setStudentPage(studentPage + 1);
+  };
+
+  const handleStudentPrevPage = () => {
+    if (studentPrevPage) setStudentPage(studentPage - 1);
+  };
+
+  const handleStudentSelect = (studentId) => {
+    setSelectedStudent(studentId);
+    setStudentPage(1);
+  };
+
+  const handleSubjectSelect = (subject) => {
+    setSelectedSubject(subject);
+    setTeacherPage(1);
+  };
+
+
+  const handleTeacherExport = async (format) => {
+    const token = localStorage.getItem('access_token');
+    let url = `http://localhost:8000/api/admin/attendance-export/?`;
+    if (section) url += `§section=${section}`;
+    if (selectedSubject) {
+        // Remove semester suffix
+        const cleanSubject = selectedSubject.replace(/\s*\(sem\s*-\s*[IVX]+\)\s*$/, '');
+        url += `&subject_name=${encodeURIComponent(cleanSubject)}`;
+    }
+    if (program) url += `&program=${program}`;
+    if (year) url += `&year=${year}`;
+    if (semester) url += `&semester=${semester}`;
+    if (period === 'daily' && date) url += `&date=${date}`;
+
+    try {
+        const response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${token}` },
+            responseType: 'blob',
+        });
+        const blob = new Blob([response.data], { type: response.headers['content-type'] });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = `attendance_report_${selectedSubject}_${loggedInTeacherId}.${format}`;
+        link.click();
+        notifyUser(`Exported attendance report as ${format}`, 'success');
+    } catch (err) {
+        notifyUser('Failed to export report', 'error');
+        console.error(err);
+    }
+};
 
   return (
-    <div className="p-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800 min-h-screen">
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 mb-6"
-      >
-        Attendance Statistics
-      </motion.h2>
+    <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
+      <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
+        Teacher Attendance Dashboard
+      </Typography>
       <AnimatePresence>
         {error && (
           <motion.p
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="text-red-500 bg-red-100 dark:bg-red-900/30 dark:text-red-300 p-3 rounded-lg mb-6 shadow-md"
+            style={{ color: 'red', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}
           >
             {error}
           </motion.p>
         )}
       </AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-6 flex flex-col space-y-6"
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="flex space-x-4 items-center"
-        >
-          <label className="text-indigo-700 dark:text-indigo-300 font-medium">View by:</label>
-          <motion.select
-            whileHover={{ scale: 1.02 }}
-            value={period}
-            onChange={(e) => {
-              setPeriod(e.target.value);
-              setCustomRange(false);
+
+      {profileLoading ? (
+        <Typography sx={{ color: 'text.secondary', mb: 2 }}>Loading profile...</Typography>
+      ) : !loggedInTeacherId ? (
+        <Typography sx={{ color: 'text.secondary', mb: 2 }}>No teacher profile found. Please check your login or contact admin.</Typography>
+      ) : null}
+
+      {teacherSubjects.length === 0 && !profileLoading && loggedInTeacherId && (
+        <Typography sx={{ color: 'text.secondary', mb: 2 }}>No subjects found for this teacher.</Typography>
+      )}
+
+      {teacherSubjects.length > 0 && (
+        <>
+          <Typography variant="subtitle1" sx={{ mb: 2 }}>
+            Period: {teacherStartDate || 'N/A'} to {teacherEndDate || 'N/A'} | Total Records: {teacherTotalCount}
+          </Typography>
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Subjects Taught ({teacherSubjects.length})
+            </Typography>
+            <Grid container spacing={2}>
+              {teacherSubjects.map((subject) => (
+                <Grid key={subject}>
+                  <Card
+                    sx={{
+                      cursor: 'pointer',
+                      minWidth: '300px',
+                      minHeight: '100px',
+                      bgcolor: selectedSubject === subject ? 'primary.light' : 'white',
+                      '&:hover': { bgcolor: 'grey.100' },
+                    }}
+                    onClick={() => setSelectedSubject(subject)}
+                  >
+                    <CardContent>
+                      <Typography variant="h6">{subject}</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+            {selectedSubject && (
+              <Button
+                variant="outlined"
+                onClick={() => setSelectedSubject(null)}
+                sx={{ mt: 2 }}
+              >
+                Clear Subject Filter
+              </Button>
+            )}
+          </Box>
+        </>
+      )}
+
+
+      {/* Attendance Filter Controls */}
+      <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+        <FormControl sx={{ minWidth: 160 }}>
+          <InputLabel>Attendance Filter</InputLabel>
+          <Select
+            value={attendanceFilter}
+            label="Attendance Filter"
+            onChange={e => {
+              setAttendanceFilter(e.target.value);
+              setTeacherPage(1);
+              setTeacherStats([]);
             }}
-            
-            className="p-3 border border-indigo-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500 transition-all duration-200"
           >
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="semester">Semester</option>
-            <option value="custom">Custom Range</option>
-          </motion.select>
-        </motion.div>
-        <AnimatePresence>
-          {period === 'custom' && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-              className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-6"
+            <MenuItem value="daily">Day Wise</MenuItem>
+            <MenuItem value="weekly">Week Wise</MenuItem>
+            <MenuItem value="semester">Semester Wise</MenuItem>
+            <MenuItem value="yearly">Year Wise</MenuItem>
+            <MenuItem value="range">Custom Range</MenuItem>
+          </Select>
+        </FormControl>
+        {attendanceFilter === 'daily' && (
+          <TextField
+            label="Date"
+            type="date"
+            value={attendanceDate}
+            onChange={e => setAttendanceDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ minWidth: 160 }}
+          />
+        )}
+        {attendanceFilter === 'yearly' && (
+          <TextField
+            label="Year"
+            type="number"
+            value={attendanceYear}
+            onChange={e => setAttendanceYear(e.target.value)}
+            sx={{ minWidth: 160 }}
+          />
+        )}
+        {attendanceFilter === 'range' && (
+          <>
+            <TextField
+              label="Start Date"
+              type="date"
+              value={attendanceRangeStart}
+              onChange={e => setAttendanceRangeStart(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ minWidth: 160 }}
+            />
+            <TextField
+              label="End Date"
+              type="date"
+              value={attendanceRangeEnd}
+              onChange={e => setAttendanceRangeEnd(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ minWidth: 160 }}
+            />
+          </>
+        )}
+      </Box>
+
+
+
+      {selectedSubject && teacherStats.length === 0 && !profileLoading && (
+        <Typography sx={{ color: 'text.secondary', mb: 2 }}>No attendance stats found for this subject and filter.</Typography>
+      )}
+
+      {selectedSubject && teacherStats.length > 0 && (
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Subject: {selectedSubject}
+          </Typography>
+          <Button
+              variant="contained"
+              onClick={() => handleTeacherExport('csv')}
+              sx={{ mr: 2 }}
             >
-              <div className="flex items-center space-x-4">
-                <label className="text-indigo-700 dark:text-indigo-300 font-medium">Start Date:</label>
-                <motion.input
-                  whileHover={{ scale: 1.02 }}
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value);
-                    setCustomRange(true);
-                  }}
-                  className="p-3 border border-indigo-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500 transition-all duration-200"
-                />
-              </div>
-              <div className="flex items-center space-x-4">
-                <label className="text-indigo-700 dark:text-indigo-300 font-medium">End Date:</label>
-                <motion.input
-                  whileHover={{ scale: 1.02 }}
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
-                    setCustomRange(true);
-                  }}
-                  className="p-3 border border-indigo-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500 transition-all duration-200"
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-      <motion.p
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.2 }}
-        className="text-gray-800 dark:text-gray-200 font-medium mb-6"
-      >
-        Period: {responseStartDate} to {responseEndDate}
-      </motion.p>
-      <AnimatePresence>
-        {stats.length > 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="overflow-x-auto"
-          >
-            <motion.table
-              className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-indigo-100 dark:border-gray-700 overflow-hidden"
-            >
-              <thead>
-                <tr className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700">
-                  <th className="p-3 text-left text-white font-semibold">Student Name</th>
-                  <th className="p-3 text-left text-white font-semibold">Student ID </th>
-                  <th className="p-3 text-left text-white font-semibold">Roll Number</th>
-                  <th className="p-3 text-left text-white font-semibold">Total Sessions</th>
-                  <th className="p-3 text-left text-white font-semibold">Present</th>
-                  <th className="p-3 text-left text-white font-semibold">Absent</th>
-                  <th className="p-3 text-left text-white font-semibold">Attendance %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.map((stat) => (
+              Export as CSV
+            </Button>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ background: 'linear-gradient(to right, #3f51b5, #9c27b0)' }}>
+                  <TableCell sx={{ color: '#fff' }}>Student Name</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Student ID</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Roll Number</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Program</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Year</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Semester</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Subject</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Total Sessions</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Present</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Absent</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Attendance %</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {teacherStats.map((stat, index) => (
                   <motion.tr
-                    key={stat.student_id}
+                    key={index}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="border-t border-indigo-100 dark:border-gray-700 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors duration-200"
-                  > 
-                    <td className="p-3 text-gray-700 dark:text-gray-200">{stat.name}</td>
-                  <td className="p-3 text-gray-700 dark:text-gray-200">{stat.student_id}</td>
-                    <td className="p-3 text-gray-700 dark:text-gray-200">{stat.roll_number}</td>
-                    <td className="p-3 text-gray-700 dark:text-gray-200">{stat.total_sessions}</td>
-                    <td className="p-3 text-gray-700 dark:text-gray-200">{stat.present}</td>
-                    <td className="p-3 text-gray-700 dark:text-gray-200">{stat.absent}</td>
-                    <td className="p-3 text-gray-700 dark:text-gray-200">{stat.attendance_percentage}%</td>
+                  >
+                    <TableCell>{stat.name}</TableCell>
+                    <TableCell>{stat.student_id}</TableCell>
+                    <TableCell>{stat.roll_number}</TableCell>
+                    <TableCell>{stat.program}</TableCell>
+                    <TableCell>{stat.year}</TableCell>
+                    <TableCell>{stat.semester}</TableCell>
+                    <TableCell>{stat.subject_name}</TableCell>
+                    <TableCell>{stat.total_sessions}</TableCell>
+                    <TableCell>{stat.present}</TableCell>
+                    <TableCell>{stat.absent}</TableCell>
+                    <TableCell>{typeof stat.attendance_percentage === 'number' ? stat.attendance_percentage.toFixed(2) + '%' : 'N/A'}</TableCell>
                   </motion.tr>
                 ))}
-              </tbody>
-            </motion.table>
-          </motion.div>
-        ) : (
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="text-gray-600 dark:text-gray-400 font-medium"
-          >
-            No attendance stats available for this period.
-          </motion.p>
-        )}
-      </AnimatePresence>
-    </div>
+              </TableBody>
+            </Table>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+              <Button
+                variant="contained"
+                onClick={() => setTeacherPage(teacherPage - 1)}
+                disabled={!teacherPrevPage}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => setTeacherPage(teacherPage + 1)}
+                disabled={!teacherNextPage}
+              >
+                Next
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+      )}
+
+      {studentStats.length > 0 && (
+        <>
+          <Typography variant="subtitle1" sx={{ mb: 2 }}>
+            Period: {studentStartDate} to {studentEndDate} | Showing {studentStats.length} of {studentTotalCount} records
+          </Typography>
+          <Box sx={{ mb: 4 }}>
+            <Button
+              variant="contained"
+              onClick={() => handleStudentExport('csv')}
+              sx={{ mr: 2 }}
+            >
+              Export as CSV
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => handleStudentExport('excel')}
+            >
+              Export as Excel
+            </Button>
+          </Box>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ background: 'linear-gradient(to right, #3f51b5, #9c27b0)' }}>
+                  <TableCell sx={{ color: '#fff' }}>Student Name</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Student ID</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Roll Number</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Program</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Semester</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Total Sessions</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Present</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Absent</TableCell>
+                  <TableCell sx={{ color: '#fff' }}>Attendance %</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {studentStats.map((stat, index) => (
+                  <motion.tr
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <TableCell>{stat.name}</TableCell>
+                    <TableCell>{stat.student_id}</TableCell>
+                    <TableCell>{stat.roll_number}</TableCell>
+                    <TableCell>{stat.program}</TableCell>
+                    <TableCell>{stat.semester}</TableCell>
+                    <TableCell>{stat.total_sessions}</TableCell>
+                    <TableCell>{stat.present}</TableCell>
+                    <TableCell>{stat.absent}</TableCell>
+                    <TableCell>{stat.attendance_percentage}%</TableCell>
+                  </motion.tr>
+                ))}
+              </TableBody>
+            </Table>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+              <Button
+                variant="contained"
+                onClick={handleStudentPrevPage}
+                disabled={!studentPrevPage}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleStudentNextPage}
+                disabled={!studentNextPage}
+              >
+                Next
+              </Button>
+            </Box>
+          </Box>
+        </>
+      )}
+      
+      <ToastContainer />
+    </Box>
   );
 }
-
 export default AttendanceStats;

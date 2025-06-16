@@ -1,0 +1,106 @@
+{
+  "hash": "dc33b2c5",
+  "configHash": "0f1b0e75",
+  "lockfileHash": "a60189a6",
+  "browserHash": "a567ebcd",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "6fc78ade",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "0cf682c0",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "b7c30d4c",
+      "needsInterop": false
+    },
+    "axios": {
+      "src": "../../node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "f8f66c19",
+      "needsInterop": false
+    },
+    "framer-motion": {
+      "src": "../../node_modules/framer-motion/dist/es/index.mjs",
+      "file": "framer-motion.js",
+      "fileHash": "2c1dcd21",
+      "needsInterop": false
+    },
+    "react-icons/fa": {
+      "src": "../../node_modules/react-icons/fa/index.mjs",
+      "file": "react-icons_fa.js",
+      "fileHash": "ed50b857",
+      "needsInterop": false
+    },
+    "@headlessui/react": {
+      "src": "../../node_modules/@headlessui/react/dist/headlessui.esm.js",
+      "file": "@headlessui_react.js",
+      "fileHash": "13f27d76",
+      "needsInterop": false
+    },
+    "react-toastify": {
+      "src": "../../node_modules/react-toastify/dist/index.mjs",
+      "file": "react-toastify.js",
+      "fileHash": "4b92ce9c",
+      "needsInterop": false
+    },
+    "react-lottie-player": {
+      "src": "../../node_modules/react-lottie-player/dist/LottiePlayer.modern.js",
+      "file": "react-lottie-player.js",
+      "fileHash": "232d73b1",
+      "needsInterop": false
+    },
+    "react-tsparticles": {
+      "src": "../../node_modules/react-tsparticles/esm/index.js",
+      "file": "react-tsparticles.js",
+      "fileHash": "a89454ac",
+      "needsInterop": false
+    },
+    "tsparticles": {
+      "src": "../../node_modules/tsparticles/browser/index.js",
+      "file": "tsparticles.js",
+      "fileHash": "9fba85ed",
+      "needsInterop": false
+    },
+    "react-icons/md": {
+      "src": "../../node_modules/react-icons/md/index.mjs",
+      "file": "react-icons_md.js",
+      "fileHash": "3c031e54",
+      "needsInterop": false
+    },
+    "@mui/material": {
+      "src": "../../node_modules/@mui/material/esm/index.js",
+      "file": "@mui_material.js",
+      "fileHash": "9337a7c0",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-Z7B2QQBT": {
+      "file": "chunk-Z7B2QQBT.js"
+    },
+    "chunk-T7OI7B56": {
+      "file": "chunk-T7OI7B56.js"
+    },
+    "chunk-CJK34UIW": {
+      "file": "chunk-CJK34UIW.js"
+    },
+    "chunk-2KHBIA62": {
+      "file": "chunk-2KHBIA62.js"
+    },
+    "chunk-W24JOBID": {
+      "file": "chunk-W24JOBID.js"
+    },
+    "chunk-EWTE5DHJ": {
+      "file": "chunk-EWTE5DHJ.js"
+    }
+  }
+}

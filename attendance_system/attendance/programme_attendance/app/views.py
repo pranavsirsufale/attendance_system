@@ -313,89 +313,203 @@ class AdminAttendanceStatsView(APIView):
 
 
 
-
-
-
 class TeacherAttendanceStatsView(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = AttendanceStatsPagination
 
     def get(self, request):
         try:
             teacher = Teacher.objects.get(user=request.user)
             period = request.query_params.get('period', 'semester')
-            start_date_param = request.query_params.get('start_date', None)
-            end_date_param = request.query_params.get('end_date', None)
-            logger.debug(f"Fetching attendance stats for teacher {teacher.id}, period: {period}, start_date: {start_date_param}, end_date: {end_date_param}")
+            date = request.query_params.get('date')
+            end_date = request.query_params.get('end_date')
 
-            timetables = Timetable.objects.filter(teacher=teacher)
-            session_ids = Session.objects.filter(timetable__in=timetables).values_list('id', flat=True)
-            students = Student.objects.filter(section__in=timetables.values('section')).distinct()
-
-            today = timezone.now().date()
-            if start_date_param and end_date_param:
-                start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
-                end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
-            elif period == 'weekly':
-                start_date = today - timedelta(days=today.weekday())
-                end_date = start_date + timedelta(days=6)
-            elif period == 'monthly':
-                start_date = today.replace(day=1)
-                end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
-            else:  # semester
-                if not timetables.exists():
-                    start_date = today
-                    end_date = today
-                else:
-                    start_date = min(t.semester_start_date for t in timetables)
-                    end_date = max(t.semester_end_date for t in timetables)
-
-            attendance_stats = (
-                Attendance.objects.filter(session__id__in=session_ids, student__in=students)
-                .filter(session__date__gte=start_date, session__date__lte=end_date)
-                .values('student__id', 'student__first_name', 'student__last_name', 'student__roll_number')
-                .annotate(
-                    total_sessions=Count('session'),
-                    present=Count('session', filter=Q(status=True)),
-                    absent=Count('session', filter=Q(status=False))
-                )
+            sessions = Session.objects.select_related('timetable__subject', 'timetable__section').filter(
+                timetable__teacher=teacher,
+                status='Completed'
             )
 
-            stats = [
-                {
-                    'student_id': stat['student__id'],
-                    'name': f"{stat['student__first_name']} {stat['student__last_name']}",
-                    'roll_number': stat['student__roll_number'],
-                    'total_sessions': stat['total_sessions'],
-                    'present': stat['present'],
-                    'absent': stat['absent'],
-                    'attendance_percentage': round((stat['present'] / stat['total_sessions']) * 100, 2) if stat['total_sessions'] > 0 else 0
-                }
-                for stat in attendance_stats
-            ]
+            if period == 'daily' and date:
+                sessions = sessions.filter(date=date)
+                if not end_date:
+                    end_date = (datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+            elif period == 'weekly':
+                start_date = datetime.now().date() - timedelta(days=datetime.now().weekday())
+                end_date = start_date + timedelta(days=7)
+                sessions = sessions.filter(date__range=[start_date, end_date])
+            elif period == 'monthly':
+                start_date = datetime.now().date().replace(day=1)
+                end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+                sessions = sessions.filter(date__range=[start_date, end_date])
+            else:  # semester or default
+                start_date = sessions.order_by('date').first().date if sessions.exists() else datetime.now().date()
+                end_date = sessions.order_by('-date').first().date if sessions.exists() else datetime.now().date()
+                sessions = sessions.filter(date__range=[start_date, end_date])
 
-            return Response({
-                'period': period,
-                'start_date': start_date.isoformat(),
-                'end_date': end_date.isoformat(),
-                'stats': stats
-            }, status=200)
+            stats = (
+                Attendance.objects.filter(session__in=sessions)
+                .select_related('student','recorded_by')
+                .values(
+                    'student_id',
+                    'student__first_name',
+                    'student__last_name',
+                    'student__roll_number',
+                    'student__section__program__name',
+                    'student__section__year',
+                    'student__semester',
+                    'session__timetable__subject__name'
+                )
+                .annotate(
+                    name=Concat(F('student__first_name'), Value(' '), F('student__last_name')),
+                    roll_number=F('student__roll_number'),
+                    program=F('student__section__program__name'),
+                    year=F('student__section__year'),
+                    semester=F('student__semester'),
+                    subject_name=F('session__timetable__subject__name'),
+                    recorded_by_name=Concat(F('recorded_by__first_name'), Value(' '), F('recorded_by__last_name'), output_field=CharField()),                    total_sessions=Count('session'),
+                    present=Count('session', filter=Q(status=True)),
+                    absent=Count('session', filter=Q(status=False)),
+                    attendance_percentage=F('present') * 100.0 / F('total_sessions')
+                )
+                .values(
+                    'student_id',
+                    'name',
+                    'roll_number',
+                    'program',
+                    'year',
+                    'semester',
+                    'subject_name',
+                    'recorded_by_name',
+                    'total_sessions',
+                    'present',
+                    'absent',
+                    'attendance_percentage'
+                )
+                .order_by('roll_number')
+            )
+
+            viz_data = {
+                'total_sessions': stats.aggregate(total=Count('total_sessions'))['total'] or 0,
+                'total_present': stats.aggregate(total=Count('present'))['total'] or 0,
+                'total_absent': stats.aggregate(total=Count('absent'))['total'] or 0,
+                'by_subject': (
+                    Attendance.objects.filter(session__in=sessions)
+                    .values('session__timetable__subject__name')
+                    .annotate(
+                        present=Count('session', filter=Q(status=True)),
+                        absent=Count('session', filter=Q(status=False))
+                    )
+                    .order_by('session__timetable__subject__name')
+                ),
+                'by_date': (
+                    Attendance.objects.filter(session__in=sessions)
+                    .values('session__date')
+                    .annotate(
+                        present=Count('session', filter=Q(status=True)),
+                        absent=Count('session', filter=Q(status=False))
+                    )
+                    .order_by('session__date')
+                ) if period in ['daily', 'weekly', 'monthly'] else [],
+            }
+
+            paginator = self.pagination_class()
+            paginated_stats = paginator.paginate_queryset(stats, request)
+            serializer = AttendanceStatsSerializer(paginated_stats, many=True)
+
+            return paginator.get_paginated_response({
+                'stats': serializer.data,
+                'start_date': str(start_date),
+                'end_date': str(end_date),
+                'viz_data': viz_data,
+            })
+
         except Teacher.DoesNotExist:
-            logger.error("Teacher not found for user: %s", request.user)
-            return Response({"error": "Teacher not found"}, status=404)
+            return Response({"error": "Teacher profile not found"}, status=404)
         except Exception as e:
-            logger.error("Error fetching attendance stats: %s", str(e))
+            logger.error(f"Error in TeacherAttendanceStatsView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
 
-
-
-# class StudentViewSet(viewsets.ReadOnlyModelViewSet):
-#     queryset = Student.objects.all()
-#     serializer_class = StudentSerializer
+# class TeacherAttendanceStatsView(APIView):
 #     permission_classes = [IsAuthenticated]
 
-#     def get_queryset(self):
-#         return Student.objects.filter(section__timetable__teacher__user = self.request.user ).distinct()
+#     def get(self, request):
+#         try:
+#             teacher = Teacher.objects.get(user=request.user)
+#             period = request.query_params.get('period', 'semester')
+#             start_date_param = request.query_params.get('start_date', None)
+#             end_date_param = request.query_params.get('end_date', None)
+#             logger.debug(f"Fetching attendance stats for teacher {teacher.id}, period: {period}, start_date: {start_date_param}, end_date: {end_date_param}")
+
+#             timetables = Timetable.objects.filter(teacher=teacher)
+#             session_ids = Session.objects.filter(timetable__in=timetables).values_list('id', flat=True)
+#             students = Student.objects.filter(section__in=timetables.values('section')).distinct()
+
+#             today = timezone.now().date()
+#             if start_date_param and end_date_param:
+#                 start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+#                 end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
+#             elif period == 'weekly':
+#                 start_date = today - timedelta(days=today.weekday())
+#                 end_date = start_date + timedelta(days=6)
+#             elif period == 'monthly':
+#                 start_date = today.replace(day=1)
+#                 end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+#             else:  # semester
+#                 if not timetables.exists():
+#                     start_date = today
+#                     end_date = today
+#                 else:
+#                     start_date = min(t.semester_start_date for t in timetables)
+#                     end_date = max(t.semester_end_date for t in timetables)
+
+#             attendance_stats = (
+#                 Attendance.objects.filter(session__id__in=session_ids, student__in=students)
+#                 .filter(session__date__gte=start_date, session__date__lte=end_date)
+#                 .values('student__id', 'student__first_name', 'student__last_name', 'student__roll_number')
+#                 .annotate(
+#                     total_sessions=Count('session'),
+#                     present=Count('session', filter=Q(status=True)),
+#                     absent=Count('session', filter=Q(status=False))
+#                 )
+#             )
+
+#             stats = [
+#                 {
+#                     'student_id': stat['student__id'],
+#                     'name': f"{stat['student__first_name']} {stat['student__last_name']}",
+#                     'roll_number': stat['student__roll_number'],
+#                     'total_sessions': stat['total_sessions'],
+#                     'present': stat['present'],
+#                     'absent': stat['absent'],
+#                     'attendance_percentage': round((stat['present'] / stat['total_sessions']) * 100, 2) if stat['total_sessions'] > 0 else 0
+#                 }
+#                 for stat in attendance_stats
+#             ]
+
+#             return Response({
+#                 'period': period,
+#                 'start_date': start_date.isoformat(),
+#                 'end_date': end_date.isoformat(),
+#                 'stats': stats
+#             }, status=200)
+#         except Teacher.DoesNotExist:
+#             logger.error("Teacher not found for user: %s", request.user)
+#             return Response({"error": "Teacher not found"}, status=404)
+#         except Exception as e:
+#             logger.error("Error fetching attendance stats: %s", str(e))
+#             return Response({"error": str(e)}, status=500)
+
+
+
+
+class StudentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Student.objects.filter(section__timetable__teacher__user = self.request.user ).distinct()
 
 class SessionViewSet(viewsets.ModelViewSet):
     queryset = Session.objects.all()
@@ -711,6 +825,7 @@ def teacher_info(request):
         decoded = jwt.decode(token, options={"verify_signature": False})
         print(datetime.fromtimestamp(decoded['exp']).isoformat())
         return Response({
+            'id': f"{teacher.id}",
             'name': f"{teacher.first_name} {teacher.last_name}",
             'last_login': request.user.last_login.isoformat() if request.user.last_login else None,
             'token_expiry': datetime.fromtimestamp(decoded['exp']).isoformat() if 'exp' in decoded else 'Unknown',

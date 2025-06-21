@@ -1336,6 +1336,38 @@ class StudentViewSet(ModelViewSet):
 #             logger.error(f"Error in StudentDetailView: {str(e)}", exc_info=True)
 #             return Response({'error': str(e)}, status=500)
 
+# class StudentDetailView(APIView):
+#     permission_classes = [IsAuthenticated, IsAdmin]
+
+#     def get(self, request, pk):
+#         try:
+#             student = Student.objects.select_related('section__program').get(id=pk)
+#             serializer = StudentSerializer(student)
+
+#             # Aggregate attendance by subject
+#             attendance_data = (
+#                 Attendance.objects.filter(student=student)
+#                 .select_related('session__timetable__subject')
+#                 .values('session__timetable__subject__id', 'session__timetable__subject__name')
+#                 .annotate(
+#                     classes_attended=Count('id', filter=Q(status=True)),
+#                     total_classes=Count('id')
+#                 )
+#             )
+
+#             # Serialize attendance data
+#             attendance_serializer = AttendanceSummarySerializer(attendance_data, many=True)
+
+#             return Response({
+#                 'student': serializer.data,
+#                 'attendance': attendance_serializer.data
+#             })
+#         except Student.DoesNotExist:
+#             return Response({'error': 'Student not found'}, status=404)
+#         except Exception as e:
+#             logger.error(f"Error in StudentDetailView: {str(e)}", exc_info=True)
+#             return Response({'error': str(e)}, status=500)
+
 class StudentDetailView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -1344,10 +1376,61 @@ class StudentDetailView(APIView):
             student = Student.objects.select_related('section__program').get(id=pk)
             serializer = StudentSerializer(student)
 
+            # Base attendance query
+            attendance_query = Attendance.objects.filter(student=student).select_related('session__timetable__subject')
+
+            # Apply filters
+            date_param = request.query_params.get('date')
+            week_param = request.query_params.get('week')
+            month_param = request.query_params.get('month')
+            semester_param = request.query_params.get('semester')
+            start_date_param = request.query_params.get('start_date')
+            end_date_param = request.query_params.get('end_date')
+
+            if date_param:
+                try:
+                    date = datetime.strptime(date_param, '%Y-%m-%d').date()
+                    attendance_query = attendance_query.filter(session__date=date)
+                except ValueError:
+                    return Response({'error': 'Invalid date format'}, status=400)
+            elif week_param:
+                try:
+                    week_start = datetime.strptime(week_param, '%Y-%m-%d').date()
+                    week_end = week_start + timedelta(days=6)
+                    attendance_query = attendance_query.filter(session__date__range=[week_start, week_end])
+                except ValueError:
+                    return Response({'error': 'Invalid week format'}, status=400)
+            elif month_param:
+                try:
+                    month_start = datetime.strptime(month_param, '%Y-%m').date()
+                    month_end = month_start + relativedelta(months=1) - timedelta(days=1)
+                    attendance_query = attendance_query.filter(session__date__range=[month_start, month_end])
+                except ValueError:
+                    return Response({'error': 'Invalid month format'}, status=400)
+            elif semester_param:
+                # Assume semester starts in July (odd semesters) or January (even semesters)
+                year = datetime.now().year
+                semester = student.semester
+                if semester % 2 == 1:  # Odd semester (Jul-Dec)
+                    start_date = datetime(year, 7, 1).date()
+                    end_date = datetime(year, 12, 31).date()
+                else:  # Even semester (Jan-Jun)
+                    start_date = datetime(year, 1, 1).date()
+                    end_date = datetime(year, 6, 30).date()
+                attendance_query = attendance_query.filter(session__date__range=[start_date, end_date])
+            elif start_date_param and end_date_param:
+                try:
+                    start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
+                    if start_date > end_date:
+                        return Response({'error': 'Start date must be before end date'}, status=400)
+                    attendance_query = attendance_query.filter(session__date__range=[start_date, end_date])
+                except ValueError:
+                    return Response({'error': 'Invalid date format'}, status=400)
+
             # Aggregate attendance by subject
             attendance_data = (
-                Attendance.objects.filter(student=student)
-                .select_related('session__timetable__subject')
+                attendance_query
                 .values('session__timetable__subject__id', 'session__timetable__subject__name')
                 .annotate(
                     classes_attended=Count('id', filter=Q(status=True)),
@@ -1367,7 +1450,6 @@ class StudentDetailView(APIView):
         except Exception as e:
             logger.error(f"Error in StudentDetailView: {str(e)}", exc_info=True)
             return Response({'error': str(e)}, status=500)
-
 
 class AdminStudentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdmin]

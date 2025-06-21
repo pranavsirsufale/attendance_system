@@ -1,7 +1,7 @@
 # Manikchand Pahade Law College, Aurangabad Attendance Management System
 
 <div align="center">
-  <img src="/api/placeholder/400/200" alt="Law College Attendance System Logo" width="200"/>
+  <img src="/attendance_system/attendance_system/attendance/frontend/public/logo.jpeg" alt="Law College Attendance System Logo" width="200"/>
   <br>
   <p><em>Streamlining attendance management for legal education</em></p>
   <p>
@@ -11,7 +11,7 @@
     <a href="#api">API</a> •
     <a href="#development">Development</a>
   </p>
-  
+
   ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
   ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
   ![Python](https://img.shields.io/badge/python-3.8+-yellow.svg)
@@ -32,16 +32,18 @@ The **Manikchand Pahade Law College, Aurangabad Attendance Management System** i
 | **Database** | MySQL |
 | **API** | Django REST Framework |
 | **Authentication** | JWT |
-| **Deployment** | Docker, Nginx |
 
 ## ✨ Features
 
 ### 👑 For Administrators
-- **User Management**: Create and manage accounts for faculty, staff, and students
-- **Course Management**: Set up courses, Program, and sections
-- **Attendance Policy Configuration**: Define attendance rules and minimum attendance requirements
+- **User Management**: Create and manage accounts for faculty, staff.
+- **Subject Management**: Set up Subjects, Program, and sections.
+- **Timetable Management**: set up timetables, sesssion for semester.
+- **Attendance Policy Configuration**: Define attendance rules and minimum attendance requirements.
+- **View All Stats**: view student attendance status. view subject wise, time durationwise.
 - **Reporting Dashboard**: Generate comprehensive reports on attendance patterns
-- **System Configuration**: Customize system settings according to institutional requirements
+- **Add Bulk Students**: att all class students at once through an excel sheet.
+- **Promote Students**: Promote students for the next class ( next sem ).
 
 ### 👨‍🏫 For Faculty
 - **Quick Attendance Recording**: Mark attendance with just a few clicks
@@ -227,11 +229,11 @@ npm test
   ```bash
   # Install flake8
   pip install flake8
-  
+
   # Run flake8
   flake8 .
   ```
-  
+
 - Frontend: ESLint with Airbnb config
   ```bash
   # Run ESLint
@@ -270,15 +272,15 @@ For production deployment:
    server {
        listen 80;
        server_name yourdomain.com;
-       
+
        location /static/ {
            alias /path/to/static/;
        }
-       
+
        location /media/ {
            alias /path/to/media/;
        }
-       
+
        location / {
            proxy_pass http://127.0.0.1:8000;
            proxy_set_header Host $host;
@@ -302,7 +304,7 @@ mysql -u root -p law_college < attendance_backup_20250401.sql
 ## 🆘 Support and Maintenance
 
 For technical support or system maintenance:
-- 📧 Email: [pranavsirsfuale@gmail.com](mailto:pranavsirsfuale@gmail.com)
+- 📧 Email: [pranavsirsfuale@gmail.com](mailto:pranavsirsfuale@gmail.com) | [pranav.sirsufale@antaris.global](mailto:pranav.sirsufale@antaris.global)
 - ☎️ Phone: (+91) 8482852301
 - 📚 Documentation: See the [wiki](https://github.com/pranavsirsufale/attendance_system) section of this repository
 
@@ -318,7 +320,7 @@ This software is proprietary and licensed exclusively to Manikchand Pahade law c
 ---
 
 <div align="center">
-  <p>© 2025 Your Manikchan Pahade Law College. Chh. Sambhajinagar All Rights Reserved by Pranav Sirsufale.</p>
+  <p>© 2025 Manikchan Pahade Law College. Chh. Sambhajinagar All Rights Reserved by Pranav Sirsufale.</p>
   <p>
     <a href="https://yourwebsite.edu">Website</a> •
     <a href="https://twitter.com/yourlawcollege">Twitter</a> •

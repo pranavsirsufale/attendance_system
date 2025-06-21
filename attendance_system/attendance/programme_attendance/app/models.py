@@ -9,7 +9,7 @@ class Semester(models.Model):
     semester = models.PositiveIntegerField(unique=True)
     subject = models.CharField(max_length=50)
 
-    
+
 class Timetable(models.Model):
     LECTURE_SLOTS = [
     ('08:30:00', '08:30 AM - 09:30 AM'),
@@ -80,10 +80,10 @@ class Student(models.Model):
         # unique=True,
         #validators=[RegexValidator(r'^(G|NG)24\d{4}$', 'Roll number must be G24xxxx or NG24xxxx')]
     )  # e.g., G240001, NG240012
-    first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
-    email = models.EmailField(unique=True)
-    phone = models.CharField(max_length = 15)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=50,null=True, blank=True)
+    email = models.EmailField(null=True, blank=True, unique=False)
+    phone = models.CharField(max_length = 15,null=True, blank=True, unique=False)
     semester = models.PositiveIntegerField(null= False)
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="students")
     subjects = models.ManyToManyField(Subject, related_name="students", blank=True)
@@ -112,7 +112,7 @@ class Timetable(models.Model):
     ('12:00:00', '12:00 PM - 01:00 PM'),
     ('13:00:00', '01:00 PM - 02:00 PM'),
     ]
-    
+
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="timetable")
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="timetable")
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name="timetable")
@@ -160,11 +160,11 @@ class Attendance(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="attendance", db_index=True)
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="attendance")
     status = models.CharField(max_length=7, choices=STATUS_CHOICES, default='Absent')
-    
+
     # status = models.BooleanField(default=False , db_index= True)
-    
-    
-    timestamp = models.DateTimeField(db_index=True) 
+
+
+    timestamp = models.DateTimeField(db_index=True)
     recorded_by = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name="attendance_records")
 
     def __str__(self):
@@ -176,20 +176,20 @@ class Attendance(models.Model):
         verbose_name = "Attendance"
         verbose_name_plural = "Attendance"
 
-    
+
     # def get_status_display(self):
     #     return "Present" if self.status else 'Absent'
-    
+
 '''
 
 class Attendance(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="attendance", db_index=True)
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="attendance")
-    
+
     # Updated: store boolean instead of string
     status = models.BooleanField(default=False, db_index=True)  # False = Absent, True = Present
 
-    timestamp = models.DateTimeField(db_index=True) 
+    timestamp = models.DateTimeField(db_index=True)
     recorded_by = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True,db_index= True ,  related_name="attendance_records")
 
     def __str__(self):

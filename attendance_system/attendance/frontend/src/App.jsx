@@ -27,6 +27,8 @@ import Lottie from "react-lottie-player"; //! for lottie animation
 import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles"; //! particles engine
 import PassStudents from "./components/utilities/PassStudents";
+import StudentProfile from "./components/admin/StudentProfile";
+import StudentDetail from "./components/admin/StudentDetail";
 // Sample Lottie animation (law-themed scales of justice)
 // import lawAnimationData from "https://lottie.host/9c9f6f1d-3b3e-4b7e-9e1a-3f3d6b8e7f2a/justice-scales.json";
 
@@ -73,7 +75,7 @@ function App() {
         informUser(msg);
     }
 
-   
+
   };
 
   const particlesInit = async (main) => {
@@ -97,7 +99,7 @@ function App() {
     visible: { opacity: 1, y: 0 },
   };
 
-  
+
   useEffect(() => {
     const checkAdmin = async () => {
       const token = localStorage.getItem("access_token");
@@ -147,7 +149,7 @@ function App() {
       }
     >
       <AnimatePresence mode="wait">
-        
+
           <motion.div
             key="app"
             initial={{ opacity: 0 }}
@@ -169,7 +171,7 @@ function App() {
                   </motion.div>
 
                   <div className="flex items-center gap-4">
-                    
+
 
                     <ProfileIcon notifyUser={notifyUser} />
                   </div>
@@ -307,6 +309,15 @@ function App() {
                           }
                         />
 
+                        <Route
+                          path="/admin/student-profile"
+                          element={<StudentProfile notifyUser={notifyUser} />}
+                        />
+                        <Route
+                          path="/admin/student/:studentId"
+                          element={<StudentDetail notifyUser={notifyUser} />}
+                        />
+
 
                       </>
                     )}
@@ -317,7 +328,7 @@ function App() {
 
             {/* <Footer /> */}
           </motion.div>
-        
+
       </AnimatePresence>
     </div>
   );

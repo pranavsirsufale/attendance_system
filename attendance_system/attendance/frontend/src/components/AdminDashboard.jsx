@@ -232,13 +232,31 @@ function AdminDashboard({notifyUser}) {
             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
           >
             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
-              Pass Students
+              Promote Students to Next class
             </h3>
             <Link
               to="/admin/pass-students"
               className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-200 font-medium transition-colors duration-200 hover:underline"
             >
-              Promote students to the next class 
+              Promote students to the next class
+            </Link>
+          </motion.div>
+
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+            className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
+          >
+            <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
+              Student Profiles
+            </h3>
+            <Link
+              to="/admin/student-profile"
+              className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-200 font-medium transition-colors duration-200 hover:underline"
+            >
+              View Student Profiles
             </Link>
           </motion.div>
 

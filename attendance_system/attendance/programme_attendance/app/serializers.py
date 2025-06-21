@@ -15,16 +15,18 @@ class TeacherSerializer(serializers.ModelSerializer):
 
 class StudentSerializer(serializers.ModelSerializer):
     section = serializers.StringRelatedField()
-    subjects = serializers.PrimaryKeyRelatedField(many = True , read_only = True)
+    subjects = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
     class Meta:
         model = Student
-        fields = ['id','roll_number','first_name','last_name','email','phone','section','subjects']
+        fields = ['id', 'roll_number', 'first_name', 'last_name', 'email', 'phone', 'section', 'subjects', 'semester']
+
 
 class ProgramSerializer(serializers.ModelSerializer):
     class Meta:
         model = Program
         fields = ['id' , 'name' , 'duration_years']
-     
+
 class SubjectSerializer(serializers.ModelSerializer):
     teacher = TeacherSerializer(read_only = True)
     class Meta:
@@ -90,7 +92,7 @@ class TimetableSerializer(serializers.ModelSerializer):
 
 '''
 
-        
+
 
 class SessionSerializer(serializers.ModelSerializer):
     timetable = TimetableSerializer(read_only=True)
@@ -116,14 +118,44 @@ class AttendanceSerializer(serializers.ModelSerializer):
 '''
 
 
+# class AttendanceSerializer(serializers.ModelSerializer):
+#     student = StudentSerializer(read_only=True)
+#     session = SessionSerializer(read_only=True)
+#     recorded_by = TeacherSerializer(read_only=True)
+
+#     # Add a custom status field to override the boolean
+#     status = serializers.SerializerMethodField()
+
+#     class Meta:
+#         model = Attendance
+#         fields = ['id', 'student', 'session', 'status', 'timestamp', 'recorded_by']
+#         read_only_fields = ['timestamp', 'recorded_by']
+
+#     def get_status(self, obj):
+#         return "Present" if obj.status else "Absent"
+
+#     def to_internal_value(self, data):
+#         internal = super().to_internal_value(data)
+
+#         # map incoming status string to boolean
+#         status = data.get('status')
+#         if status == "Present":
+#             internal['status'] = True
+#         elif status == "Absent":
+#             internal['status'] = False
+#         else:
+#             raise serializers.ValidationError({
+#                 'status': 'Status must be either "Present" or "Absent".'
+#             })
+
+#         return internal
+
 class AttendanceSerializer(serializers.ModelSerializer):
     student = StudentSerializer(read_only=True)
     session = SessionSerializer(read_only=True)
     recorded_by = TeacherSerializer(read_only=True)
-    
-    # Add a custom status field to override the boolean
     status = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Attendance
         fields = ['id', 'student', 'session', 'status', 'timestamp', 'recorded_by']
@@ -134,8 +166,6 @@ class AttendanceSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         internal = super().to_internal_value(data)
-
-        # map incoming status string to boolean
         status = data.get('status')
         if status == "Present":
             internal['status'] = True
@@ -145,8 +175,28 @@ class AttendanceSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'status': 'Status must be either "Present" or "Absent".'
             })
-
         return internal
+
+
+class AttendanceSummarySerializer(serializers.Serializer):
+    subject_id = serializers.IntegerField(source='session__timetable__subject__id')
+    subject_name = serializers.CharField(source='session__timetable__subject__name')
+    classes_attended = serializers.IntegerField()
+    total_classes = serializers.IntegerField()
+
+    class Meta:
+        fields = ['subject_id', 'subject_name', 'classes_attended', 'total_classes']
+
+
+class StudentDetailSerializer(serializers.ModelSerializer):
+    section_name = serializers.CharField(source='section.name')
+    year = serializers.IntegerField(source='section.year')
+    program_name = serializers.CharField(source='section.program.name')
+    attendance = AttendanceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Student
+        fields = ['id', 'roll_number', 'first_name', 'last_name', 'email', 'phone', 'section_id', 'section_name', 'year', 'semester', 'program_name', 'attendance']
 
 
 
@@ -196,7 +246,7 @@ class TimetableCreateSerializer(serializers.Serializer):
 '''
 
 class TimetableCreateSerializer(serializers.Serializer):
-    
+
     section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())
     teacher = serializers.PrimaryKeyRelatedField(queryset=Teacher.objects.all())
     semester = serializers.IntegerField()
@@ -232,8 +282,8 @@ class TimetableCreateSerializer(serializers.Serializer):
             if subject.semester != semester:
                 raise serializers.ValidationError(f"Subject {subject.name} (Semester {subject.semester}) does not match selected semester {semester}")
         return data
-    
-previous 
+
+previous
 
 
 '''
@@ -244,9 +294,9 @@ previous
 
 
 class AdminTeacherSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only = True , 
+    password = serializers.CharField(write_only = True ,
     required = False ,
-    allow_blank = True , # allow empty string, 
+    allow_blank = True , # allow empty string,
     default = None      # default to None if not p
      )
 
@@ -266,20 +316,18 @@ class AdminSectionSerializer(serializers.ModelSerializer):
 class AdminStudentSerializer(serializers.ModelSerializer):
     section = AdminSectionSerializer()
     # section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())  # Accept section ID directly
-    
     subjects = SubjectSerializer(many = True , read_only = True )
     # section_data = SectionSerializer( read_only = True)
     # print(section_data)
-    
     print(section)
     class Meta:
         model = Student
         # section = Section
-       
+
         fields = ['id', 'roll_number', 'first_name', 'last_name', 'email', 'phone', 'section','semester', 'subjects']
         read_only_fields = ['id', 'subjects']
         extra_kwargs = {'roll_number' : {'required' : False , 'allow_blank' : True , 'default' : ''}}
-   
+
 
 
 # New serializer for admin updates
@@ -315,7 +363,7 @@ class AdminTimetableSerializer(serializers.ModelSerializer):
         teacher = validated_data.get('teacher', instance.teacher)
         semester_start_date = validated_data.get('semester_start_date', instance.semester_start_date)
         semester_end_date = validated_data.get('semester_end_date', instance.semester_end_date)
-        
+
         Timetable.objects.filter(
             section=section,
             teacher=teacher,
@@ -340,7 +388,7 @@ class AdminTimetableSerializer(serializers.ModelSerializer):
 
         # Store created timetables for response
         self.context['created_timetables'] = created_timetables
-        return created_timetables[0] if created_timetables else instance   
+        return created_timetables[0] if created_timetables else instance
 
 
 class AttendanceStatsSerializer(serializers.Serializer):
@@ -356,4 +404,4 @@ class AttendanceStatsSerializer(serializers.Serializer):
     absent = serializers.IntegerField()
     attendance_percentage = serializers.FloatField()
     recorded_by_name = serializers.CharField()
-    
+

@@ -1,7 +1,7 @@
 # Manikchand Pahade Law College, Aurangabad Attendance Management System
 
 <div align="center">
-  <img src="/attendance_system/attendance_system/attendance/frontend/public/logo.jpeg" alt="Law College Attendance System Logo" width="200"/>
+  <img src="/attendance_system/attendance/frontend/public/logo.jpeg" alt="Law College Attendance System Logo" width="200"/>
   <br>
   <p><em>Streamlining attendance management for legal education</em></p>
   <p>

@@ -143,10 +143,10 @@ The **Manikchand Pahade Law College, Aurangabad Attendance Management System** i
 5. Define attendance policies and thresholds
 
 ### Taking Attendance
-
+<!-- 
 <div align="center">
   <img src="/api/placeholder/700/400" alt="Attendance Taking Interface" width="700"/>
-</div>
+</div> -->
 
 1. Faculty logs into their account
 2. Selects the course, date, and time slot
@@ -240,7 +240,7 @@ npm test
   npm run lint
   ```
 
-## 🚢 Deployment
+<!-- ## 🚢 Deployment
 
 For production deployment:
 
@@ -287,7 +287,7 @@ For production deployment:
            proxy_set_header X-Real-IP $remote_addr;
        }
    }
-   ```
+   ``` -->
 
 ## 🔄 Database Backup
 

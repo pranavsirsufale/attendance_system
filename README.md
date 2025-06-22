@@ -4,13 +4,13 @@
   <img src="/attendance_system/attendance/frontend/public/logo.jpeg" alt="Law College Attendance System Logo" width="200"/>
   <br>
   <p><em>Streamlining attendance management for legal education</em></p>
-  <p>
+  <!-- <p>
     <a href="#features">Features</a> •
     <a href="#installation">Installation</a> •
     <a href="#usage">Usage</a> •
     <a href="#api">API</a> •
     <a href="#development">Development</a>
-  </p>
+  </p> -->
 
   ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
   ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
@@ -143,7 +143,7 @@ The **Manikchand Pahade Law College, Aurangabad Attendance Management System** i
 5. Define attendance policies and thresholds
 
 ### Taking Attendance
-<!-- 
+<!--
 <div align="center">
   <img src="/api/placeholder/700/400" alt="Attendance Taking Interface" width="700"/>
 </div> -->

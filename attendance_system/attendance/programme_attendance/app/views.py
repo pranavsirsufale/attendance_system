@@ -1304,6 +1304,16 @@ class StudentViewSet(ModelViewSet):
 
         return queryset.select_related('section__program')
 
+    def list(self, request, *args, **kwargs):
+        if request.query_params.get('all') == 'true':
+            # Return all students without pagination
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        return super().list(request, *args, **kwargs)
+
+
+
 # class StudentDetailView(APIView):
 #     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -1849,96 +1859,6 @@ class AdminAttendanceOverview(APIView):
         })
 
 
-class PassStudentsView(APIView):
-    permission_classes = [IsAuthenticated, IsAdmin]
-
-    def post(self, request):
-        try:
-            students_data = request.data
-            if not isinstance(students_data, list):
-                return Response({"error": "Expected a list of students"}, status=400)
-
-            errors = []
-            updated_students = []
-
-            with transaction.atomic():
-                for student_data in students_data:
-                    # Required fields
-                    required_fields = ['id', 'semester', 'section_id']
-                    missing_fields = [field for field in required_fields if field not in student_data or student_data[field] is None]
-                    if missing_fields:
-                        errors.append(f"ID {student_data.get('id', 'unknown')}: Missing {', '.join(missing_fields)}")
-                        continue
-
-                    # Validate student
-                    try:
-                        student = Student.objects.get(id=student_data['id'])
-                    except Student.DoesNotExist:
-                        errors.append(f"ID {student_data['id']}: Not found")
-                        continue
-
-                    # Get current section
-                    try:
-                        current_section = Section.objects.get(id=student.section_id)
-                    except Section.DoesNotExist:
-                        errors.append(f"ID {student_data['id']}: Current section invalid")
-                        continue
-
-                    program_id = current_section.program_id
-                    current_year = current_section.year
-                    section_name = current_section.name
-                    current_semester = student.semester
-                    new_semester = student_data['semester']
-
-                    # Validate semester
-                    if new_semester != current_semester + 1:
-                        errors.append(f"ID {student_data['id']}: Expected semester {current_semester + 1}")
-                        continue
-
-                    # Check max semester
-                    max_semester = 6 if program_id == 2 else 10
-                    if new_semester > max_semester:
-                        errors.append(f"ID {student_data['id']}: Final semester reached")
-                        continue
-
-                    # Determine expected year
-                    new_year = current_year if new_semester % 2 == 0 else current_year + 1
-
-                    # Validate new section
-                    new_section_id = student_data['section_id']
-                    try:
-                        new_section = Section.objects.get(id=new_section_id, program_id=program_id, year=new_year)
-                    except Section.DoesNotExist:
-                        # Try same section name
-                        try:
-                            new_section = Section.objects.get(name=section_name, program_id=program_id, year=new_year)
-                            new_section_id = new_section.id
-                        except Section.DoesNotExist:
-                            # Fallback to any section
-                            new_section = Section.objects.filter(program_id=program_id, year=new_year).first()
-                            if not new_section:
-                                errors.append(f"ID {student_data['id']}: No section for Year {new_year}")
-                                continue
-                            new_section_id = new_section.id
-
-                    # Update student
-                    student.semester = new_semester
-                    student.section_id = new_section_id
-                    updated_students.append(student)
-
-                if errors:
-                    return Response({"error": "; ".join(errors)}, status=400)
-
-                # Save updates
-                for student in updated_students:
-                    student.save()
-
-                return Response({"updated": len(updated_students)}, status=200)
-
-        except Exception as e:
-            logger.error(f"Error in PassStudentsView: {str(e)}", exc_info=True)
-            return Response({"error": str(e)}, status=500)
-
 # class PassStudentsView(APIView):
 #     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -1971,38 +1891,31 @@ class PassStudentsView(APIView):
 #                         errors.append(f"ID {student_data['id']}: Current section invalid")
 #                         continue
 
-#                     program_id = current_section.program_id
-#                     current_year = current_section.year
-#                     section_name = current_section.name
-#                     current_semester = student.semester
-#                     new_semester = student_data['semester']
-
-#                     if new_semester != current_semester + 1:
-#                         errors.append(f"ID {student_data['id']}: Expected semester {current_semester + 1}")
-#                         continue
-
-#                     max_semester = 6 if program_id == 2 else 10
-#                     if new_semester > max_semester:
-#                         errors.append(f"ID {student_data['id']}: Final semester reached")
-#                         continue
-
-#                     new_year = current_year if new_semester % 2 == 0 else current_year + 1
-#                     new_section_id = student_data['section_id']
 #                     try:
-#                         new_section = Section.objects.get(id=new_section_id, program_id=program_id, year=new_year)
+#                         new_section = Section.objects.get(id=student_data['section_id'])
 #                     except Section.DoesNotExist:
-#                         try:
-#                             new_section = Section.objects.get(name=section_name, program_id=program_id, year=new_year)
-#                             new_section_id = new_section.id
-#                         except Section.DoesNotExist:
-#                             new_section = Section.objects.filter(program_id=program_id, year=new_year).first()
-#                             if not new_section:
-#                                 errors.append(f"ID {student_data['id']}: No section for Year {new_year}")
-#                                 continue
-#                             new_section_id = new_section.id
+#                         errors.append(f"ID {student_data['id']}: Target section invalid")
+#                         continue
+
+#                     # Validate program consistency
+#                     if new_section.program_id != current_section.program_id:
+#                         errors.append(f"ID {student_data['id']}: Target section must belong to the same program")
+#                         continue
+
+#                     # Validate semester
+#                     max_semester = 6 if current_section.program_id == 2 else 10
+#                     new_semester = student_data['semester']
+#                     if new_semester < 1 or new_semester > max_semester:
+#                         errors.append(f"ID {student_data['id']}: Semester {new_semester} is out of range (1-{max_semester})")
+#                         continue
+
+#                     # Validate semester progression (optional, can be removed if flexible progression is allowed)
+#                     if new_semester <= student.semester:
+#                         errors.append(f"ID {student_data['id']}: Target semester must be greater than current semester {student.semester}")
+#                         continue
 
 #                     student.semester = new_semester
-#                     student.section_id = new_section_id
+#                     student.section_id = student_data['section_id']
 #                     updated_students.append(student)
 
 #                 if errors:
@@ -2016,6 +1929,77 @@ class PassStudentsView(APIView):
 #         except Exception as e:
 #             logger.error(f"Error in PassStudentsView: {str(e)}", exc_info=True)
 #             return Response({"error": str(e)}, status=500)
+
+class PassStudentsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def post(self, request):
+        try:
+            students_data = request.data
+            if not isinstance(students_data, list):
+                return Response({"error": "Expected a list of students"}, status=400)
+
+            errors = []
+            updated_students = []
+
+            with transaction.atomic():
+                for student_data in students_data:
+                    required_fields = ['id', 'semester', 'section_id']
+                    missing_fields = [field for field in required_fields if field not in student_data or student_data[field] is None]
+                    if missing_fields:
+                        errors.append(f"ID {student_data.get('id', 'unknown')}: Missing {', '.join(missing_fields)}")
+                        continue
+
+                    try:
+                        student = Student.objects.get(id=student_data['id'])
+                    except Student.DoesNotExist:
+                        errors.append(f"ID {student_data['id']}: Not found")
+                        continue
+
+                    try:
+                        current_section = Section.objects.get(id=student.section_id)
+                    except Section.DoesNotExist:
+                        errors.append(f"ID {student_data['id']}: Current section invalid")
+                        continue
+
+                    try:
+                        new_section = Section.objects.get(id=student_data['section_id'])
+                    except Section.DoesNotExist:
+                        errors.append(f"ID {student_data['id']}: Target section invalid")
+                        continue
+
+                    # Validate program consistency
+                    if new_section.program_id != current_section.program_id:
+                        errors.append(f"ID {student_data['id']}: Target section must belong to the same program")
+                        continue
+
+                    # Validate semester
+                    max_semester = 6 if current_section.program_id == 2 else 10
+                    new_semester = student_data['semester']
+                    if new_semester < 1 or new_semester > max_semester:
+                        errors.append(f"ID {student_data['id']}: Semester {new_semester} is out of range (1-{max_semester})")
+                        continue
+
+                    # Validate semester progression
+                    if new_semester <= student.semester:
+                        errors.append(f"ID {student_data['id']}: Target semester must be greater than current semester {student.semester}")
+                        continue
+
+                    student.semester = new_semester
+                    student.section_id = student_data['section_id']
+                    updated_students.append(student)
+
+                if errors:
+                    return Response({"error": "; ".join(errors)}, status=400)
+
+                for student in updated_students:
+                    student.save()
+
+                return Response({"updated": len(updated_students)}, status=200)
+
+        except Exception as e:
+            logger.error(f"Error in PassStudentsView: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=500)
 
 # admin attendance export by teacher-subject
 class AdminAttendanceExportView(APIView):

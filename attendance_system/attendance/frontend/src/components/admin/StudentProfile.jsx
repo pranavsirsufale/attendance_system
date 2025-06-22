@@ -24,37 +24,71 @@ function StudentProfile({ notifyUser }) {
   const navigate = useNavigate();
 
   // Fetch programs
-  const fetchPrograms = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setError('Please log in first');
-      notifyUser('Please log in first', 'warning');
-      return;
-    }
-    try {
-      const response = await axios.get('http://localhost:8000/api/programs/', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setPrograms(response.data);
-    } catch (err) {
-      setError('Failed to load programs');
-      notifyUser('Failed to load programs', 'error');
-    }
-  };
+  // const fetchPrograms = async () => {
+  //   const token = localStorage.getItem('access_token');
+  //   if (!token) {
+  //     setError('Please log in first');
+  //     notifyUser('Please log in first', 'warning');
+  //     return;
+  //   }
+  //   try {
+  //     const response = await axios.get('http://localhost:8000/api/programs/', {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+  //     setPrograms(response.data);
+  //   } catch (err) {
+  //     setError('Failed to load programs');
+  //     notifyUser('Failed to load programs', 'error');
+  //   }
+  // };
 
-  // Fetch sections
-  const fetchSections = async (programId) => {
-    const token = localStorage.getItem('access_token');
-    try {
-      const response = await axios.get(`http://localhost:8000/api/sections/?program_id=${programId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSections(response.data);
-    } catch (err) {
-      setError('Failed to load sections');
-      notifyUser('Failed to load sections', 'error');
-    }
-  };
+  // // Fetch sections
+  // const fetchSections = async (programId) => {
+  //   const token = localStorage.getItem('access_token');
+  //   try {
+  //     const response = await axios.get(`http://localhost:8000/api/sections/?program_id=${programId}`, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+  //     setSections(response.data);
+  //   } catch (err) {
+  //     setError('Failed to load sections');
+  //     notifyUser('Failed to load sections', 'error');
+  //   }
+  // };
+
+
+
+    const fetchPrograms = async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setError('Please log in first');
+        notifyUser('Please log in first', 'warning');
+        return;
+      }
+      try {
+        const response = await axios.get('http://localhost:8000/api/programs/', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setPrograms(response.data);
+      } catch (err) {
+        setError('Failed to load programs');
+        notifyUser('Failed to load programs', 'error');
+      }
+    };
+
+    // Fetch sections
+    const fetchSections = async (programId) => {
+      const token = localStorage.getItem('access_token');
+      try {
+        const response = await axios.get(`http://localhost:8000/api/sections-for-program/?program_id=${programId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setSections(response.data);
+      } catch (err) {
+        setError('Failed to load sections');
+        notifyUser('Failed to load sections', 'error');
+      }
+    };
 
   // Generate semesters
   const generateSemesters = (year) => {

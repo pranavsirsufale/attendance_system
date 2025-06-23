@@ -29,6 +29,7 @@ import { loadFull } from "tsparticles"; //! particles engine
 import PassStudents from "./components/utilities/PassStudents";
 import StudentProfile from "./components/admin/StudentProfile";
 import StudentDetail from "./components/admin/StudentDetail";
+import RemoveStudents from "./components/utilities/RemoveStudents";
 // Sample Lottie animation (law-themed scales of justice)
 // import lawAnimationData from "https://lottie.host/9c9f6f1d-3b3e-4b7e-9e1a-3f3d6b8e7f2a/justice-scales.json";
 
@@ -302,6 +303,13 @@ function App() {
                             <AddBulkStudents notifyUser={notifyUser} />
                           }
                         />
+                          <Route
+                          path="/admin/remove-builk-student"
+                          element={
+                            <RemoveStudents notifyUser={notifyUser} />
+                          }
+                        />
+
                         <Route
                           path="/admin/pass-students"
                           element={

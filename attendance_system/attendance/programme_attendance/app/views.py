@@ -2001,6 +2001,43 @@ class PassStudentsView(APIView):
             logger.error(f"Error in PassStudentsView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
+
+class RemoveStudentsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def post(self, request):
+        try:
+            students_data = request.data
+            if not isinstance(students_data, list):
+                return Response({"error": "Expected a list of student IDs"}, status=400)
+
+            errors = []
+            deleted_count = 0
+
+            with transaction.atomic():
+                for student_data in students_data:
+                    if 'id' not in student_data or student_data['id'] is None:
+                        errors.append(f"Missing ID in student data")
+                        continue
+
+                    try:
+                        student = Student.objects.get(id=student_data['id'])
+                        student.delete()
+                        deleted_count += 1
+                    except Student.DoesNotExist:
+                        errors.append(f"ID {student_data['id']}: Not found")
+                        continue
+
+                if errors:
+                    return Response({"error": "; ".join(errors)}, status=400)
+
+                return Response({"removed": deleted_count}, status=200)
+
+        except Exception as e:
+            logger.error(f"Error in RemoveStudentsView: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=500)
+
+
 # admin attendance export by teacher-subject
 class AdminAttendanceExportView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]

@@ -45,6 +45,7 @@ urlpatterns = [
     # path('semesters-for-section/' , views.SemestersForSectionView.as_view() , name = 'semester-for-section'),
     path('students/bulk/',views.BulkStudentUploadView.as_view() , name='students-bulk'),
     path('students/pass/', views.PassStudentsView.as_view(), name='pass-students'),
+    path("students-remove/", views.RemoveStudentsView.as_view(), name='remove-students'),
     path('student-details/<int:pk>/', views.StudentDetailView.as_view(), name='student-detail'),
 
     path('admin/attendance-overview/', views.AdminAttendanceOverview.as_view(), name='admin-attendance-overview'),

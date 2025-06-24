@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import Button from './utilities/Button';
 
 function Calendar(admin) {
   const [sessions, setSessions] = useState([]);
@@ -229,7 +230,7 @@ function Calendar(admin) {
 
   return (
     <div className="p-6 bg-gradient-to-br from-indigo-50 to-purple-100 min-h-screen">
-      <motion.h2 
+      <motion.h2
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -237,7 +238,7 @@ function Calendar(admin) {
       >
         Session Schedules
       </motion.h2>
-      
+
       <AnimatePresence>
         {error && (
           <motion.p
@@ -251,20 +252,60 @@ function Calendar(admin) {
         )}
       </AnimatePresence>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
         className="mb-6 flex flex-wrap gap-4"
       >
-        <Link 
-          to="/attendance-stats" 
-          className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-200 flex items-center gap-2"
+
+
+
+         <Button
+        whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            setEditTimetableId(null);
+            setTimetableData({
+              section: '',
+              semester: '',
+              daily_schedules: [{ day_of_week: 'Monday', subject: '', start_time: '08:30:00' }],
+              semester_start_date: '',
+              semester_end_date: '',
+            });
+            setShowTimetableForm(true);
+          }}
+
         >
-         
-          View Attendance Statistics
+          Create TimeTable
+        </Button>
+
+
+        <Link
+          to="/attendance-stats"
+          // className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-200 flex items-center gap-2"
+        >
+
+        <Button
+          // to="/attendance-stats"
+
+        whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          View Statistics
+        </Button>
+          {/* View Attendance Statistics */}
         </Link>
-        <motion.button
+
+        <Button
+        onClick={() => navigate('/calendar')}
+        >
+          Calendar
+        </Button>
+
+
+
+        {/* <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => {
@@ -281,10 +322,15 @@ function Calendar(admin) {
           className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-6 rounded-full hover:from-indigo-700 hover:to-purple-700 shadow-lg transition-all duration-200"
         >
           Create Timetable
-        </motion.button>
+        </motion.button> */}
+
+
+
+
+
       </motion.div>
 
-      <motion.h3 
+      <motion.h3
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
@@ -294,7 +340,7 @@ function Calendar(admin) {
       </motion.h3>
 
       {timetables.length > 0 ? (
-        <motion.div 
+        <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -338,7 +384,7 @@ function Calendar(admin) {
           ))}
         </motion.div>
       ) : (
-        <motion.p 
+        <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="text-gray-500 mb-8 italic"
@@ -347,7 +393,7 @@ function Calendar(admin) {
         </motion.p>
       )}
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
@@ -519,7 +565,7 @@ function Calendar(admin) {
       </AnimatePresence>
 
       {sessions.length > 0 ? (
-        <motion.ul 
+        <motion.ul
           className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -554,7 +600,7 @@ function Calendar(admin) {
     </p>
   </div>
 
-  <motion.div 
+  <motion.div
     className="mt-5"
     whileHover={{ scale: 1.05 }}
     whileTap={{ scale: 0.95 }}
@@ -578,7 +624,7 @@ function Calendar(admin) {
 
 
       ) : (
-        <motion.p 
+        <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="text-gray-500 italic"

@@ -2405,10 +2405,17 @@ class ScheduledDatesView(APIView):
             except ValueError:
                 return Response({"error": "Invalid month format. Use yyyy-MM"}, status=400)
 
+            # Fetch teacher linked to the authenticated user
+            try:
+                teacher = Teacher.objects.get(user=request.user)
+            except Teacher.DoesNotExist:
+                logger.error(f"Teacher not found for user: {request.user}")
+                return Response({"error": "Teacher not found"}, status=404)
+
             # Filter sessions by teacher (via timetable.teacher)
             sessions = Session.objects.filter(
                 date__range=[start_date, end_date],
-                timetable__teacher__id=request.user.id
+                timetable__teacher=teacher
             )
             if section_id:
                 sessions = sessions.filter(timetable__section_id=section_id)
@@ -2439,9 +2446,16 @@ class SessionsByDateView(APIView):
             except ValueError:
                 return Response({"error": "Invalid date format. Use yyyy-MM-dd"}, status=400)
 
+            # Fetch teacher linked to the authenticated user
+            try:
+                teacher = Teacher.objects.get(user=request.user)
+            except Teacher.DoesNotExist:
+                logger.error(f"Teacher not found for user: {request.user}")
+                return Response({"error": "Teacher not found"}, status=404)
+
             sessions = Session.objects.filter(
                 date=date_obj,
-                timetable__teacher__id=request.user.id
+                timetable__teacher=teacher
             )
             if section_id:
                 sessions = sessions.filter(timetable__section_id=section_id)
@@ -2453,4 +2467,3 @@ class SessionsByDateView(APIView):
         except Exception as e:
             logger.error(f"Error in SessionsByDateView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
-

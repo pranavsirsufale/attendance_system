@@ -1,28 +1,45 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { motion, AnimatePresence } from 'framer-motion';
+import Button from './Button';
 
 const CalendarPicker = () => {
-  const [events, setEvents] = useState([]); // Events for current month
-  const [selectedDate, setSelectedDate] = useState(null); // Clicked date
-  const [dateSessions, setDateSessions] = useState([]); // Sessions for selected date
-  const [loading, setLoading] = useState(false); // Loading state
-  const [error, setError] = useState(''); // Error message
+  const [events, setEvents] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [dateSessions, setDateSessions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [sections, setSections] = useState([]);
+  const [selectedSection, setSelectedSection] = useState('');
   const navigate = useNavigate();
 
-  // Check for token on mount
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) {
       setError('Please log in first');
-      navigate('/login'); // Adjust to your login route
+      navigate('/login');
+      return;
     }
+    fetchSections(token);
   }, [navigate]);
 
-  // Fetch sessions for the current month
+  const fetchSections = async (token) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/sections/', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+      const data = await response.json();
+      setSections(data);
+    } catch (err) {
+      console.error('Error fetching sections:', err);
+      setError('Failed to load sections');
+    }
+  };
+
   const fetchMonthSessions = useCallback(async (start, end) => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -33,11 +50,10 @@ const CalendarPicker = () => {
     setLoading(true);
     setError('');
     try {
-      const month = start.toISOString().slice(0, 7); // YYYY-MM
-      const response = await fetch(`http://localhost:8000/api/scheduled-dates/?month=${month}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const month = start.toISOString().slice(0, 7);
+      const url = `http://localhost:8000/api/scheduled-dates/?month=${month}${selectedSection ? `&section_id=${selectedSection}` : ''}`;
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) {
         if (response.status === 401) {
@@ -47,10 +63,7 @@ const CalendarPicker = () => {
         }
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      const text = await response.text();
-      console.log('Raw month sessions response:', text);
-      const data = JSON.parse(text);
-      console.log('Month sessions response:', data);
+      const data = await response.json();
       const formattedEvents = (data.dates || []).map((date) => ({
         title: 'Scheduled Session',
         date,
@@ -66,9 +79,8 @@ const CalendarPicker = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [navigate, selectedSection]);
 
-  // Fetch sessions for a specific date
   const fetchDateSessions = async (dateStr) => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -79,10 +91,9 @@ const CalendarPicker = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch(`http://localhost:8000/api/sessions-by-date/?date=${dateStr}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const url = `http://localhost:8000/api/sessions-by-date/?date=${dateStr}${selectedSection ? `&section_id=${selectedSection}` : ''}`;
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) {
         if (response.status === 401) {
@@ -92,16 +103,19 @@ const CalendarPicker = () => {
         }
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      const text = await response.text();
-      console.log('Raw date sessions response:', text);
-      const data = JSON.parse(text);
-      console.log('Date sessions response:', data);
+      const data = await response.json();
       const formattedSessions = (data || []).map((session) => ({
         id: session.id,
         title: session.timetable?.subject?.name || 'Untitled Session',
-        time: session.timetable?.start_time || 'Unknown Time',
+        date: session.date,
         day: session.timetable?.day_of_week || 'Unknown Day',
+        time: session.timetable?.start_time || 'Unknown Time',
         section: session.timetable?.section?.name || 'Unknown Section',
+        year: session.timetable?.section?.year || 'Unknown',
+        semester: session.timetable?.semester || 'Unknown',
+        program: session.timetable?.section?.program || 'Unknown',
+        periodStart: session.timetable?.semester_start_date || 'Unknown',
+        periodEnd: session.timetable?.semester_end_date || 'Unknown',
         status: session.status || 'Unknown',
       }));
       setDateSessions(formattedSessions);
@@ -114,26 +128,30 @@ const CalendarPicker = () => {
     }
   };
 
-  // Handle date click
   const handleDateClick = (info) => {
     const dateStr = info.dateStr;
-    console.log('Date clicked:', dateStr);
     setSelectedDate(dateStr);
     fetchDateSessions(dateStr);
   };
 
-  // Handle month change
   const handleDatesSet = (info) => {
     const { start, end } = info;
     fetchMonthSessions(start, end);
   };
 
+  const viewAllSessions = () => {
+    navigate('/all-sessions');
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="p-6 bg-gradient-to-br from-indigo-50 to-purple-100 min-h-screen"
-    >
+    <div className="p-6 bg-gradient-to-br from-indigo-50 to-purple-100 min-h-screen">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center mb-8"
+      >
+
       <motion.h2
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -142,6 +160,10 @@ const CalendarPicker = () => {
       >
         Session Calendar
       </motion.h2>
+
+        <Button onClick={viewAllSessions}>View All Sessions</Button>
+
+</motion.div>
 
       <AnimatePresence>
         {error && (
@@ -155,6 +177,28 @@ const CalendarPicker = () => {
           </motion.p>
         )}
       </AnimatePresence>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="mb-6"
+      >
+        <label className="block text-lg font-medium text-indigo-800 mb-2">Filter Sessions by Section:</label>
+        <motion.select
+          whileHover={{ scale: 1.02 }}
+          value={selectedSection}
+          onChange={(e) => setSelectedSection(e.target.value)}
+          className="w-full p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all duration-200"
+        >
+          <option value="">All Sections</option>
+          {sections.map((section) => (
+            <option key={section.id} value={section.id}>
+              {section.name} (Year: {section.year}, Program: {section.program})
+            </option>
+          ))}
+        </motion.select>
+      </motion.div>
 
       {loading && (
         <motion.div
@@ -212,20 +256,41 @@ const CalendarPicker = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   whileHover={{ y: -5 }}
-                  className="p-6 bg-white rounded-2xl shadow-lg border border-indigo-100"
+                  className="bg-gradient-to-br from-indigo-200 via-indigo-100 to-white rounded-3xl shadow-2xl hover:shadow-indigo-300 transition-all duration-300 p-6 border border-indigo-300/50"
                 >
-                  <h4 className="text-xl font-semibold text-indigo-600 mb-3">{session.title}</h4>
-                  <div className="space-y-2 text-gray-600">
-                    <p><span className="font-medium text-indigo-700">Time:</span> {session.time}</p>
-                    <p><span className="font-medium text-indigo-700">Day:</span> {session.day}</p>
-                    <p><span className="font-medium text-indigo-700">Section:</span> {session.section}</p>
+                  <div className="mb-4">
+                    <h3 className="text-2xl font-bold text-indigo-700 drop-shadow-sm">{session.title}</h3>
+                    <p className="text-sm text-indigo-500">{session.section} • Year {session.year} • Semester {session.semester}</p>
+                  </div>
+                  <div className="space-y-2 text-indigo-700 text-sm">
+                    <p><span className="font-semibold">📅 Date:</span> {session.date}</p>
+                    <p><span className="font-semibold">📆 Day:</span> {session.day}</p>
+                    <p><span className="font-semibold">⏰ Time:</span> {session.time}</p>
+                    <p><span className="font-semibold">🎓 Program:</span> {session.program}</p>
+                    <p><span className="font-semibold">🗓️ Period:</span> {session.periodStart} → {session.periodEnd}</p>
                     <p>
-                      <span className="font-medium text-indigo-700">Status:</span>{' '}
-                      <span className={session.status === 'Scheduled' ? 'text-yellow-600' : 'text-green-600'}>
+                      <span className="font-semibold">📌 Status:</span>
+                      <span className={`ml-1 font-bold ${session.status === 'Scheduled' ? 'text-yellow-600' : 'text-green-600'}`}>
                         {session.status}
                       </span>
                     </p>
                   </div>
+                  <motion.div
+                    className="mt-5"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Link
+                      to={`/attendance/${session.id}`}
+                      className={`inline-block w-full text-center px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-md ${
+                        session.status === 'Scheduled'
+                          ? 'bg-yellow-400 text-white hover:bg-yellow-500'
+                          : 'bg-green-500 text-white hover:bg-green-600'
+                      }`}
+                    >
+                      {session.status === 'Scheduled' ? '📋 Mark Attendance' : '✏️ Update Attendance'}
+                    </Link>
+                  </motion.div>
                 </motion.li>
               ))}
             </motion.ul>
@@ -240,7 +305,7 @@ const CalendarPicker = () => {
           )}
         </motion.div>
       )}
-    </motion.div>
+    </div>
   );
 };
 

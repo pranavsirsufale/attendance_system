@@ -199,12 +199,24 @@ function App() {
                       path="/"
                       element={<Login notifyUser={notifyUser} />}
                     />
+
                     <Route
                       path="/calendar"
                       element={
                         <CalendarPicker admin={isAdmin} notifyUser={notifyUser} />
                       }
                     />
+                    <Route
+                      path="/all-sessions"
+                      element={
+                        <Calendar admin={isAdmin} notifyUser={notifyUser} />
+                      }
+                    />
+
+
+
+
+
                     <Route
                       path="/attendance/:sessionId"
                       element={

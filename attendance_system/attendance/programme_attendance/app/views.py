@@ -13,6 +13,7 @@ from app.permissions import IsAdmin
 from django.db.models import Count, Q , F , ExpressionWrapper , FloatField , DecimalField, CharField , Value,Sum , Case, When, IntegerField
 from django.contrib.auth.models import User
 from datetime import datetime, timedelta
+import calendar
 from .models import Session , Program, Attendance, Teacher, Student, Subject, Timetable, CalendarException , Section
 from .serializers import (
     SessionSerializer, AttendanceSerializer , TimetableCreateSerializer, TeacherSerializer, StudentSerializer,
@@ -2351,3 +2352,105 @@ class AdminSessionViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter( timetable__subject__semester = semester)
 
         return queryset.order_by('date') # Order for consistency
+
+
+
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            date = request.query_params.get('date')  # Format: yyyy-MM-dd
+            section_id = request.query_params.get('section_id')
+            if not date:
+                return Response({"error": "Date parameter is required (format: yyyy-MM-dd)"}, status=400)
+
+            try:
+                date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+            except ValueError:
+                return Response({"error": "Invalid date format. Use yyyy-MM-dd"}, status=400)
+
+            sessions = Session.objects.filter(
+                date=date_obj,
+                timetable__subject__teacher_id=request.user.id
+            )
+            if section_id:
+                sessions = sessions.filter(timetable__section_id=section_id)
+
+            serializer = SessionSerializer(sessions, many=True)
+            return Response(serializer.data, status=200)
+
+        except Exception as e:
+            logger.error(f"Error in SessionsByDateView: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=500)
+
+
+
+class ScheduledDatesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            month = request.query_params.get('month')  # Format: yyyy-MM
+            section_id = request.query_params.get('section_id')
+            if not month:
+                return Response({"error": "Month parameter is required (format: yyyy-MM)"}, status=400)
+
+            try:
+                year, month = map(int, month.split('-'))
+                start_date = datetime(year, month, 1).date()
+                _, last_day = calendar.monthrange(year, month)
+                end_date = datetime(year, month, last_day).date()
+                logger.debug(f"Fetching scheduled dates for {year}-{month}, section_id={section_id}")
+            except ValueError:
+                return Response({"error": "Invalid month format. Use yyyy-MM"}, status=400)
+
+            # Filter sessions by teacher (via timetable.teacher)
+            sessions = Session.objects.filter(
+                date__range=[start_date, end_date],
+                timetable__teacher__id=request.user.id
+            )
+            if section_id:
+                sessions = sessions.filter(timetable__section_id=section_id)
+
+            # Get distinct dates
+            dates = sessions.values('date').distinct().values_list('date', flat=True)
+            date_list = [date.strftime('%Y-%m-%d') for date in dates]
+            logger.debug(f"Found dates: {date_list}")
+            return Response({"dates": date_list}, status=200)
+
+        except Exception as e:
+            logger.error(f"Error in ScheduledDatesView: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=500)
+
+class SessionsByDateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            date = request.query_params.get('date')  # Format: yyyy-MM-dd
+            section_id = request.query_params.get('section_id')
+            if not date:
+                return Response({"error": "Date parameter is required (format: yyyy-MM-dd)"}, status=400)
+
+            try:
+                date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+                logger.debug(f"Fetching sessions for date={date}, section_id={section_id}")
+            except ValueError:
+                return Response({"error": "Invalid date format. Use yyyy-MM-dd"}, status=400)
+
+            sessions = Session.objects.filter(
+                date=date_obj,
+                timetable__teacher__id=request.user.id
+            )
+            if section_id:
+                sessions = sessions.filter(timetable__section_id=section_id)
+
+            serializer = SessionSerializer(sessions, many=True)
+            logger.debug(f"Serialized sessions: {serializer.data}")
+            return Response(serializer.data, status=200)
+
+        except Exception as e:
+            logger.error(f"Error in SessionsByDateView: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=500)
+

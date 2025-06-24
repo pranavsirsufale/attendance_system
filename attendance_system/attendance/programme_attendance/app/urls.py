@@ -47,6 +47,8 @@ urlpatterns = [
     path('students/pass/', views.PassStudentsView.as_view(), name='pass-students'),
     path("students-remove/", views.RemoveStudentsView.as_view(), name='remove-students'),
     path('student-details/<int:pk>/', views.StudentDetailView.as_view(), name='student-detail'),
+    path('scheduled-dates/', views.ScheduledDatesView.as_view(), name='scheduled-dates'),
+    path('sessions-by-date/', views.SessionsByDateView.as_view(), name='sessions-by-date'),
 
     path('admin/attendance-overview/', views.AdminAttendanceOverview.as_view(), name='admin-attendance-overview'),
     path('admin/holidays/', views.AdminHolidayManagement.as_view(), name='admin-holidays'),

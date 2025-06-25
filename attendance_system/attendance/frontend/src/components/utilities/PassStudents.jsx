@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import {Box, Button, FormControl, FormHelperText, InputLabel, Select, MenuItem, Typography, Table, TableBody, TableCell,
+import {Box, FormControl, FormHelperText, InputLabel, Select, MenuItem, Typography, Table, TableBody, TableCell,
   TableHead, TableRow, Card, CardContent, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Grid,
   } from '@mui/material';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { styled } from '@mui/material/styles';
+import Button from './Button';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: '12px',
@@ -29,6 +31,7 @@ function PassStudents({ notifyUser }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [openConfirm, setOpenConfirm] = useState(false);
+  const navigate = useNavigate();
 
   // Fetch programs
   const fetchPrograms = async () => {
@@ -243,9 +246,12 @@ function PassStudents({ notifyUser }) {
 
   return (
     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
-      <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
-        Promote Students
-      </Typography>
+
+     <Typography textAlign={"center"} variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
+          <Button onClick={() => navigate('/admin')}>Dashboard</Button>
+            Promote Students
+          </Typography>
+
       <AnimatePresence>
         {error && (
           <motion.div
@@ -324,6 +330,25 @@ function PassStudents({ notifyUser }) {
                 <FormHelperText>Select semester based on year</FormHelperText>
               </FormControl>
             </Grid>
+             <Grid item xs={12} sm={3}>
+              <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedProgram}>
+                <InputLabel id="target-section-label">Target Section</InputLabel>
+                <Select
+                  labelId="target-section-label"
+                  value={selectedTargetSection}
+                  onChange={(e) => setSelectedTargetSection(e.target.value)}
+                  label="Target Section"
+                >
+                  <MenuItem value="">Select Target Section</MenuItem>
+                  {targetSections.map((section) => (
+                    <MenuItem key={section.id} value={section.id}>
+                      {section.name} (Year {section.year})
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>Choose section to promote to</FormHelperText>
+              </FormControl>
+            </Grid>
             <Grid item xs={12} sm={3}>
               <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedProgram}>
                 <InputLabel id="target-semester-label">Target Semester</InputLabel>
@@ -343,25 +368,7 @@ function PassStudents({ notifyUser }) {
                 <FormHelperText>Select semester to promote to</FormHelperText>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={3}>
-              <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedProgram}>
-                <InputLabel id="target-section-label">Target Section</InputLabel>
-                <Select
-                  labelId="target-section-label"
-                  value={selectedTargetSection}
-                  onChange={(e) => setSelectedTargetSection(e.target.value)}
-                  label="Target Section"
-                >
-                  <MenuItem value="">Select Target Section</MenuItem>
-                  {targetSections.map((section) => (
-                    <MenuItem key={section.id} value={section.id}>
-                      {section.name} (Year {section.year})
-                    </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText>Choose section to promote to</FormHelperText>
-              </FormControl>
-            </Grid>
+
           </Grid>
           {students.length > 0 && (
             <StyledCard sx={{ mb: 3 }}>

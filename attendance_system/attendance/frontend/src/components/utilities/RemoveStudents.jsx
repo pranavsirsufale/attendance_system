@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   Box,
-  Button,
   FormControl,
   FormHelperText,
   InputLabel,
@@ -27,6 +27,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { styled } from '@mui/material/styles';
+import Button from './Button';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: '12px',
@@ -45,6 +46,7 @@ function RemoveStudents({ notifyUser }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [openConfirm, setOpenConfirm] = useState(false);
+  const navigate = useNavigate();
 
   // Fetch programs
   const fetchPrograms = async () => {
@@ -192,9 +194,13 @@ function RemoveStudents({ notifyUser }) {
 
   return (
     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
-      <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
-        Remove Students
-      </Typography>
+
+           <Typography textAlign={"center"} variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
+                <Button onClick={() => navigate("/admin")}>Dashboard</Button>
+                  Promote Students
+                </Typography>
+
+
       <AnimatePresence>
         {error && (
           <motion.div

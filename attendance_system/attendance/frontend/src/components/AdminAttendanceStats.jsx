@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+// import {Button as btn} from './utilities/Button';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, TextField, Select, MenuItem, FormControl, InputLabel, Box, Typography, Table, TableBody, TableCell, TableHead, TableRow, Card, CardContent, Grid } from '@mui/material';
@@ -35,6 +37,7 @@ function AdminAttendanceStats({ notifyUser }) {
   const [selectedTeacherName, setSelectedTeacherName] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
+  const navigate = useNavigate();
 
   const fetchTeachers = async () => {
     const token = localStorage.getItem('access_token');
@@ -76,8 +79,8 @@ function AdminAttendanceStats({ notifyUser }) {
       setStudentPrevPage(response.data.previous);
       setError('');
       notifyUser(
-        studentsData.length > 0 
-          ? `Loaded ${studentsData.length} of ${totalCount} students` 
+        studentsData.length > 0
+          ? `Loaded ${studentsData.length} of ${totalCount} students`
           : `No students found (Total: ${totalCount}).`,
         studentsData.length > 0 ? 'info' : 'warning'
       );
@@ -323,9 +326,17 @@ function AdminAttendanceStats({ notifyUser }) {
 
   return (
     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
-      <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
+
+
+      <Button onClick={() => navigate('/admin')}>Dashboard</Button>
+ <Typography textAlign={"center"} variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
         Admin Attendance Dashboard
       </Typography>
+      {/* <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
+        Admin Attendance Dashboard
+      </Typography> */}
+
+
       <AnimatePresence>
         {error && (
           <motion.p
@@ -340,7 +351,7 @@ function AdminAttendanceStats({ notifyUser }) {
       </AnimatePresence>
 
       <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-        
+
        <FormControl sx={{ minWidth: 120 }}>
           <InputLabel>Period</InputLabel>
           <Select value={period} onChange={(e) => { setPeriod(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); setStartDate(''); setEndDate(''); }}>
@@ -482,7 +493,7 @@ function AdminAttendanceStats({ notifyUser }) {
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" sx={{ mb: 2 }}>
             Subject: {selectedSubject}
-            
+
           </Typography>
           <Button
               variant="contained"
@@ -491,9 +502,9 @@ function AdminAttendanceStats({ notifyUser }) {
             >
               Export as CSV
             </Button>
-          
-          
-          
+
+
+
           <Box sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead>

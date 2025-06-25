@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Box, Button, FormControl, InputLabel, Select, MenuItem, Typography, TextField, CircularProgress, Grid, Paper, FormHelperText } from '@mui/material';
+import { Box, FormControl, InputLabel, Select, MenuItem, Typography, TextField, CircularProgress, Grid, Paper, FormHelperText } from '@mui/material';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import Button from './Button';
 
 function AddBulkStudents({ notifyUser }) {
   const [programs, setPrograms] = useState([]);
@@ -16,6 +18,7 @@ function AddBulkStudents({ notifyUser }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   // Fetch programs
   const fetchPrograms = async () => {
@@ -244,9 +247,15 @@ function AddBulkStudents({ notifyUser }) {
 
   return (
     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
-      <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
+
+      {/* <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
         Add Bulk Students
-      </Typography>
+      </Typography> */}
+
+                 <Typography textAlign={"center"} variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
+                      <Button onClick={() => navigate("/admin")}>Dashboard</Button>
+                        Add Bulk Students
+                      </Typography>
       <AnimatePresence>
         {error && (
           <motion.div
@@ -331,7 +340,7 @@ function AddBulkStudents({ notifyUser }) {
                 onClick={downloadTemplate}
                 sx={{ flexShrink: 0 }}
               >
-                Download Sample Template
+                Download Sample
               </Button>
               <TextField
                 type="file"

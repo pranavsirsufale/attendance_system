@@ -7,6 +7,7 @@ import {Grid, Box, FormControl, InputLabel, Select, MenuItem, Typography, Table,
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { motion, AnimatePresence } from 'framer-motion';
+import Button from '../utilities/Button';
 
 function StudentProfile({ notifyUser }) {
   const [programs, setPrograms] = useState([]);
@@ -184,7 +185,10 @@ function StudentProfile({ notifyUser }) {
 
   return (
     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
-      <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
+
+
+      <Typography textAlign={"center"} variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
+      <Button onClick={() => navigate('/admin')}>Dashboard</Button>
         Student Profiles
       </Typography>
       <AnimatePresence>

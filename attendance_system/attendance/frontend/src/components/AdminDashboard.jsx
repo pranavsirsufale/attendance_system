@@ -301,7 +301,8 @@ import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import styled from "styled-components";
-
+import Button from "./utilities/Button";
+import LogOutButton from "./utilities/LogOutButton";
 // --- START: Styled Card Component ---
 const StyledCard = styled(motion.div)`
   /* Base card container */
@@ -541,14 +542,38 @@ function AdminDashboard({ notifyUser }) {
         </motion.h2>
 
 
-        <motion.button
+
+
+        <Button
+        whileHover={{scale : 1.05, rotate:2}}
+        whileTap={{scale: 0.95}}
+        onClick={()=>navigate('/calendar')}>
+          Calendar
+        </Button>
+
+
+        <Button
+        onClick={()=> navigate("/all-sessions")}>
+          All Sessions
+        </Button>
+
+
+        <LogOutButton
+          whileHover={{ scale: 1.05, rotate: 2 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleLogout}>
+            Logout
+          </LogOutButton>
+
+
+        {/* <motion.button
           whileHover={{ scale: 1.05, rotate: 2 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleLogout}
           className="bg-gradient-to-r from-red-500 via-red-600 to-pink-500 dark:from-red-600 dark:to-pink-600 text-white py-2 px-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
         >
           Logout
-        </motion.button>
+        </motion.button> */}
 
 
       </motion.div>

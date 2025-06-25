@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaUserCircle, FaSignOutAlt, FaUserTag, FaClock } from 'react-icons/fa';
 import { MdAccessTime } from 'react-icons/md';
 import { motion, AnimatePresence } from 'framer-motion';
+import LogOutButton from './utilities/LogOutButton';
 
 function ProfileIcon({notifyUser}) {
   const [profile, setProfile] = useState(null);
@@ -31,12 +32,12 @@ function ProfileIcon({notifyUser}) {
         console.log(token_expiry)
         const data = { ...response.data, last_login, token_expiry };
         setProfile(data);
-     
+
         setError('');
       } catch (err) {
         console.error('Failed to load profile:', err);
         notifyUser('Failed to load profile:'+ err , 'error');
-        
+
         setError('Failed to load profile');
         navigate('/');
       }
@@ -150,7 +151,9 @@ function ProfileIcon({notifyUser}) {
                     {profile.last_login || 'N/A'}
                   </p>
                 </motion.div>
-                <motion.div
+
+
+                {/* <motion.div
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 }}
@@ -161,7 +164,16 @@ function ProfileIcon({notifyUser}) {
                     <span className="font-semibold text-indigo-700 dark:text-indigo-300">Token Expiry:</span>{' '}
                     {profile.token_expiry || 'N/A'}
                   </p>
-                </motion.div>
+                </motion.div> */}
+
+
+                <LogOutButton
+                  // whileHover={{ scale: 1.05, rotate: 2 }}
+                  // whileTap={{ scale: 0.95 }}
+                  onClick={handleLogout}>
+                    Logout
+                  </LogOutButton>
+{/*
                 <motion.button
                   whileHover={{ scale: 1.05, rotate: 2 }}
                   whileTap={{ scale: 0.95 }}
@@ -169,8 +181,16 @@ function ProfileIcon({notifyUser}) {
                   className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white px-4 py-2  hover:from-red-600 hover:to-red-700 dark:hover:from-red-700 dark:hover:to-red-800 shadow-md hover:shadow-xl transition-all duration-300 mt-4"
                 >
                   <FaSignOutAlt />
+
+
                   <span>Logout</span>
-                </motion.button>
+
+
+                </motion.button> */}
+
+
+
+
               </div>
             ) : (
               <motion.p

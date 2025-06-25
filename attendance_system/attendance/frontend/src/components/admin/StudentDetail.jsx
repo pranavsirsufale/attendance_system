@@ -778,12 +778,16 @@ function StudentDetail({ notifyUser }) {
         )}
       </AnimatePresence>
       <Stack direction="row" spacing={2} sx={{ mb: 3 }} className="no-print">
+
+
         <Button
           variant="outlined"
-          onClick={() => navigate('/admin/student-profiles')}
+          onClick={() => navigate(-1)}
         >
           Back to Student List
         </Button>
+
+
         <Button
           variant="contained"
           startIcon={<PrintIcon />}

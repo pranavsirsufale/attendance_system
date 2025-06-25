@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import Button from "../utilities/Button";
 
 function SessionCRUD({notifyUser}) {
   const [items, setItems] = useState([]);
@@ -50,7 +51,7 @@ function SessionCRUD({notifyUser}) {
       setItems(response.data.results || response.data);
       setTotalPages(Math.ceil((response.data.count || response.data.length) / pageSize));
       setError("");
-      
+
       if( response.status >= 200 && response.status <= 300 ){
         notifyUser(response.data.message || `${response.data.count || 0 } Records found ✅`,'info')
       }
@@ -73,8 +74,8 @@ function SessionCRUD({notifyUser}) {
       });
       setTeachers(response.data);
       console.log("Teachers fetched:", response.data);
-      
-      
+
+
     } catch (err) {
       notifyUser("Teachers fetch error:"+err.response?.data || err.message ,'error');
     }
@@ -103,7 +104,7 @@ function SessionCRUD({notifyUser}) {
       setSemesters(uniqueSemesters);
       console.log("Semesters fetched:", uniqueSemesters);
     } catch (err) {
-      
+
       notifyUser("Semesters fetch error:" + err.response?.data || err.message, 'error') ;
     }
   };
@@ -261,12 +262,13 @@ function SessionCRUD({notifyUser}) {
 
   return (
     <div className="p-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800 min-h-screen">
+      <Button  onClick={() => navigate('/admin')}>Dashboard</Button>
       <motion.h2
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 mb-6"
-      >
+        className="text-3xl font-extrabold text-transparent text-center bg-clip-text bg-gradient-to-r from-gray-900 to-black dark:from-white dark:to-gray-100 mb-6"
+     >
         Manage Sessions
       </motion.h2>
       <AnimatePresence>
@@ -771,7 +773,7 @@ function SessionCRUD() {
         )}
       </form>
 
-      // Session table 
+      // Session table
 
       {loading ? (
         <div className="p-6">Loading more sessions...</div>

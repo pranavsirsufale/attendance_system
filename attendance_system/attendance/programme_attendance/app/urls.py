@@ -4,8 +4,6 @@ from . import views
 from django.http import HttpResponse
 
 
-
-
 router = DefaultRouter()
 router.register(r'teachers', views.TeacherViewSet, basename='teacher')
 router.register(r'students', views.StudentViewSet, basename='student')
@@ -49,6 +47,10 @@ urlpatterns = [
     path('student-details/<int:pk>/', views.StudentDetailView.as_view(), name='student-detail'),
     path('scheduled-dates/', views.ScheduledDatesView.as_view(), name='scheduled-dates'),
     path('sessions-by-date/', views.SessionsByDateView.as_view(), name='sessions-by-date'),
+
+    path('semesters-for-section/', views.SemestersForSectionView.as_view(), name='semesters-for-section'),
+    path('sections-for-program/', views.SectionForProgramView.as_view(), name='sections-for-program'),
+    path('student-attendance/', views.StudentAttendanceView.as_view(), name='student-attendance'),
 
     path('admin/attendance-overview/', views.AdminAttendanceOverview.as_view(), name='admin-attendance-overview'),
     path('admin/holidays/', views.AdminHolidayManagement.as_view(), name='admin-holidays'),

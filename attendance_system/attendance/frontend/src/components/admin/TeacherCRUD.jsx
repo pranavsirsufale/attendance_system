@@ -64,7 +64,7 @@ function TeacherCRUD({ notifyUser }) {
         if (updateTeacher.status >= 200 && updateTeacher.status <= 300) {
           notifyUser(
             updateTeacher.data.message ||
-              "Teacher Record has been updated succesfully ✅",
+              "Teacher Record has been updated succesfully",
             "info"
           );
         }
@@ -77,7 +77,7 @@ function TeacherCRUD({ notifyUser }) {
           }
         );
         if(savedTeacherResponse.status >= 200 && savedTeacherResponse.status <= 300){
-          notifyUser(savedTeacherResponse.data.message || "Teacher record has been saved successfully ✅" , 'success')
+          notifyUser(savedTeacherResponse.data.message || "Teacher record has been saved successfully" , 'success')
         }
       }
 
@@ -85,18 +85,19 @@ function TeacherCRUD({ notifyUser }) {
       setEditingId(null);
       fetchItems();
     } catch (err) {
+      const message = JSON.stringify(err.response?.data || "Unknown error");
+      notifyUser('Failed to save data' + message || 'Failed to save or update teacher details' , 'error')
       setError(
         "Failed to save data: " +
-          JSON.stringify(err.response?.data || "Unknown error")
+          JSON.stringify(message || "Unknown error")
       );
-      notifyUser('Failed to save data' + err.response?.data || 'Failed to save or update teacher details' , 'error')
     }
   };
 
   const handleEdit = (item) => {
     setFormData(item);
     setEditingId(item.id);
-    notifyUser('User Details has been fetched successfully ✅ ' , 'info')
+    notifyUser('User Details has been fetched successfully.' , 'info')
   };
 
   const handleDelete = async (id) => {

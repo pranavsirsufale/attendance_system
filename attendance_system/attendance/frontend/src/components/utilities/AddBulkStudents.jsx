@@ -276,7 +276,7 @@ function AddBulkStudents({ notifyUser }) {
           Select a program, section, and semester, then upload a CSV or Excel file. Required columns: <strong>id</strong> (unique integer), <strong>first_name</strong>, <strong>roll_number</strong>. Optional: <strong>last_name</strong>, <strong>email</strong>, <strong>phone</strong>.
         </Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={4}>
+          <Grid>
             <FormControl fullWidth sx={{ minWidth: 120 }}>
               <InputLabel id="program-label">Program</InputLabel>
               <Select
@@ -295,7 +295,7 @@ function AddBulkStudents({ notifyUser }) {
               <FormHelperText>Select a program to filter sections</FormHelperText>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid>
             <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedProgram}>
               <InputLabel id="section-label">Section</InputLabel>
               <Select
@@ -314,7 +314,7 @@ function AddBulkStudents({ notifyUser }) {
               <FormHelperText>Choose a section for the program</FormHelperText>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid>
             <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedSection}>
               <InputLabel id="semester-label">Semester</InputLabel>
               <Select
@@ -333,7 +333,7 @@ function AddBulkStudents({ notifyUser }) {
               <FormHelperText>Select semester based on year</FormHelperText>
             </FormControl>
           </Grid>
-          <Grid item xs={12}>
+          <Grid>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
               <Button
                 variant="outlined"

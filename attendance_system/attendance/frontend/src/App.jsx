@@ -76,9 +76,9 @@ function App() {
         const informUser = (msg) => toast.info(msg, toastConfigOptions);
         informUser(msg);
     }
-
-
   };
+
+  console.log("Is Admin:", isAdmin);
 
   const particlesInit = async (main) => {
     await loadFull(main);
@@ -116,7 +116,8 @@ function App() {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        setIsAdmin(response.data.is_admin);
+        console.log("Admin Check Response:", response);
+        // setIsAdmin(response.data.is_admin);
       } catch (err) {
         console.error("Failed to verify admin status:", err);
       } finally {
@@ -197,13 +198,13 @@ function App() {
                   <Routes>
                     <Route
                       path="/"
-                      element={<Login notifyUser={notifyUser} />}
+                      element={<Login setIsAdmin={setIsAdmin} notifyUser={notifyUser} />}
                     />
 
                     <Route
                       path="/calendar"
                       element={
-                        <CalendarPicker admin={isAdmin} notifyUser={notifyUser} />
+                        <CalendarPicker isAdmin={isAdmin} notifyUser={notifyUser} />
                       }
                     />
                     <Route

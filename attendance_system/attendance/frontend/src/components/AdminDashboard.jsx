@@ -76,8 +76,8 @@
 //           Admin Dashboard
 //         </motion.h2>
 //         <motion.button
-//           whileHover={{ scale: 1.05, rotate: 2 }}
-//           whileTap={{ scale: 0.95 }}
+//           whilehover={{ scale: 1.05, rotate: 2 }}
+//           whiletap={{ scale: 0.95 }}
 //           onClick={handleLogout}
 //           className="bg-gradient-to-r from-red-500 via-red-600 to-pink-500 dark:from-red-600 dark:to-pink-600 text-white py-2 px-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
 //         >
@@ -94,7 +94,7 @@
 //           <motion.div
 //             initial={{ opacity: 0, y: 20 }}
 //             animate={{ opacity: 1, y: 0 }}
-//             whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+//             whilehover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
 //             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
 //           >
 //             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
@@ -110,7 +110,7 @@
 //           <motion.div
 //             initial={{ opacity: 0, y: 20 }}
 //             animate={{ opacity: 1, y: 0 }}
-//             whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+//             whilehover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
 //             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
 //           >
 //             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
@@ -126,7 +126,7 @@
 //           <motion.div
 //             initial={{ opacity: 0, y: 20 }}
 //             animate={{ opacity: 1, y: 0 }}
-//             whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+//             whilehover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
 //             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
 //           >
 //             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
@@ -142,7 +142,7 @@
 //           <motion.div
 //             initial={{ opacity: 0, y: 20 }}
 //             animate={{ opacity: 1, y: 0 }}
-//             whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+//             whilehover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
 //             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
 //           >
 //             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
@@ -158,7 +158,7 @@
 //           <motion.div
 //             initial={{ opacity: 0, y: 20 }}
 //             animate={{ opacity: 1, y: 0 }}
-//             whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+//             whilehover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
 //             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
 //           >
 //             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
@@ -174,7 +174,7 @@
 //           <motion.div
 //             initial={{ opacity: 0, y: 20 }}
 //             animate={{ opacity: 1, y: 0 }}
-//             whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+//             whilehover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
 //             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
 //           >
 //             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
@@ -192,7 +192,7 @@
 //           <motion.div
 //             initial={{ opacity: 0, y: 20 }}
 //             animate={{ opacity: 1, y: 0 }}
-//             whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+//             whilehover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
 //             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
 //           >
 //             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
@@ -210,7 +210,7 @@
 //           <motion.div
 //             initial={{ opacity: 0, y: 20 }}
 //             animate={{ opacity: 1, y: 0 }}
-//             whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+//             whilehover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
 //             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
 //           >
 //             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
@@ -228,7 +228,7 @@
 //          <motion.div
 //             initial={{ opacity: 0, y: 20 }}
 //             animate={{ opacity: 1, y: 0 }}
-//             whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+//             whilehover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
 //             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
 //           >
 //             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
@@ -245,7 +245,7 @@
 //           <motion.div
 //             initial={{ opacity: 0, y: 20 }}
 //             animate={{ opacity: 1, y: 0 }}
-//             whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+//             whilehover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
 //             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
 //           >
 //             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
@@ -262,7 +262,7 @@
 //           <motion.div
 //             initial={{ opacity: 0, y: 20 }}
 //             animate={{ opacity: 1, y: 0 }}
-//             whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
+//             whilehover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.15)" }}
 //             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-gray-700 transition-all duration-300"
 //           >
 //             <h3 className="text-lg font-semibold mb-2 text-indigo-600 dark:text-indigo-300">
@@ -545,8 +545,8 @@ function AdminDashboard({ notifyUser }) {
 
 
         <Button
-        whileHover={{scale : 1.05, rotate:2}}
-        whileTap={{scale: 0.95}}
+        whilehover={{scale : 1.05, rotate:2}}
+        whiletap={{scale: 0.95}}
         onClick={()=>navigate('/calendar')}>
           Calendar
         </Button>
@@ -559,16 +559,16 @@ function AdminDashboard({ notifyUser }) {
 
 
         <LogOutButton
-          whileHover={{ scale: 1.05, rotate: 2 }}
-          whileTap={{ scale: 0.95 }}
+          whilehover={{ scale: 1.05, rotate: 2 }}
+          whiletap={{ scale: 0.95 }}
           onClick={handleLogout}>
             Logout
           </LogOutButton>
 
 
         {/* <motion.button
-          whileHover={{ scale: 1.05, rotate: 2 }}
-          whileTap={{ scale: 0.95 }}
+          whilehover={{ scale: 1.05, rotate: 2 }}
+          whiletap={{ scale: 0.95 }}
           onClick={handleLogout}
           className="bg-gradient-to-r from-red-500 via-red-600 to-pink-500 dark:from-red-600 dark:to-pink-600 text-white py-2 px-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
         >
@@ -587,8 +587,8 @@ function AdminDashboard({ notifyUser }) {
           {/* Card for Manage Teachers */}
           <Link to="/admin/teachers" className="w-full flex justify-center">
             <StyledCard
-              whileHover={{ scale: 1.02 }} /* Subtle scale for this style */
-              whileTap={{ scale: 0.98 }}
+              whilehover={{ scale: 1.02 }} /* Subtle scale for this style */
+              whiletap={{ scale: 0.98 }}
               className="teachers-card" /* Add specific class for hover text */
             >
               <span className="card__title">Manage Teachers</span>
@@ -604,8 +604,8 @@ function AdminDashboard({ notifyUser }) {
           {/* Card for Manage Students */}
           <Link to="/admin/students" className="w-full flex justify-center">
             <StyledCard
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
               className="students-card"
             >
               <span className="card__title">Manage Students</span>
@@ -621,8 +621,8 @@ function AdminDashboard({ notifyUser }) {
           {/* Card for Manage Programs */}
           <Link to="/admin/programs" className="w-full flex justify-center">
             <StyledCard
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
               className="programs-card"
             >
               <span className="card__title">Manage Programs</span>
@@ -638,8 +638,8 @@ function AdminDashboard({ notifyUser }) {
           {/* Card for Manage Subjects */}
           <Link to="/admin/subjects" className="w-full flex justify-center">
             <StyledCard
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
               className="subjects-card"
             >
               <span className="card__title">Manage Subjects</span>
@@ -655,8 +655,8 @@ function AdminDashboard({ notifyUser }) {
           {/* Card for Manage Timetables */}
           <Link to="/admin/timetables" className="w-full flex justify-center">
             <StyledCard
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
               className="timetables-card"
             >
               <span className="card__title">Manage Timetables</span>
@@ -672,8 +672,8 @@ function AdminDashboard({ notifyUser }) {
           {/* Card for Manage Sessions */}
           <Link to="/admin/sessions" className="w-full flex justify-center">
             <StyledCard
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
               className="sessions-card"
             >
               <span className="card__title">Manage Sessions</span>
@@ -689,8 +689,8 @@ function AdminDashboard({ notifyUser }) {
           {/* Card for View All Stats */}
           <Link to="/admin/attendance-stats" className="w-full flex justify-center">
             <StyledCard
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
               className="stats-card"
             >
               <span className="card__title">View All Stats</span>
@@ -706,8 +706,8 @@ function AdminDashboard({ notifyUser }) {
           {/* Card for Add Bulk Students */}
           <Link to="/admin/add-builk-student" className="w-full flex justify-center">
             <StyledCard
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
               className="add-bulk-students-card"
             >
               <span className="card__title">Add Bulk Students</span>
@@ -723,8 +723,8 @@ function AdminDashboard({ notifyUser }) {
           {/* Card for Remove Bulk Students */}
           <Link to="/admin/remove-builk-student" className="w-full flex justify-center">
             <StyledCard
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
               className="remove-bulk-students-card"
             >
               <span className="card__title">Remove Bulk Students</span>
@@ -740,8 +740,8 @@ function AdminDashboard({ notifyUser }) {
           {/* Card for Promote Students to Next Class */}
           <Link to="/admin/pass-students" className="w-full flex justify-center">
             <StyledCard
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
               className="promote-students-card"
             >
               <span className="card__title">Promote Students</span>
@@ -757,8 +757,8 @@ function AdminDashboard({ notifyUser }) {
           {/* Card for Student Profiles */}
           <Link to="/admin/student-profile" className="w-full flex justify-center">
             <StyledCard
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
               className="student-profiles-card"
             >
               <span className="card__title">Student Profiles</span>

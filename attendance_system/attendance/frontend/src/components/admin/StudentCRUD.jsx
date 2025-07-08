@@ -203,12 +203,17 @@ function StudentCRUD({notifyUser}) {
     const token = localStorage.getItem("access_token");
     if (!confirm("Are you sure you want to delete this student?")) return;
     try {
-      await axios.delete(`http://localhost:8000/api/admin/students/${studentId}/`, {
+      const response = await axios.delete(`http://localhost:8000/api/admin/students/${studentId}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if(response.status == 204){
+        notifyUser(`Student ${studentId} deleted Successfully.`,'warning')
+      }
+      else if (response.status < 300  && response.status > 199){
+        notifyUser(`${response?.statusText}`)
+      }
       fetchStudentsBySectionAndSemester(selectedSection, selectedSemester);
       setError("");
-      console.log(`Student ${studentId} deleted`);
     } catch (err) {
       setError(`Failed to delete student: ${err.response?.data?.detail || err.message}`);
     }

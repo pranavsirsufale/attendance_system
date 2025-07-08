@@ -8,12 +8,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaSignInAlt } from 'react-icons/fa';
 
 
-function Login({setNotification , notifyUser}) {
+function Login({setIsAdmin , notifyUser}) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -22,12 +22,22 @@ function Login({setNotification , notifyUser}) {
         username,
         password,
       });
-      
-      console.log(response)
-      if ( response.status === 200){
-        notifyUser('Logged in Succcessfully 👀 ' , 'success')
 
-      }
+      if ( response.status === 200){
+        notifyUser('Logged in Succcessfully.' , 'success')
+        const token = response.data.access;
+        if (response?.data?.access){
+          console.log("Token:", token);
+          const response = await axios.get(
+            "http://localhost:8000/api/teacher-info/",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          console.log(response)
+                setIsAdmin(response.data.is_admin);
+
+      }}
 
 
       localStorage.setItem('access_token', response.data.access);
@@ -41,7 +51,7 @@ function Login({setNotification , notifyUser}) {
   };
 
   return (
-    
+
     <div
   style={{
     backgroundImage: `url("bg.png")`,
@@ -50,10 +60,10 @@ function Login({setNotification , notifyUser}) {
   }}
   className="relative min-h-screen flex items-center justify-center p-4"
 >
-    
-    
-    
-     
+
+
+
+
       <motion.div
         initial={{ y: -40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -98,8 +108,8 @@ function Login({setNotification , notifyUser}) {
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-               className="w-full px-4 py-3 border-b-4 border-indigo-900 backdrop-blur- 
-             focus:border-sky-500 
+               className="w-full px-4 py-3 border-b-4 border-indigo-900 backdrop-blur-
+             focus:border-sky-500
              focus:outline-none focus:ring-0"
             />
           </motion.div>
@@ -113,10 +123,10 @@ function Login({setNotification , notifyUser}) {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-               className="w-full px-4 py-3 border-b-4 border-indigo-900 backdrop-blur- 
-             invalid:border-pink-500 invalid:text-pink-600 focus:border-sky-500 
+               className="w-full px-4 py-3 border-b-4 border-indigo-900 backdrop-blur-
+             invalid:border-pink-500 invalid:text-pink-600 focus:border-sky-500
              focus:outline-none focus:ring-0"
-              
+
             />
           </motion.div>
 
@@ -135,12 +145,10 @@ function Login({setNotification , notifyUser}) {
           </AnimatePresence>
 
           <motion.button
-            whileHover={{ scale: 1.05, rotate: 2 }}
-            whileTap={{ scale: 0.95 }}
             type="submit"
             className="w-full bg-white text-black py-3 rounded-md font-semibold shadow-md hover:shadow-xl transition-all duration-300 "
           >
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-2 cursor-pointer">
               <FaSignInAlt className="text-black" />
               Login
             </div>
@@ -155,13 +163,13 @@ function Login({setNotification , notifyUser}) {
         >
           <p className="text-gray-500 dark:text-gray-400 text-sm">© 2025 MPLC Attendance System</p>
           <span className="text-xs text-gray-400 dark:text-gray-500">Developed by Pran</span>
-        
+
         </motion.div>
-        
+
       </motion.div>
-      
+
     </div>
-   
+
   );
 }
 

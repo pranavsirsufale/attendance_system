@@ -1,27 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import {
-  Box,
-  FormControl,
-  FormHelperText,
-  InputLabel,
-  Select,
-  MenuItem,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Card,
-  CardContent,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Grid,
+import {Box, FormControl, FormHelperText, InputLabel, Select, MenuItem, Typography, Table, TableBody, TableCell,
+  TableHead, TableRow, Card, CardContent, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Grid,
 } from '@mui/material';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -107,9 +88,7 @@ function RemoveStudents({ notifyUser }) {
         },
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Students response:', response.data);
       const studentsData = Array.isArray(response.data) ? response.data : response.data.results || [];
-      console.log(`Fetched ${studentsData.length} students`);
       setStudents(studentsData);
     } catch (err) {
       console.error('Error fetching students:', err.response || err);
@@ -133,12 +112,9 @@ function RemoveStudents({ notifyUser }) {
     try {
       const token = localStorage.getItem('access_token');
       const studentIds = students.map((student) => ({ id: student.id }));
-
-      console.log('Sending removal payload:', studentIds);
       const response = await axios.post('http://localhost:8000/api/students-remove/', studentIds, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Remove students response:', response.data);
       notifyUser(`Successfully removed ${response.data.removed} students`, 'success');
       setStudents([]);
       setSelectedProgram('');
@@ -222,7 +198,7 @@ function RemoveStudents({ notifyUser }) {
             Select a program, section, and semester to view students. Review the list and click "Remove Students" to delete them.
           </Typography>
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={4}>
+            <Grid>
               <FormControl fullWidth sx={{ minWidth: 120 }}>
                 <InputLabel id="program-label">Program</InputLabel>
                 <Select
@@ -241,7 +217,7 @@ function RemoveStudents({ notifyUser }) {
                 <FormHelperText>Select a program to filter sections</FormHelperText>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid>
               <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedProgram}>
                 <InputLabel id="section-label">Section</InputLabel>
                 <Select
@@ -260,7 +236,7 @@ function RemoveStudents({ notifyUser }) {
                 <FormHelperText>Choose a section for the program</FormHelperText>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid>
               <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedSection}>
                 <InputLabel id="semester-label">Semester</InputLabel>
                 <Select
@@ -317,8 +293,8 @@ function RemoveStudents({ notifyUser }) {
                     <TableCell sx={{ color: '#fff' }}>ID</TableCell>
                     <TableCell sx={{ color: '#fff' }}>Roll No</TableCell>
                     <TableCell sx={{ color: '#fff' }}>Name</TableCell>
-                    <TableCell sx={{ color: '#fff' }}>Program</TableCell>
-                    <TableCell sx={{ color: '#fff' }}>Section</TableCell>
+                    {/* <TableCell sx={{ color: '#fff' }}>Program</TableCell> */}
+                    <TableCell sx={{ color: '#fff' }}>Program - Section</TableCell>
                     <TableCell sx={{ color: '#fff' }}>Semester</TableCell>
                   </TableRow>
                 </TableHead>
@@ -328,8 +304,8 @@ function RemoveStudents({ notifyUser }) {
                       <TableCell>{student.id}</TableCell>
                       <TableCell>{student.roll_number}</TableCell>
                       <TableCell>{`${student.first_name} ${student.last_name || ''}`}</TableCell>
-                      <TableCell>{student.section?.program?.name || 'N/A'}</TableCell>
-                      <TableCell>{student.section?.name ? `${student.section.name} (Year ${student.section.year})` : 'N/A'}</TableCell>
+                      {/* <TableCell>{student.section?.program?.name || 'N/A'}</TableCell> */}
+                      <TableCell>{student.section? `${student.section}` : 'N/A'}</TableCell>
                       <TableCell>{student.semester}</TableCell>
                     </TableRow>
                   ))}

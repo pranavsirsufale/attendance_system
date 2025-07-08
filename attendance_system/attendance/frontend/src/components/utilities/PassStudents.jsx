@@ -114,10 +114,7 @@ function PassStudents({ notifyUser }) {
         },
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Students response:', response.data);
-      // Handle both paginated and non-paginated responses
       const studentsData = Array.isArray(response.data) ? response.data : response.data.results || [];
-      console.log(`Fetched ${studentsData.length} students`);
       setStudents(studentsData);
     } catch (err) {
       console.error('Error fetching students:', err.response || err);
@@ -156,7 +153,6 @@ function PassStudents({ notifyUser }) {
       const response = await axios.post('http://localhost:8000/api/students/pass/', updatedStudents, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Pass students response:', response.data);
       notifyUser(`Successfully passed ${response.data.updated} students`, 'success');
       setStudents([]);
       setSelectedProgram('');
@@ -273,7 +269,7 @@ function PassStudents({ notifyUser }) {
             Select a program, section, and semester to view students. Choose target semester and section, then click "Promote Students".
           </Typography>
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={3}>
+            <Grid>
               <FormControl fullWidth sx={{ minWidth: 120 }}>
                 <InputLabel id="program-label">Program</InputLabel>
                 <Select
@@ -292,7 +288,7 @@ function PassStudents({ notifyUser }) {
                 <FormHelperText>Select a program to filter sections</FormHelperText>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid>
               <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedProgram}>
                 <InputLabel id="section-label">Current Section</InputLabel>
                 <Select
@@ -311,7 +307,7 @@ function PassStudents({ notifyUser }) {
                 <FormHelperText>Choose a section for the program</FormHelperText>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid>
               <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedSection}>
                 <InputLabel id="semester-label">Current Semester</InputLabel>
                 <Select
@@ -330,7 +326,7 @@ function PassStudents({ notifyUser }) {
                 <FormHelperText>Select semester based on year</FormHelperText>
               </FormControl>
             </Grid>
-             <Grid item xs={12} sm={3}>
+             <Grid>
               <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedProgram}>
                 <InputLabel id="target-section-label">Target Section</InputLabel>
                 <Select
@@ -349,7 +345,7 @@ function PassStudents({ notifyUser }) {
                 <FormHelperText>Choose section to promote to</FormHelperText>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid>
               <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedProgram}>
                 <InputLabel id="target-semester-label">Target Semester</InputLabel>
                 <Select

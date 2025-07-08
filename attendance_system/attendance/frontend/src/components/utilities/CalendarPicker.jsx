@@ -6,7 +6,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from './Button';
 
-const CalendarPicker = () => {
+const CalendarPicker = ({isAdmin,notifyUser}) => {
   const [events, setEvents] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [dateSessions, setDateSessions] = useState([]);
@@ -15,6 +15,7 @@ const CalendarPicker = () => {
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState('');
   const navigate = useNavigate();
+
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -25,6 +26,7 @@ const CalendarPicker = () => {
     }
     fetchSections(token);
   }, [navigate]);
+
 
   const fetchSections = async (token) => {
     try {
@@ -160,8 +162,12 @@ const CalendarPicker = () => {
       >
         Session Calendar
       </motion.h2>
+      <div>
 
         <Button onClick={viewAllSessions}>View All Sessions</Button>
+
+        { isAdmin && <Button onClick={()=>navigate('/admin')} > Admin DashBoard </Button>}
+      </div>
 
 </motion.div>
 

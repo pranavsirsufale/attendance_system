@@ -86,10 +86,10 @@ function ProfileIcon({notifyUser}) {
   return (
     <div className="relative">
       <motion.button
-        whileHover={{ scale: 1.05, rotate: 2 }}
-        whileTap={{ scale: 0.95 }}
+        // whileHover={{ scale: 1.05, rotate: 2 }}
+        // whileTap={{ scale: 0.95 }}
         onClick={() => setShowDropdown(!showDropdown)}
-        className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-600 dark:to-purple-600 text-white px-4 py-2 shadow-md hover:shadow-xl transition-all duration-300"
+        className="flex items-center cursor-pointer gap-2 bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-600 dark:to-purple-600 text-white px-4 py-2 shadow-md hover:shadow-xl transition-all duration-300"
       >
         <FaUserCircle className="text-2xl" />
         <span className="font-medium">Profile</span>

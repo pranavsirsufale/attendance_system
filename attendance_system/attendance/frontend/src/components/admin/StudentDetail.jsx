@@ -488,26 +488,8 @@ export default StudentDetail;
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import {
-  Box,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  Button,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-} from '@mui/material';
+import {Box, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography, Grid, Card, CardContent, Button,
+  CircularProgress, FormControl, InputLabel, Select, MenuItem, TextField} from '@mui/material';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -517,7 +499,6 @@ import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO } from 'date-fns'; // Import parseISO for safety
 import PrintIcon from '@mui/icons-material/Print';
 
-// Define styled components outside the main component
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius * 2,
   boxShadow: '0px 8px 20px rgba(0, 0, 0, 0.08)',
@@ -567,7 +548,6 @@ function StudentDetail({ notifyUser }) {
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  // New state to hold the formatted time duration string
   const [displayTimeRange, setDisplayTimeRange] = useState('All Time');
 
 

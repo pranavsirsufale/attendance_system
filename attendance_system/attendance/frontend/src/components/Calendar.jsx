@@ -12,8 +12,9 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from './utilities/Button';
+import LogoutButton from './utilities/LogOutButton'
 
-function Calendar(admin) {
+function Calendar(admin, notifyUser) {
   const [sessions, setSessions] = useState([]);
   const [timetables, setTimetables] = useState([]);
   const [error, setError] = useState('');
@@ -31,6 +32,8 @@ function Calendar(admin) {
     semester_start_date: '',
     semester_end_date: '',
   });
+
+  console.log('admin', admin)
 
   const navigate = useNavigate();
 
@@ -363,22 +366,30 @@ function Calendar(admin) {
                 <p><span className="font-medium text-indigo-700">Schedule:</span> {timetable.day_of_week}: {timetable.subject.name} at {timetable.start_time}</p>
               </div>
               <div className="mt-4 flex justify-between gap-3">
-                <motion.button
+
+                {/* <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleEditTimetable(timetable)}
                   className="flex-1 bg-yellow-400 text-white py-2 rounded-full hover:bg-yellow-500 shadow-md transition-colors duration-200"
                 >
                   Edit
-                </motion.button>
-                <motion.button
+                </motion.button> */}
+
+                {/* <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleDeleteTimetable(timetable.id)}
                   className="flex-1 bg-red-500 text-white py-2 rounded-full hover:bg-red-600 shadow-md transition-colors duration-200"
                 >
                   Delete
-                </motion.button>
+                </motion.button> */}
+                <LogoutButton
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleDeleteTimetable(timetable.id)}>
+                  Delete
+                  </LogoutButton>
               </div>
             </motion.div>
           ))}

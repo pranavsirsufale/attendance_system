@@ -1,6 +1,6 @@
 from django.shortcuts import render
+import rest_framework
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.views import APIView
 from django.http import HttpResponse,StreamingHttpResponse
 from django.utils import timezone
 from rest_framework import viewsets, generics, status , serializers
@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view , permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.views import APIView
 from app.permissions import IsAdmin
 from django.db.models import Count, Q , F , ExpressionWrapper , FloatField , DecimalField, CharField , Value,Sum , Case, When, IntegerField
 from django.contrib.auth.models import User
@@ -33,16 +34,9 @@ import re
 
 
 
-
-
 # Logging setup
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', stream=sys.stdout)
-
-
-#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-#!                       █    THE TEACHER VIEWS APPEAR HERE   █
-#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
 
 class StandardPagination(PageNumberPagination):
@@ -51,16 +45,14 @@ class StandardPagination(PageNumberPagination):
     max_page_size = 100
 
 
-class AttendanceStatsPagination(PageNumberPagination):
-    page_size = 20
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-
+# class AttendanceStatsPagination(PageNumberPagination):
+#     page_size = 20
+#     page_size_query_param = 'page_size'
+#     max_page_size = 100
 
 class StudentListView(APIView):
     permission_classes = [IsAuthenticated]
-    pagination_class = AttendanceStatsPagination
+    pagination_class = StandardPagination
 
     def get(self, request):
         try:
@@ -88,8 +80,6 @@ class StudentListView(APIView):
             logger.error(f"Error in StudentListView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
-
-
 class TeacherListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -101,7 +91,6 @@ class TeacherListView(APIView):
         except Exception as e:
             logger.error(f"Error in TeacherListView: {str(e)}")
             return Response({"error": str(e)}, status=500)
-
 
 class TeacherSubjectsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -124,29 +113,15 @@ class TeacherSubjectsView(APIView):
             logger.error(f"Error in TeacherSubjectsView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
-
-class SessionPagination(PageNumberPagination):
-    page_size = 20 # default batch size
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-
 class AdminCRUDViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdmin]
 
     def get_queryset(self):
         return self.queryset
 
-
 class TeacherViewSet(AdminCRUDViewSet):
     queryset = Teacher.objects.all()
     serializer_class = TeacherSerializer
-
-# class StudentViewSet(AdminCRUDViewSet):
-#     queryset = Student.objects.all()
-#     serializer_class = StudentSerializer
-
-
 
 class ProgramViewSet(AdminCRUDViewSet):
     queryset = Program.objects.all()
@@ -157,10 +132,9 @@ class SubjectViewSet(AdminCRUDViewSet):
     serializer_class = SubjectSerializer
     permission_classes = [IsAuthenticated]
 
-
 class AdminAttendanceStatsView(APIView):
     permission_classes = [IsAuthenticated]
-    pagination_class = AttendanceStatsPagination
+    pagination_class = StandardPagination
 
     def get(self, request):
         try:
@@ -307,24 +281,17 @@ class AdminAttendanceStatsView(APIView):
             logger.error(f"Error in AdminAttendanceStatsView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
-
-
-
 class TeacherAttendanceStatsView(APIView):
     permission_classes = [IsAuthenticated]
-
     def get(self, request):
         try:
             teacher = Teacher.objects.get(user=request.user)
             period = request.query_params.get('period', 'semester')
             start_date_param = request.query_params.get('start_date', None)
             end_date_param = request.query_params.get('end_date', None)
-            logger.debug(f"Fetching attendance stats for teacher {teacher.id}, period: {period}, start_date: {start_date_param}, end_date: {end_date_param}")
-
             timetables = Timetable.objects.filter(teacher=teacher)
             session_ids = Session.objects.filter(timetable__in=timetables).values_list('id', flat=True)
             students = Student.objects.filter(section__in=timetables.values('section')).distinct()
-
             today = timezone.now().date()
             if start_date_param and end_date_param:
                 start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
@@ -380,17 +347,6 @@ class TeacherAttendanceStatsView(APIView):
             logger.error("Error fetching attendance stats: %s", str(e))
             return Response({"error": str(e)}, status=500)
 
-
-
-
-# class StudentViewSet(viewsets.ReadOnlyModelViewSet):
-#     queryset = Student.objects.all()
-#     serializer_class = StudentSerializer
-#     permission_classes = [IsAuthenticated]
-
-#     def get_queryset(self):
-#         return Student.objects.filter(section__timetable__teacher__user = self.request.user ).distinct()
-
 class SessionViewSet(viewsets.ModelViewSet):
     queryset = Session.objects.all()
     serializer_class = SessionSerializer
@@ -408,7 +364,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(recorded_by=Teacher.objects.get(user=self.request.user))
 
-
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated]
@@ -419,12 +374,9 @@ class TimetableViewSet(viewsets.ModelViewSet):
         return TimetableSerializer
 
     def get_queryset(self):
-        logger.debug("Fetching queryset for user: %s", self.request.user)
         return Timetable.objects.filter(teacher__user=self.request.user)
 
     def create(self, request, *args, **kwargs):
-        logger.debug("POST request received at /api/timetables/")
-        logger.debug("Request data: %s", request.data)
         try:
             mutable_data = request.data.copy()
             teacher = Teacher.objects.get(user=request.user)
@@ -432,10 +384,8 @@ class TimetableViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(data=mutable_data)
             serializer.is_valid(raise_exception=True)
             timetable_data = self.perform_create(serializer)
-            logger.info("Timetable created successfully")
             return Response(timetable_data, status=status.HTTP_201_CREATED)
         except ValidationError as e:
-            logger.error("Serializer validation failed: %s", str(e))
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error("Unexpected error: %s\n%s", str(e), traceback.format_exc())
@@ -495,8 +445,6 @@ class TimetableViewSet(viewsets.ModelViewSet):
 
         timetable_serializer = TimetableSerializer(created_timetables, many=True)
         return timetable_serializer.data
-
-
 
 '''
 
@@ -687,8 +635,6 @@ previous than above ( the second previous )
 
 '''
 
-
-
 class TeacherViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Teacher.objects.all()
     serializer_class = TeacherSerializer
@@ -722,8 +668,6 @@ class TeacherCalendarView(generics.ListAPIView):
         if section_id:
             queryset = queryset.filter(timetable__section_id=section_id)
         return queryset
-
-
 
 class MarkAttendanceView(generics.GenericAPIView):
     serializer_class = AttendanceSerializer
@@ -797,17 +741,13 @@ class MarkAttendanceView(generics.GenericAPIView):
             logger.error(f"Error in MarkAttendanceView POST: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 class HolidayListCreateView(generics.ListCreateAPIView):
     queryset = CalendarException.objects.all()
     serializer_class = CalendarExceptionSerializer
     permission_classes = [IsAuthenticated]
-
     def perform_create(self, serializer):
         holiday = serializer.save()
-
         Session.objects.filter(date=holiday.date).update(status='Cancelled')
-
 
 class AttendanceStatsView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -852,20 +792,16 @@ class AttendanceStatsView(generics.GenericAPIView):
         except Student.DoesNotExist:
             return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
-
 class ClassHourlyStatsView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
-
     def get(self, request, session_id):
         try:
             session = Session.objects.get(id=session_id)
             if session.timetable.teacher != Teacher.objects.get(user=request.user):
                 return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
-
             attendance = Attendance.objects.filter(session=session).aggregate(
                 present=Count('id', filter=Q(status='Present')),
-                absent=Count('id', filter=Q(status='Absent'))
-            )
+                absent=Count('id', filter=Q(status='Absent')))
             total_students = Student.objects.filter(section=session.timetable.section).count()
             return Response({
                 'session': SessionSerializer(session).data,
@@ -886,83 +822,43 @@ class SubjectViewSet(viewsets.ModelViewSet):
     serializer_class = SubjectSerializer
     permission_classes = [IsAuthenticated]
 
-
 class SubjectsForSectionView(APIView):
     permission_classes = [IsAuthenticated]
-
     def get(self, request):
         section_id = request.query_params.get('section_id')
         semester = request.query_params.get('semester')
-        logger.debug(f"Request: section_id={section_id}, semester={semester}")
-
         if not section_id or not semester:
-            logger.warning("Missing parameters")
             return Response({"error": "section_id and semester are required"}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
             section_id_int = int(section_id)
             semester_int = int(semester)
-            logger.debug(f"Parsed: section_id={section_id_int}, semester={semester_int}")
             section = Section.objects.get(id=section_id_int)
-            logger.debug(f"Section found: {section}")
         except ValueError as e:
-            logger.error(f"ValueError: {str(e)}")
             return Response({"error": "section_id and semester must be integers"}, status=status.HTTP_400_BAD_REQUEST)
         except Section.DoesNotExist:
-            logger.error(f"Section id={section_id} not found")
             return Response({"error": f"Section with id={section_id} not found"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Validate semester against section's available semesters
         program_duration = section.program.duration_years * 2
         start_semester = (section.year - 1) * 2 + 1
         end_semester = min(section.year * 2, program_duration)
         if not (start_semester <= semester_int <= end_semester):
             logger.error(f"Semester {semester_int} invalid for section {section.id} (range: {start_semester}-{end_semester})")
             return Response({"error": f"Semester {semester_int} is invalid for {section.name} (valid: {start_semester}-{end_semester})"}, status=status.HTTP_400_BAD_REQUEST)
-
         subjects = Subject.objects.filter(semester=semester_int)
-        logger.debug(f"Subjects found: {list(subjects.values('id', 'name', 'semester'))}")
         if not subjects.exists():
-            logger.info(f"No subjects for semester={semester_int}")
             return Response({"message": "No subjects found", "data": []}, status=status.HTTP_200_OK)
-
         serializer = SubjectSerializer(subjects, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-
-'''
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def get_sections(request):
-    try:
-        teacher = Teacher.objects.get(user=request.user)
-        # Fetch sections where the teacher is assigned via timetables, distinct
-        sections = Section.objects.filter(timetable__teacher=teacher).distinct()
-        serializer = SectionSerializer(sections, many=True)
-        # Enhance data with semester context (optional, if semester is stored elsewhere)
-        return Response(serializer.data)
-    except Teacher.DoesNotExist:
-        logger.error(f"Teacher not found for user: {request.user}")
-        return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        logger.error(f"Error in get_sections: {str(e)}")
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-'''
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_sections(request):
     try:
-        # Fetch all sections (not just those tied to the teacher)
         sections = Section.objects.all()
         serializer = SectionSerializer(sections, many=True)
         return Response(serializer.data)
     except Exception as e:
         logger.error(f"Error in get_sections: {str(e)}")
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -1003,39 +899,15 @@ def get_time_slots(request):
     time_slots = [slot[0] for slot in Timetable.LECTURE_SLOTS]
     return Response(time_slots)
 
-
-
-
-
-
-#!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-#!                       █    THE ADMIN VIEWS APPEAR HERE     █
-#!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-
-
-
-#### ADMIN VIEWS
-# (Keeping all other teacher-related views like TimetableViewSet, SubjectsForSectionView, etc., unchanged)
-
-
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import Section, Subject, Student
-from .serializers import SubjectSerializer
-
 class SectionSemesterWiseDataView(APIView):
     def get(self, request):
         data = {}
         sections = Section.objects.all()
-
         for section in sections:
             students = section.students.all()
             if not students.exists():
                 continue
-
             section_data = {}
-
             for student in students:
                 for subject in student.subjects.all():
                     sem = f"Semester {subject.semester}"
@@ -1044,119 +916,54 @@ class SectionSemesterWiseDataView(APIView):
                     serialized = SubjectSerializer(subject).data
                     if serialized not in section_data[sem]:  # prevent duplicates
                         section_data[sem].append(serialized)
-
             data[str(section)] = section_data
-
         return Response(data)
-
-
-
 
 #!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 #!                       █    THE ADMIN VIEWS APPEAR HERE     █
 #!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-
-
-
-#### ADMIN VIEWS
-# (Keeping all other teacher-related views like TimetableViewSet, SubjectsForSectionView, etc., unchanged)
-
-
-import rest_framework
-
-
-# --- New Admin-Specific Views ---
-
-
 class AdminTeacherViewSet(viewsets.ModelViewSet):
-    """
-    Admin-only viewset for managing teachers.
-    """
     queryset = Teacher.objects.all()
     serializer_class = AdminTeacherSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
-    #authentication_classes = [rest_framework.authentication.TokenAuthentication]
-
-
     def perform_create(self,serializer):
-        # logger.info(f"Creating teacher with user_id : {self.request.user}")
-        # print(self.request.user)
-        # serializer.save(user = self.request.user)
-
-
         validated_data = serializer.validated_data
-
         email = validated_data.get('email')
-        # username = validated_data.get('username')
         first_name = validated_data.get('first_name')
-        # username = validated_data.get('email')
         last_name = validated_data.get('last_name')
         phone = validated_data.get('phone','')
         password = validated_data.get('password')
         is_admin = validated_data.get('is_admin' , False)
-
         # Create a new User for the teacher
         # username = email
         # counter = 1
         # while User.objects.filter(username = username).exists():
         #     username = f'{base_username}{counter}'
         #     counter += 1
-
-
-
-
-
         try:
             new_user = User.objects.create_user(
-                username = email ,
-                email = email ,
-                password = password,
-                first_name = first_name,
-                last_name = last_name,
-                is_superuser = is_admin
-
-
-            )
-            logger.info(f"created new user for teacher : {new_user.id}")
+                username = email , email = email , password = password, first_name = first_name,
+                last_name = last_name, is_superuser = is_admin)
         except Exception as e:
-            logger.error(f"failed to create user : {str(e)}")
             raise
-
         try:
-            teacher = Teacher.objects.create(
-                user = new_user,
-                first_name = first_name ,
-                last_name = last_name ,
-                email = email ,
-                phone = phone ,
-                is_admin = is_admin
-            )
-            logger.info(f"Created teacher with ID :{teacher.id}")
-            # set the isntance on the serializer to return it in the
+            teacher = Teacher.objects.create( user = new_user, first_name = first_name, last_name = last_name,
+                email = email, phone = phone, is_admin = is_admin)
             serializer.instance = teacher
         except Exception as e:
             logger.error(f"Failed to create teacher : {str(e)}")
-            # Clean up the User if Teacher creation fails
             new_user.delete()
             raise
 
-
     def perform_update(self,serializer):
-        # Extract validated data
         teacher = self.get_object() # the teacher instance being updated
         user = teacher.user # the linked user instance
         validated_data = serializer.validated_data
-        logger.info(f"Updating teacher ID  : {teacher.id} with data : {validated_data}")
-
-
-
-        # Update User fields if provided
         first_name = validated_data.get('first_name' , user.first_name)
         last_name = validated_data.get('last_name' , user.last_name)
         email = validated_data.get('email' , user.email)
         password = validated_data.get('password')  # May be None or Empty
         is_admin = validated_data.get('is_admin' , teacher.is_admin)
-
         try:
             user.first_name = first_name
             user.last_name = last_name
@@ -1165,7 +972,6 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
             if password:            # Only update if provided and non-empty
                 user.set_password(password)
             user.save()
-            logger.info(f"Updated User ID : {user.id}")
 
         except Exception as e:
             logger.error(f"failed to update user : {str(e)}")
@@ -1180,7 +986,6 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
                 phone = validated_data.get('phone' , teacher.phone),
                 is_admin = is_admin
             )
-            logger.info(f"Updated teacher ID : {teacher.id}")
         except Exception as e:
             logger.error(f"Failed to update teacher : {str(e)}")
             raise
@@ -1189,120 +994,58 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
     def destroy(self,request , *args,**kwargs):
         teacher = self.get_object()
         user = teacher.user
-        logger.info(f"Deleting teaching ID : {teacher.id} and associated user ID: {user.id}")
-
         try:
-            # Delete the teacher instance
             teacher.delete()
-            logger.info(f"Delete teacher ID : {teacher.id}")
-
-            # Delete the associated User instance
             user.delete()
-            logger.info(f"Deleted user ID : {user.id}")
-
             return Response(status = status.HTTP_204_NO_CONTENT)
         except Exception as e:
             logger.error(f"Failed to delete teacher/user : {str(e)}")
             return Response({"error" : f"Failed to delete : {str(e)}"})
 
-
-
 class SemesterForSectionViewTest(APIView):
     permission_classes = [IsAuthenticated,IsAdmin]
-
     def get(self,request):
         section = request.query_params.get('section_id')
-        print(section)
-
         return Response({"data":'section has found good !!!!!!!!'})
 
 # -- new endpoint for semester ---
 class SemestersForSectionView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
-
     def get(self, request):
         section_id = request.query_params.get('section_id')
         print('I got section Id here ',section_id)
         if not section_id :
-            logger.warning('Missing Section_id parametr')
             return Response({'error' : 'section_id is required '} , status = status.HTTP_400_BAD_REQUEST)
-
         try:
             section = Section.objects.get(id = int(section_id))
             program_duration = section.program.duration_years * 2  # e.g. 3 year = 6 sem
             start_semester = (section.year - 1 ) * 2 + 1
             end_semester = min( start_semester + 1 , program_duration)
             semesters = list(range(start_semester , end_semester + 1))
-            logger.debug(f"Semesters for section {section.id} (Year {section.year}, Program {section.program.name}): {semesters}")
             return Response({'semesters' : semesters } , status = status.HTTP_200_OK)
-
         except Section.DoesNotExist:
             logger.error(f"Section id = {section_id} not found")
-            # print('printing section id not found')
             return Response({'error' : f"Section with id = {section_id}"} , status = status.HTTP_404_NOT_FOUND)
         except ValueError:
             logger.error(f"Invalid section_id : {section_id}")
             return Response({'error' : 'Section_id must be an integer'} , status = status.HTTP_400_BAD_REQUEST)
-
-
-# class StudentDetailView(APIView):
-#     permission_classes = [IsAuthenticated, IsAdmin]
-
-#     def get(self, request, pk):
-#         try:
-#             student = Student.objects.select_related('section__program').get(id=pk)
-#             attendance = Attendance.objects.filter(student=student).select_related('subject')
-#             serializer = StudentDetailSerializer(student)
-#             data = serializer.data
-#             data['attendance'] = AttendanceSerializer(attendance, many=True).data
-#             return Response({'student': student, 'attendance': data['attendance']})
-#         except Student.DoesNotExist:
-#             return Response({'error': 'Student not found'}, status=404)
-#         except Exception as e:
-#             logger.error(f"Error in StudentDetailView: {str(e)}", exc_info=True)
-#             return Response({'error': str(e)}, status=500)
-
-
-# class StudentViewSet(ModelViewSet):
-#     queryset = Student.objects.all()
-#     serializer_class = StudentSerializer
-#     permission_classes = [IsAuthenticated, IsAdmin]
-#     pagination_class = StandardPagination
-
-#     def get_queryset(self):
-#         queryset = super().get_queryset()
-#         section_id = self.request.query_params.get('section_id')
-#         semester = self.request.query_params.get('semester')
-#         program_id = self.request.query_params.get('program_id')
-
-#         if section_id:
-#             queryset = queryset.filter(section_id=section_id)
-#         if semester:
-#             queryset = queryset.filter(semester=semester)
-#         if program_id:
-#             queryset = queryset.filter(section__program_id=program_id)
-
-#         return queryset.select_related('section__program')
 
 class StudentViewSet(ModelViewSet):
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
     pagination_class = StandardPagination
-
     def get_queryset(self):
         queryset = super().get_queryset()
         section_id = self.request.query_params.get('section_id')
         semester = self.request.query_params.get('semester')
         program_id = self.request.query_params.get('program_id')
-
         if section_id:
             queryset = queryset.filter(section_id=section_id)
         if semester:
             queryset = queryset.filter(semester=semester)
         if program_id:
             queryset = queryset.filter(section__program_id=program_id)
-
         return queryset.select_related('section__program')
 
     def list(self, request, *args, **kwargs):
@@ -1313,91 +1056,19 @@ class StudentViewSet(ModelViewSet):
             return Response(serializer.data)
         return super().list(request, *args, **kwargs)
 
-
-
-# class StudentDetailView(APIView):
-#     permission_classes = [IsAuthenticated, IsAdmin]
-
-#     def get(self, request, pk):
-#         try:
-#             student = Student.objects.select_related('section__program').get(id=pk)
-#             serializer = StudentSerializer(student)
-
-#             # Aggregate attendance by subject
-#             attendance_data = (
-#                 Attendance.objects.filter(student=student)
-#                 .select_related('session__subject')
-#                 .values('session__subject__id', 'session__subject__name')
-#                 .annotate(
-#                     classes_attended=Count('id', filter=Q(status=True)),
-#                     total_classes=Count('id')
-#                 )
-#             )
-
-#             # Serialize attendance data
-#             attendance_serializer = AttendanceSummarySerializer(attendance_data, many=True)
-
-#             return Response({
-#                 'student': serializer.data,
-#                 'attendance': attendance_serializer.data
-#             })
-#         except Student.DoesNotExist:
-#             return Response({'error': 'Student not found'}, status=404)
-#         except Exception as e:
-#             logger.error(f"Error in StudentDetailView: {str(e)}", exc_info=True)
-#             return Response({'error': str(e)}, status=500)
-
-# class StudentDetailView(APIView):
-#     permission_classes = [IsAuthenticated, IsAdmin]
-
-#     def get(self, request, pk):
-#         try:
-#             student = Student.objects.select_related('section__program').get(id=pk)
-#             serializer = StudentSerializer(student)
-
-#             # Aggregate attendance by subject
-#             attendance_data = (
-#                 Attendance.objects.filter(student=student)
-#                 .select_related('session__timetable__subject')
-#                 .values('session__timetable__subject__id', 'session__timetable__subject__name')
-#                 .annotate(
-#                     classes_attended=Count('id', filter=Q(status=True)),
-#                     total_classes=Count('id')
-#                 )
-#             )
-
-#             # Serialize attendance data
-#             attendance_serializer = AttendanceSummarySerializer(attendance_data, many=True)
-
-#             return Response({
-#                 'student': serializer.data,
-#                 'attendance': attendance_serializer.data
-#             })
-#         except Student.DoesNotExist:
-#             return Response({'error': 'Student not found'}, status=404)
-#         except Exception as e:
-#             logger.error(f"Error in StudentDetailView: {str(e)}", exc_info=True)
-#             return Response({'error': str(e)}, status=500)
-
 class StudentDetailView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
-
     def get(self, request, pk):
         try:
             student = Student.objects.select_related('section__program').get(id=pk)
             serializer = StudentSerializer(student)
-
-            # Base attendance query
             attendance_query = Attendance.objects.filter(student=student).select_related('session__timetable__subject')
-
-            # Apply filters
             date_param = request.query_params.get('date')
             week_param = request.query_params.get('week')
             month_param = request.query_params.get('month')
             semester_param = request.query_params.get('semester')
             start_date_param = request.query_params.get('start_date')
             end_date_param = request.query_params.get('end_date')
-
             if date_param:
                 try:
                     date = datetime.strptime(date_param, '%Y-%m-%d').date()
@@ -1419,7 +1090,6 @@ class StudentDetailView(APIView):
                 except ValueError:
                     return Response({'error': 'Invalid month format'}, status=400)
             elif semester_param:
-                # Assume semester starts in July (odd semesters) or January (even semesters)
                 year = datetime.now().year
                 semester = student.semester
                 if semester % 2 == 1:  # Odd semester (Jul-Dec)
@@ -1438,24 +1108,11 @@ class StudentDetailView(APIView):
                     attendance_query = attendance_query.filter(session__date__range=[start_date, end_date])
                 except ValueError:
                     return Response({'error': 'Invalid date format'}, status=400)
-
-            # Aggregate attendance by subject
             attendance_data = (
-                attendance_query
-                .values('session__timetable__subject__id', 'session__timetable__subject__name')
-                .annotate(
-                    classes_attended=Count('id', filter=Q(status=True)),
-                    total_classes=Count('id')
-                )
-            )
-
-            # Serialize attendance data
+                attendance_query.values('session__timetable__subject__id', 'session__timetable__subject__name')
+                .annotate(classes_attended=Count('id', filter=Q(status=True)), total_classes=Count('id')))
             attendance_serializer = AttendanceSummarySerializer(attendance_data, many=True)
-
-            return Response({
-                'student': serializer.data,
-                'attendance': attendance_serializer.data
-            })
+            return Response({'student': serializer.data, 'attendance': attendance_serializer.data})
         except Student.DoesNotExist:
             return Response({'error': 'Student not found'}, status=404)
         except Exception as e:
@@ -1466,59 +1123,34 @@ class AdminStudentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdmin]
     queryset = Student.objects.all()
     serializer_class = AdminStudentSerializer
-
-
-
     def get_queryset(self):
         queryset = super().get_queryset()
         section_id = self.request.query_params.get('section')
         semester = self.request.query_params.get('semester')
         if section_id:
             queryset = queryset.filter(section__id = section_id)
-            logger.debug(f"Filterring students by section_id  = {section_id}")
-
         if semester :
             queryset = queryset.filter(semester = semester)
-            logger.debug(f"Filtering students by semester = {semester}")
-        logger.debug(f"Students queryset : {queryset.count()} items" )
         return queryset
-
-
     def perform_create(self,serializer):
         validated_data = serializer.validated_data
-
-        logger.debug(f"validated data : {validated_data}")
-
         section = validated_data['section']  # Now words with Primary related key
         semester = validated_data['semester']
         roll_number = validated_data.get('roll_number')
-
-        # Auto - generate roll number if not provided
         if not roll_number:
             program_prefix = 'NG' if 'BALLB' in section.program.name else 'G'
             year_suffix = str(timezone.now().year)[-2:] # e.g. , "25" from 2025
-            # section_year = str(section.year).zfill(2)   # e.g., "03" for year 3
-
-            # Count existing students in this section for a unique sequence
             sequence = str(Student.objects.filter(section__program=section.program).count() + 1).zfill(3)
-            # roll_number = f"{program_code}{year_suffix}{section_year}{sequence}"  # e.g., "BA2503010"
             roll_number = f"{program_prefix}{year_suffix}{sequence}"
-
-        # Assign subjects for the specific semester
         subjects = Subject.objects.filter(semester =semester)
-
         try:
-            # save with roll_numberr explicitly
             student = serializer.save(roll_number = roll_number)
             student.subjects.set(subjects)
-            logger.info(f"Created student ID: {student.id} with roll_no {roll_number} and subjects: {list(subjects.values_list('name', flat=True))}")
         except Exception as e:
             logger.error(f"Failed to create student : {str(e)}")
             raise
-
     def perform_update(self, serializer):
         serializer.save()
-
 
 class AdminProgramViewSet(viewsets.ModelViewSet):
     queryset = Program.objects.all()
@@ -1558,13 +1190,9 @@ class AdminSectionViewSet(viewsets.ModelViewSet):
                 program = Program.objects.get(id = program_id)
                 max_year = program.duration_years
                 queryset = queryset.filter(program__id = program_id , year__lte = max_year)
-                logger.debug(f"Filtering sections for program_id={program_id} , max_year={max_year}")
-
-
             except Program.DoesNotExist:
                 logger.error(f"Program id = {program_id} not found ")
         return queryset
-
 
 '''
 previous one without update funcionlity
@@ -1786,7 +1414,6 @@ class SectionForProgramView(APIView):
         except ValueError as e:
             return Response({"error":"the program Id must be an integer"},status = status.HTTP_400_BAD_REQUEST)
 
-
 # Ensure semester For Section View is unchanged and works
 class SemestersForSectionView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -1794,16 +1421,13 @@ class SemestersForSectionView(APIView):
     def get(self, request):
         section_id = request.query_params.get('section_id')
         if not section_id:
-            logger.warning('Missing section_id parameter')
             return Response({'error': 'section_id is required'}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
             section = Section.objects.get(id=int(section_id))
             program_duration = section.program.duration_years * 2
             start_semester = (section.year - 1) * 2 + 1
             end_semester = min(start_semester + 1, program_duration)
             semesters = list(range(start_semester, end_semester + 1))
-            logger.debug(f"Semesters for section {section.id}: {semesters}")
             return Response({'semesters': semesters}, status=status.HTTP_200_OK)
         except Section.DoesNotExist:
             logger.error(f"Section id={section_id} not found")
@@ -1811,7 +1435,6 @@ class SemestersForSectionView(APIView):
         except ValueError:
             logger.error(f"Invalid section_id: {section_id}")
             return Response({'error': 'section_id must be an integer'}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class AdminAttendanceOverview(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -1858,78 +1481,6 @@ class AdminAttendanceOverview(APIView):
             'end_date': end_date.isoformat(),
             'stats': response
         })
-
-
-# class PassStudentsView(APIView):
-#     permission_classes = [IsAuthenticated, IsAdmin]
-
-#     def post(self, request):
-#         try:
-#             students_data = request.data
-#             if not isinstance(students_data, list):
-#                 return Response({"error": "Expected a list of students"}, status=400)
-
-#             errors = []
-#             updated_students = []
-
-#             with transaction.atomic():
-#                 for student_data in students_data:
-#                     required_fields = ['id', 'semester', 'section_id']
-#                     missing_fields = [field for field in required_fields if field not in student_data or student_data[field] is None]
-#                     if missing_fields:
-#                         errors.append(f"ID {student_data.get('id', 'unknown')}: Missing {', '.join(missing_fields)}")
-#                         continue
-
-#                     try:
-#                         student = Student.objects.get(id=student_data['id'])
-#                     except Student.DoesNotExist:
-#                         errors.append(f"ID {student_data['id']}: Not found")
-#                         continue
-
-#                     try:
-#                         current_section = Section.objects.get(id=student.section_id)
-#                     except Section.DoesNotExist:
-#                         errors.append(f"ID {student_data['id']}: Current section invalid")
-#                         continue
-
-#                     try:
-#                         new_section = Section.objects.get(id=student_data['section_id'])
-#                     except Section.DoesNotExist:
-#                         errors.append(f"ID {student_data['id']}: Target section invalid")
-#                         continue
-
-#                     # Validate program consistency
-#                     if new_section.program_id != current_section.program_id:
-#                         errors.append(f"ID {student_data['id']}: Target section must belong to the same program")
-#                         continue
-
-#                     # Validate semester
-#                     max_semester = 6 if current_section.program_id == 2 else 10
-#                     new_semester = student_data['semester']
-#                     if new_semester < 1 or new_semester > max_semester:
-#                         errors.append(f"ID {student_data['id']}: Semester {new_semester} is out of range (1-{max_semester})")
-#                         continue
-
-#                     # Validate semester progression (optional, can be removed if flexible progression is allowed)
-#                     if new_semester <= student.semester:
-#                         errors.append(f"ID {student_data['id']}: Target semester must be greater than current semester {student.semester}")
-#                         continue
-
-#                     student.semester = new_semester
-#                     student.section_id = student_data['section_id']
-#                     updated_students.append(student)
-
-#                 if errors:
-#                     return Response({"error": "; ".join(errors)}, status=400)
-
-#                 for student in updated_students:
-#                     student.save()
-
-#                 return Response({"updated": len(updated_students)}, status=200)
-
-#         except Exception as e:
-#             logger.error(f"Error in PassStudentsView: {str(e)}", exc_info=True)
-#             return Response({"error": str(e)}, status=500)
 
 class PassStudentsView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -2002,7 +1553,6 @@ class PassStudentsView(APIView):
             logger.error(f"Error in PassStudentsView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
-
 class RemoveStudentsView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -2038,14 +1588,12 @@ class RemoveStudentsView(APIView):
             logger.error(f"Error in RemoveStudentsView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
-
 # admin attendance export by teacher-subject
 class AdminAttendanceExportView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
     def get(self, request):
         try:
-            logger.info("Starting AdminAttendanceExportView")
             period = request.query_params.get('period', 'semester')
             section_id = request.query_params.get('section')
             subject_id = request.query_params.get('subject')
@@ -2058,23 +1606,15 @@ class AdminAttendanceExportView(APIView):
             end_date = request.query_params.get('end_date')
             start_date = request.query_params.get('start_date')
             format = request.query_params.get('format', 'csv')
-
-            logger.info(f"Parameters: period={period}, teacher_id={teacher_id}, subject_name={subject_name}")
             if not teacher_id or not subject_name:
-                logger.warning("Missing teacher_id or subject_name")
                 return Response({"error": "Teacher ID and subject name are required"}, status=400)
-
-            # Validate teacher_id
             try:
                 teacher = Teacher.objects.get(id=teacher_id)
-                logger.info(f"Teacher found: {teacher.id}")
             except Teacher.DoesNotExist:
                 logger.error(f"Teacher id={teacher_id} not found")
                 return Response({"error": f"Teacher with id={teacher_id} not found"}, status=404)
 
             sessions = Session.objects.select_related('timetable__section__program', 'timetable__subject', 'timetable__teacher').filter(status='Completed')
-            logger.info(f"Initial sessions count: {sessions.count()}")
-
             if section_id:
                 sessions = sessions.filter(timetable__section_id=section_id)
             if subject_id:
@@ -2094,9 +1634,7 @@ class AdminAttendanceExportView(APIView):
                 try:
                     sessions = sessions.filter(date__range=[start_date,end_date])
                 except ValueError:
-                    logger.error(f"Invalid date range : {start_date} to {end_date}")
                     return Response({"error":"Invalid date range"},status = 400)
-
             if period == 'daily' and date:
                 try:
                     sessions = sessions.filter(date=date)
@@ -2124,9 +1662,6 @@ class AdminAttendanceExportView(APIView):
             else:
                 start_date = sessions.order_by('date').first().date if sessions.exists() else datetime.now().date()
                 end_date = sessions.order_by('-date').first().date if sessions.exists() else datetime.now().date()
-
-            logger.info(f"Filtered sessions count: {sessions.count()}")
-
             stats = (
                 Attendance.objects.filter(session__in=sessions)
                 .select_related('student', 'recorded_by')
@@ -2174,9 +1709,6 @@ class AdminAttendanceExportView(APIView):
                 )
                 .order_by('roll_number')
             )
-
-            logger.info(f"Stats count: {stats.count()}")
-
             if format == 'csv':
                 def stream_csv():
                     buffer = StringIO()
@@ -2205,14 +1737,11 @@ class AdminAttendanceExportView(APIView):
                         yield buffer.read()
                         buffer.truncate(0)
                         buffer.seek(0)
-
                 response = StreamingHttpResponse(stream_csv(), content_type='text/csv')
                 response['Content-Disposition'] = f'attachment; filename="attendance_report_{subject_name}_{teacher_id}.csv"'
                 return response
             else:
-                logger.warning("Unsupported format requested")
                 return Response({"error": "Only CSV format is supported"}, status=400)
-
         except Exception as e:
             logger.error(f"Error in AdminAttendanceExportView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
@@ -2306,31 +1835,10 @@ class BulkStudentUploadView(APIView):
             logger.error(f"Error in BulkStudentUploadView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
-
-# this admin SEssions view set can be used for all sessionsgetting
-'''
-class AdminSessionViewSet(viewsets.ModelViewSet):
-
-    queryset = Session.objects.all()
-    serializer_class = SessionSerializer
-    permission_classes = [IsAuthenticated , IsAdmin]
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        section_id = self.request.query_params.get('section_id')
-        if section_id:
-            queryset = queryset.filter(timetable__section_id = section_id)
-        return queryset
-
-
-
-'''
-
 class TestExportView(APIView):
     permission_classes = [IsAuthenticated,IsAdmin]
     def get(self,request):
         return Response({"message":"Test export view works"})
-
 
 class AdminSessionViewSet(viewsets.ModelViewSet):
     queryset = Session.objects.all()
@@ -2384,8 +1892,6 @@ class AdminSessionViewSet(viewsets.ModelViewSet):
             logger.error(f"Error in SessionsByDateView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
-
-
 class ScheduledDatesView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -2395,35 +1901,23 @@ class ScheduledDatesView(APIView):
             section_id = request.query_params.get('section_id')
             if not month:
                 return Response({"error": "Month parameter is required (format: yyyy-MM)"}, status=400)
-
             try:
                 year, month = map(int, month.split('-'))
                 start_date = datetime(year, month, 1).date()
                 _, last_day = calendar.monthrange(year, month)
                 end_date = datetime(year, month, last_day).date()
-                logger.debug(f"Fetching scheduled dates for {year}-{month}, section_id={section_id}")
             except ValueError:
                 return Response({"error": "Invalid month format. Use yyyy-MM"}, status=400)
-
-            # Fetch teacher linked to the authenticated user
             try:
                 teacher = Teacher.objects.get(user=request.user)
             except Teacher.DoesNotExist:
                 logger.error(f"Teacher not found for user: {request.user}")
                 return Response({"error": "Teacher not found"}, status=404)
-
-            # Filter sessions by teacher (via timetable.teacher)
-            sessions = Session.objects.filter(
-                date__range=[start_date, end_date],
-                timetable__teacher=teacher
-            )
+            sessions = Session.objects.filter(date__range=[start_date, end_date], timetable__teacher=teacher)
             if section_id:
                 sessions = sessions.filter(timetable__section_id=section_id)
-
-            # Get distinct dates
             dates = sessions.values('date').distinct().values_list('date', flat=True)
             date_list = [date.strftime('%Y-%m-%d') for date in dates]
-            logger.debug(f"Found dates: {date_list}")
             return Response({"dates": date_list}, status=200)
 
         except Exception as e:
@@ -2432,38 +1926,144 @@ class ScheduledDatesView(APIView):
 
 class SessionsByDateView(APIView):
     permission_classes = [IsAuthenticated]
-
     def get(self, request):
         try:
             date = request.query_params.get('date')  # Format: yyyy-MM-dd
             section_id = request.query_params.get('section_id')
             if not date:
                 return Response({"error": "Date parameter is required (format: yyyy-MM-dd)"}, status=400)
-
             try:
                 date_obj = datetime.strptime(date, '%Y-%m-%d').date()
-                logger.debug(f"Fetching sessions for date={date}, section_id={section_id}")
             except ValueError:
                 return Response({"error": "Invalid date format. Use yyyy-MM-dd"}, status=400)
-
-            # Fetch teacher linked to the authenticated user
             try:
                 teacher = Teacher.objects.get(user=request.user)
             except Teacher.DoesNotExist:
                 logger.error(f"Teacher not found for user: {request.user}")
                 return Response({"error": "Teacher not found"}, status=404)
-
-            sessions = Session.objects.filter(
-                date=date_obj,
-                timetable__teacher=teacher
-            )
+            sessions = Session.objects.filter(date=date_obj, timetable__teacher=teacher)
             if section_id:
                 sessions = sessions.filter(timetable__section_id=section_id)
-
             serializer = SessionSerializer(sessions, many=True)
-            logger.debug(f"Serialized sessions: {serializer.data}")
             return Response(serializer.data, status=200)
 
         except Exception as e:
             logger.error(f"Error in SessionsByDateView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
+
+# class StudentAttendancePagination(PageNumberPagination):
+#     page_size = 20
+#     page_size_query_param = 'page_size'
+#     max_page_size = 100
+
+class StudentAttendanceView(APIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardPagination
+
+    def get(self, request):
+        try:
+            program_id = request.query_params.get('program_id')
+            section_id = request.query_params.get('section_id')
+            semester = request.query_params.get('semester')
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            if not program_id or not section_id or not semester:
+                return Response({"error": "program_id, section_id, and semester are required"}, status=400)
+            try:
+                program_id = int(program_id)
+                section_id = int(section_id)
+                semester = int(semester)
+            except ValueError:
+                return Response({"error": "program_id, section_id, and semester must be integers"}, status=400)
+            try:
+                section = Section.objects.get(id=section_id, program_id=program_id)
+            except Section.DoesNotExist:
+                logger.error(f"Section {section_id} or Program {program_id} not found")
+                return Response({"error": f"Section {section_id} or Program {program_id} not found"}, status=404)
+            program_duration = section.program.duration_years * 2
+            start_semester = (section.year - 1) * 2 + 1
+            end_semester = min(start_semester + 1, program_duration)
+            if not (start_semester <= semester <= end_semester):
+                logger.error(f"Semester {semester} invalid for section {section_id}")
+                return Response({"error": f"Semester {semester} is invalid (valid: {start_semester}-{end_semester})"}, status=400)
+            subjects = Subject.objects.filter(semester=semester, timetable__section_id=section_id, timetable__section__program_id=program_id).distinct()
+            if not subjects.exists():
+                return Response({"count": 0, "subjects": [], "students": []}, status=200)
+            students = Student.objects.filter(section_id=section_id, semester=semester)
+            if not students.exists():
+                return Response({
+                    "count": 0,
+                    "subjects": SubjectSerializer(subjects, many=True).data,
+                    "students": []
+                }, status=200)
+
+            # Apply date range filter if provided
+            sessions = Session.objects.filter(
+                timetable__section_id=section_id,
+                timetable__subject__semester=semester,
+                timetable__section__program_id=program_id,
+                status='Completed'
+            )
+            if start_date and end_date:
+                try:
+                    start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+                    if start_date > end_date:
+                        return Response({"error": "start_date must be before end_date"}, status=400)
+                    sessions = sessions.filter(date__range=[start_date, end_date])
+                except ValueError:
+                    logger.error(f"Invalid date format: start_date={start_date}, end_date={end_date}")
+                    return Response({"error": "Invalid date format (use YYYY-MM-DD)"}, status=400)
+
+            # Fetch attendance data
+            attendance_data = (
+                Attendance.objects.filter(session__in=sessions, student__in=students)
+                .values(
+                    'student_id',
+                    'student__first_name',
+                    'student__last_name',
+                    'student__roll_number',
+                    'session__timetable__subject__id',
+                    'session__timetable__subject__name'
+                )
+                .annotate(
+                    name=Concat(F('student__first_name'), Value(' '), F('student__last_name'), output_field=CharField()),
+                    classes_attended=Count('id', filter=Q(status=True)),
+                    total_classes=Count('id')
+                )
+            )
+
+            # Organize attendance by student
+            student_attendance = {}
+            for entry in attendance_data:
+                student_id = entry['student_id']
+                if student_id not in student_attendance:
+                    student_attendance[student_id] = {
+                        'id': student_id,
+                        'roll_number': entry['student__roll_number'],
+                        'name': entry['name'],
+                        'attendance': []
+                    }
+                student_attendance[student_id]['attendance'].append({
+                    'subject_id': entry['session__timetable__subject__id'],
+                    'subject_name': entry['session__timetable__subject__name'],
+                    'classes_attended': entry['classes_attended'],
+                    'total_classes': entry['total_classes']
+                })
+
+            # Prepare student data
+            student_data = list(student_attendance.values())
+            paginator = self.pagination_class()
+            paginated_students = paginator.paginate_queryset(student_data, request)
+
+            return paginator.get_paginated_response({
+                'subjects': SubjectSerializer(subjects, many=True).data,
+                'students': paginated_students,
+                'start_date': start_date.isoformat() if start_date else None,
+                'end_date': end_date.isoformat() if end_date else None
+            })
+
+        except Exception as e:
+            logger.error(f"Error in StudentAttendanceView: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=500)
+

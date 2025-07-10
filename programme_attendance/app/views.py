@@ -56,7 +56,7 @@ class StudentListView(APIView):
 
     def get(self, request):
         try:
-            students = Student.objects.all()
+            students = Student.objects.all().order_by('roll_number')
             student_count = students.count()
             if student_count == 0:
                 return Response({
@@ -310,17 +310,18 @@ class TeacherAttendanceStatsView(APIView):
                     start_date = min(t.semester_start_date for t in timetables)
                     end_date = max(t.semester_end_date for t in timetables)
 
-            attendance_stats = (
-                Attendance.objects.filter(session__id__in=session_ids, student__in=students)
-                .filter(session__date__gte=start_date, session__date__lte=end_date)
-                .values('student__id', 'student__first_name', 'student__last_name', 'student__roll_number')
-                .annotate(
-                    total_sessions=Count('session'),
-                    present=Count('session', filter=Q(status=True)),
-                    absent=Count('session', filter=Q(status=False))
-                )
-            )
 
+            attendance_stats = (
+    Attendance.objects.filter(session__id__in=session_ids, student__in=students)
+    .filter(session__date__gte=start_date, session__date__lte=end_date)
+    .values('student__id', 'student__first_name', 'student__last_name', 'student__roll_number')
+    .annotate(
+        total_sessions=Count('session'),
+        present=Count('session', filter=Q(status=True)),
+        absent=Count('session', filter=Q(status=False))
+    )
+    .order_by('student__roll_number')  # <-- Add this line
+)
             stats = [
                 {
                     'student_id': stat['student__id'],

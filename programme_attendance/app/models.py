@@ -70,6 +70,11 @@ class Student(models.Model):
     class Meta:
         verbose_name = "Student"
         verbose_name_plural = "Students"
+        indexes = [
+            models.Index(fields=['roll_number']),
+            models.Index(fields=['first_name', 'last_name']),
+        ]
+        ordering = ['roll_number']  # <-- fixed typo here  
 
 class Timetable(models.Model):
     DAY_CHOICES = [

@@ -404,7 +404,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
             raise ValidationError("At least one daily schedule is required.")
 
         for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
-            existing = Timetable.objects.filter(section=section, day_of_week=day).count()
+            existing = Timetable.objects.filter(section=section, day_of_week=day, teacher=teacher).count()
             new_for_day = len([s for s in daily_schedules if s['day_of_week'] == day])
             if existing + new_for_day > 5:
                 raise ValidationError(f"Cannot schedule more than 5 lectures on {day} for this section.")

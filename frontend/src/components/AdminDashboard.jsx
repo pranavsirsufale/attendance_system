@@ -505,21 +505,6 @@ function AdminDashboard({ notifyUser }) {
     navigate("/");
   };
 
-    const getBackup = async () => {
-      const token = localStorage.getItem("access_token");
-    try {
-      const response = await axios.post('http://localhost:8000/api/backup/', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-      const data = await response.json();
-      console.log(data)
-    } catch (err) {
-      console.error('Error while getting backup of Database:', err);
-      setError('Error while getting backup of Database');
-    }
-  };
-
   if (error) {
     return (
       <motion.div

@@ -41,6 +41,7 @@ urlpatterns = [
     path('teacher-attendance-stats/', views.TeacherAttendanceStatsView.as_view(), name='teacher_attendance_stats'),
 
     # path('semesters-for-section/' , views.SemestersForSectionView.as_view() , name = 'semester-for-section'),
+    path('backup/', views.MySQLBackupView.as_view(), name="get-database-backup"),
     path('students/bulk/',views.BulkStudentUploadView.as_view() , name='students-bulk'),
     path('students/pass/', views.PassStudentsView.as_view(), name='pass-students'),
     path("students-remove/", views.RemoveStudentsView.as_view(), name='remove-students'),

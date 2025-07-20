@@ -37,7 +37,7 @@ INSTALLED_APPS = [
 ]
 
 ### added rest-famewokr app and simplejwt
-### added rest framework 
+### added rest framework
 '''
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES':(
@@ -139,7 +139,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.mysql",
         "NAME" : 'law_college',
         'USER': 'root',
-        'PASSWORD' : 'rpsb',
+        'PASSWORD' : 'Pranav@123',
         'HOST' : 'localhost',
         "PORT" : '3306',
     }

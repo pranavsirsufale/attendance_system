@@ -31,6 +31,7 @@ import StudentProfile from "./components/admin/StudentProfile";
 import StudentDetail from "./components/admin/StudentDetail";
 import RemoveStudents from "./components/utilities/RemoveStudents";
 import CalendarPicker from "./components/utilities/CalendarPicker";
+import GetBackup from "./components/utilities/GetBackup"
 // Sample Lottie animation (law-themed scales of justice)
 // import lawAnimationData from "https://lottie.host/9c9f6f1d-3b3e-4b7e-9e1a-3f3d6b8e7f2a/justice-scales.json";
 
@@ -338,6 +339,13 @@ function App() {
                         <Route
                           path="/admin/student/:studentId"
                           element={<StudentDetail notifyUser={notifyUser} />}
+                        />
+
+                        <Route
+                          path="/admin/database-backup"
+                          element={
+                            <GetBackup notifyUser={notifyUser} />
+                          }
                         />
 
 

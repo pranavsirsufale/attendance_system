@@ -1,5 +1,7 @@
+import calendar, subprocess, os
 from django.shortcuts import render
 import rest_framework
+from django.conf import settings
 from rest_framework.viewsets import ModelViewSet
 from django.http import HttpResponse,StreamingHttpResponse
 from django.utils import timezone
@@ -14,7 +16,6 @@ from app.permissions import IsAdmin
 from django.db.models import Count, Q , F , ExpressionWrapper , FloatField , DecimalField, CharField , Value,Sum , Case, When, IntegerField
 from django.contrib.auth.models import User
 from datetime import datetime, timedelta
-import calendar
 from .models import Session , Program, Attendance, Teacher, Student, Subject, Timetable, CalendarException , Section
 from .serializers import (
     SessionSerializer, AttendanceSerializer , TimetableCreateSerializer, TeacherSerializer, StudentSerializer,
@@ -2067,4 +2068,105 @@ class StudentAttendanceView(APIView):
         except Exception as e:
             logger.error(f"Error in StudentAttendanceView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
+
+class MySQLBackupView(APIView):
+    permission_classes = [IsAdmin]
+
+
+    def post(self, request, *args, **kwargs):
+        db_config = settings.DATABASES.get('default')
+
+        if not db_config:
+            return Response(
+                {"error": "Default database configuration not found in settings.py."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        MYSQL_HOST = db_config.get('HOST', 'localhost')
+        MYSQL_USER = db_config.get('USER')
+        MYSQL_PASSWORD = db_config.get('PASSWORD')
+        MYSQL_DATABASE = db_config.get('NAME')
+
+        if not all([MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE]):
+            return Response(
+                {"error": "Missing essential MySQL database credentials (USER, PASSWORD, NAME) in settings.py."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        BACKUP_DIR = getattr(settings, 'MYSQL_BACKUP_DIR', os.path.join(settings.BASE_DIR, 'mysql_backups'))
+
+        # 1. Ensure the backup directory exists
+        try:
+            os.makedirs(BACKUP_DIR, exist_ok=True)
+        except OSError as e:
+            print(f"Error creating backup directory {BACKUP_DIR}: {e}")
+            return Response(
+                {"error": f"Failed to create backup directory on server: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # 2. Generate a unique filename for the backup using a timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file_name = f"{MYSQL_DATABASE}_backup_{timestamp}.sql"
+        backup_path = os.path.join(BACKUP_DIR, backup_file_name)
+
+        try:
+            # 3. Construct the mysqldump command
+            # `--single-transaction` is highly recommended for InnoDB tables to get a consistent
+            # snapshot without locking the database, as it uses a transaction.
+            command = [
+                'mysqldump',
+                f'--host={MYSQL_HOST}',
+                f'--user={MYSQL_USER}',
+                f'--password={MYSQL_PASSWORD}', # Password passed via argument
+                '--single-transaction', # For consistent InnoDB backups
+                MYSQL_DATABASE
+            ]
+
+            # 4. Execute the mysqldump command using subprocess.run
+            process = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=True # Raise CalledProcessError if command returns non-zero exit code
+            )
+
+            # 5. Write the dumped SQL data (from stdout) to the backup file
+            with open(backup_path, 'w', encoding='utf-8') as f:
+                f.write(process.stdout)
+
+            print(f"MySQL backup successful: {backup_path}")
+            return Response(
+                {
+                    "message": f"Database '{MYSQL_DATABASE}' backed up successfully.",
+                    "filename": backup_file_name,
+                    "path": backup_path
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except subprocess.CalledProcessError as e:
+            # This error occurs if mysqldump itself fails (e.g., incorrect credentials, database not found)
+            error_message = f"MySQL backup command failed. Stderr: {e.stderr.strip()}"
+            print(f"Error during mysqldump execution: {error_message}")
+            return Response(
+                {"error": error_message},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except FileNotFoundError:
+            # This error occurs if 'mysqldump' command is not found on the server
+            error_message = "'mysqldump' command not found. Please ensure it's installed and in your server's PATH."
+            print(f"Error: {error_message}")
+            return Response(
+                {"error": error_message},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            # Catch any other unexpected errors during file writing or other operations
+            error_message = f"An unexpected server error occurred during backup: {str(e)}"
+            print(f"An unexpected error occurred: {error_message}")
+            return Response(
+                {"error": error_message},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 

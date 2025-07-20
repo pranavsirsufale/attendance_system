@@ -505,6 +505,21 @@ function AdminDashboard({ notifyUser }) {
     navigate("/");
   };
 
+    const getBackup = async () => {
+      const token = localStorage.getItem("access_token");
+    try {
+      const response = await axios.post('http://localhost:8000/api/backup/', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+      const data = await response.json();
+      console.log(data)
+    } catch (err) {
+      console.error('Error while getting backup of Database:', err);
+      setError('Error while getting backup of Database');
+    }
+  };
+
   if (error) {
     return (
       <motion.div
@@ -754,6 +769,8 @@ function AdminDashboard({ notifyUser }) {
             </StyledCard>
           </Link>
 
+
+
           {/* Card for Student Profiles */}
           <Link to="/admin/student-profile" className="w-full flex justify-center">
             <StyledCard
@@ -770,6 +787,24 @@ function AdminDashboard({ notifyUser }) {
               </form>
             </StyledCard>
           </Link>
+
+          {/* Card for backup of database */}
+          <Link to="/admin/database-backup" className="w-full flex justify-center">
+            <StyledCard
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
+              className="database-backup"
+            >
+              <span className="card__title">Get Database Backup</span>
+              <p className="card__content">
+                Get the all database backup along with all records and tables.
+              </p>
+              <form className="card__form">
+                <button className="card__button">retreive backup</button>
+              </form>
+            </StyledCard>
+          </Link>
+
         </motion.div>
       )}
     </div>

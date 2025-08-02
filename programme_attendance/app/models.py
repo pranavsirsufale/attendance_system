@@ -74,7 +74,7 @@ class Student(models.Model):
             models.Index(fields=['roll_number']),
             models.Index(fields=['first_name', 'last_name']),
         ]
-        ordering = ['roll_number']  # <-- fixed typo here  
+        ordering = ['roll_number']  # <-- fixed typo here
 
 class Timetable(models.Model):
     DAY_CHOICES = [
@@ -84,13 +84,22 @@ class Timetable(models.Model):
         ('Thursday', 'Thursday'),
         ('Friday', 'Friday'),
         ('Saturday', 'Saturday'),
+        ('Sunday', 'Sunday')
     ]
     LECTURE_SLOTS = [
+    ('08:00:00', '08:00 AM - 09:00 AM'),
     ('08:30:00', '08:30 AM - 09:30 AM'),
+    ('09:00:00', '09:00 AM - 10:00 AM'),
     ('09:30:00', '09:30 AM - 10:30 AM'),
+    ('10:00:00', '10:00 AM - 11:00 AM'),
     ('10:30:00', '10:30 AM - 11:30 AM'),
+    ('11:00:00', '11:00 AM - 12:00 AM'),
+    ('11:30:00', '11:30 AM - 12:30 AM'),
     ('12:00:00', '12:00 PM - 01:00 PM'),
+    ('12:30:00', '12:30 PM - 01:30 PM'),
     ('01:00:00', '01:00 PM - 02:00 PM'),
+    ('01:30:00', '01:30 PM - 02:30 PM'),
+    ('02:00:00', '02:00 PM - 03:00 PM')
     ]
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="timetable")
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="timetable")
@@ -123,7 +132,6 @@ class Session(models.Model):
         verbose_name = "Session"
         verbose_name_plural = "Sessions"
 
-
 '''
 !! the first previous attendance model with string ( status )
 class Attendance(models.Model):
@@ -147,9 +155,7 @@ class Attendance(models.Model):
 class Attendance(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="attendance", db_index=True)
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="attendance", db_index=True)
-
     status = models.BooleanField(default=False, db_index=True)  # False = Absent, True = Present
-
     timestamp = models.DateTimeField(db_index=True)
     recorded_by = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True,db_index= True ,  related_name="attendance_records")
 

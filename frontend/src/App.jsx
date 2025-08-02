@@ -78,9 +78,7 @@ function App() {
         informUser(msg);
     }
   };
-
-  console.log("Is Admin:", isAdmin);
-
+  // console.log("Is Admin:", isAdmin);
   const particlesInit = async (main) => {
     await loadFull(main);
   };
@@ -117,8 +115,8 @@ function App() {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        console.log("Admin Check Response:", response);
-        // setIsAdmin(response.data.is_admin);
+        // console.log("Admin Check Response:", response);
+        setIsAdmin(response.data.is_admin);
       } catch (err) {
         console.error("Failed to verify admin status:", err);
       } finally {

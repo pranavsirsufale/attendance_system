@@ -48,6 +48,7 @@ urlpatterns = [
     path('student-details/<int:pk>/', views.StudentDetailView.as_view(), name='student-detail'),
     path('scheduled-dates/', views.ScheduledDatesView.as_view(), name='scheduled-dates'),
     path('sessions-by-date/', views.SessionsByDateView.as_view(), name='sessions-by-date'),
+    path('timetables/single-session/', views.SingleSessionTimetableView.as_view(), name='single-session-timetable'),
 
     path('semesters-for-section/', views.SemestersForSectionView.as_view(), name='semesters-for-section'),
     path('sections-for-program/', views.SectionForProgramView.as_view(), name='sections-for-program'),

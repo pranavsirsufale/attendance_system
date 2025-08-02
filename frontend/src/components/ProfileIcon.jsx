@@ -28,8 +28,6 @@ function ProfileIcon({notifyUser}) {
 
         const last_login = convertToIndianFormat(response.data.last_login);
         const token_expiry = convertToIndianFormat(response.data.token_expiry);
-        console.log(response.data.token_expiry)
-        console.log(token_expiry)
         const data = { ...response.data, last_login, token_expiry };
         setProfile(data);
 
@@ -139,7 +137,7 @@ function ProfileIcon({notifyUser}) {
                     {profile.is_admin ? 'Admin' : 'Teacher'}
                   </p>
                 </motion.div>
-                <motion.div
+                {/* <motion.div
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 }}
@@ -150,7 +148,7 @@ function ProfileIcon({notifyUser}) {
                     <span className="font-semibold text-indigo-700 dark:text-indigo-300">Last Login:</span>{' '}
                     {profile.last_login || 'N/A'}
                   </p>
-                </motion.div>
+                </motion.div> */}
 
 
                 {/* <motion.div
@@ -181,15 +179,8 @@ function ProfileIcon({notifyUser}) {
                   className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white px-4 py-2  hover:from-red-600 hover:to-red-700 dark:hover:from-red-700 dark:hover:to-red-800 shadow-md hover:shadow-xl transition-all duration-300 mt-4"
                 >
                   <FaSignOutAlt />
-
-
                   <span>Logout</span>
-
-
                 </motion.button> */}
-
-
-
 
               </div>
             ) : (

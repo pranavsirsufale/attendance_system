@@ -7,7 +7,7 @@ import { styled } from '@mui/material/styles';
 import { toast } from 'react-toastify'; // Import toast directly
 
 // StyledCard component, adapted from your PassStudents.jsx
-const StyledCard = styled(motion(Card))(({ theme }) => ({ // Wrap Card with motion for framer-motion animations
+const StyledCard = styled(motion.create(Card))(({ theme }) => ({ // Wrap Card with motion for framer-motion animations
   borderRadius: '12px',
   boxShadow: theme.shadows[6],
   marginBottom: theme.spacing(3),

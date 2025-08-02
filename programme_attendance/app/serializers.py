@@ -146,7 +146,7 @@ class TimetableCreateSerializer(serializers.Serializer):
             required_fields = ['day_of_week', 'subject', 'start_time']
             if not all(field in schedule for field in required_fields):
                 raise serializers.ValidationError(f"Each schedule must include {required_fields}")
-            if schedule['day_of_week'] not in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+            if schedule['day_of_week'] not in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']:
                 raise serializers.ValidationError("Invalid day of week")
             if schedule['start_time'] not in [slot[0] for slot in LECTURE_SLOTS]:
                 raise serializers.ValidationError(f"Start time must be one of {[slot[0] for slot in LECTURE_SLOTS]}")
@@ -167,6 +167,13 @@ class TimetableCreateSerializer(serializers.Serializer):
             if subject.semester != semester:
                 raise serializers.ValidationError(f"Subject {subject.name} (Semester {subject.semester}) does not match selected semester {semester}")
         return data
+
+class SingleSessionTimetableSerializer(serializers.Serializer):
+    section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())
+    subject = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all())
+    day_of_week = serializers.ChoiceField(choices=Timetable.DAY_CHOICES)
+    start_time = serializers.ChoiceField(choices=Timetable.LECTURE_SLOTS)
+    session_date = serializers.DateField()
 
 class AdminTeacherSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only = True ,

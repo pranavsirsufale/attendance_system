@@ -43,11 +43,9 @@ function SessionCRUD({notifyUser}) {
       let url = `http://localhost:8000/api/admin/${resource}/?page=${page}&page_size=${pageSize}`;
       if (selectedTeacher) url += `&teacher_id=${selectedTeacher}`;
       if (selectedSemester) url += `&semester=${selectedSemester}`;
-      console.log(`Fetching from: ${url}`);
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log("Sessions fetched:", response);
       setItems(response.data.results || response.data);
       setTotalPages(Math.ceil((response.data.count || response.data.length) / pageSize));
       setError("");
@@ -73,9 +71,6 @@ function SessionCRUD({notifyUser}) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTeachers(response.data);
-      console.log("Teachers fetched:", response.data);
-
-
     } catch (err) {
       notifyUser("Teachers fetch error:"+err.response?.data || err.message ,'error');
     }
@@ -88,7 +83,6 @@ function SessionCRUD({notifyUser}) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTimetables(response.data);
-      console.log("Timetables fetched:", response.data);
     } catch (err) {
       notifyUser("Timetables fetch error:" + err.response?.data || err.message,'error');
     }
@@ -102,7 +96,6 @@ function SessionCRUD({notifyUser}) {
       });
       const uniqueSemesters = [...new Set(response.data.map(subject => subject.semester))].sort();
       setSemesters(uniqueSemesters);
-      console.log("Semesters fetched:", uniqueSemesters);
     } catch (err) {
 
       notifyUser("Semesters fetch error:" + err.response?.data || err.message, 'error') ;
@@ -113,7 +106,6 @@ function SessionCRUD({notifyUser}) {
     e.preventDefault();
     const token = localStorage.getItem("access_token");
     try {
-      console.log("Submitting:", formData);
       if (editingId) {
         const response = await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, formData, {
           headers: { Authorization: `Bearer ${token}` },
@@ -140,7 +132,6 @@ function SessionCRUD({notifyUser}) {
   };
 
   const handleEdit = (item) => {
-    console.log("Editing session:", item);
     setFormData({
       timetable: item.timetable.id,
       date: item.date,

@@ -179,3 +179,40 @@ class CalendarException(models.Model):
         verbose_name_plural = "Calendar Exceptions"
 
 
+class ArchivalAttendance(models.Model):
+    """
+    Permanent historical attendance archive for admin-only access.
+    This stores attendance snapshots that are preserved even when 
+    students, sessions, or sections are deleted.
+    """
+    # Stored as text fields to preserve data even if originals are deleted
+    student_roll_number = models.CharField(max_length=20, db_index=True)
+    student_name = models.CharField(max_length=150)
+    section_name = models.CharField(max_length=100)
+    subject_name = models.CharField(max_length=100)
+    session_date = models.DateField(db_index=True)
+    semester = models.PositiveIntegerField()
+    status = models.BooleanField(default=False)  # False = Absent, True = Present
+    
+    # Original timestamp from the attendance record
+    original_timestamp = models.DateTimeField()
+    original_recorded_by = models.CharField(max_length=200)
+    
+    # Archive metadata
+    archived_by = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name="archived_records")
+    archived_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    archive_note = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"Archive: {self.student_roll_number} - {self.subject_name} on {self.session_date}"
+    
+    class Meta:
+        verbose_name = "Archival Attendance"
+        verbose_name_plural = "Archival Attendance Records"
+        ordering = ['-archived_at', '-session_date']
+        indexes = [
+            models.Index(fields=['student_roll_number', 'session_date']),
+            models.Index(fields=['archived_at']),
+        ]
+
+

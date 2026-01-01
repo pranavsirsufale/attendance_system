@@ -790,6 +790,23 @@ function AdminDashboard({ notifyUser }) {
             </StyledCard>
           </Link>
 
+          {/* Card for Archival Attendance */}
+          <Link to="/admin/archival-attendance" className="w-full flex justify-center">
+            <StyledCard
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
+              className="archival-attendance-card"
+            >
+              <span className="card__title">Archival Attendance</span>
+              <p className="card__content">
+                Create and view permanent historical attendance snapshots preserved independently.
+              </p>
+              <form className="card__form">
+                <button className="card__button">Manage Archives</button>
+              </form>
+            </StyledCard>
+          </Link>
+
         </motion.div>
       )}
     </div>

@@ -58,6 +58,13 @@ urlpatterns = [
     path('admin/holidays/', views.AdminHolidayManagement.as_view(), name='admin-holidays'),
     path('admin/semesters/', views.SemestersForSectionView.as_view(), name='admin-semesters'),
     path('admin/section-semester-data/', views.SectionSemesterWiseDataView.as_view(), name='section-semester-data'),
+    
+    # Archival Attendance (Admin only) - MUST come before router.urls
+    path('admin/archival-attendance/export/', views.ArchivalAttendanceExportView.as_view(), name='admin-archival-export'),
+    path('admin/archival-attendance/delete/', views.ArchivalAttendanceDeleteView.as_view(), name='admin-archival-delete'),
+    path('admin/archival-attendance/stats/', views.ArchivalAttendanceStatsView.as_view(), name='admin-archival-stats'),
+    path('admin/archival-attendance/', views.ArchivalAttendanceView.as_view(), name='admin-archival-attendance'),
+    
     path('', include(router.urls)),
 ]
 

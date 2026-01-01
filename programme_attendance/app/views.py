@@ -16,12 +16,12 @@ from app.permissions import IsAdmin
 from django.db.models import Count, Q , F , ExpressionWrapper , FloatField , DecimalField, CharField , Value,Sum , Case, When, IntegerField
 from django.contrib.auth.models import User
 from datetime import datetime, timedelta
-from .models import Session , Program, Attendance, Teacher, Student, Subject, Timetable, CalendarException , Section
+from .models import Session , Program, Attendance, Teacher, Student, Subject, Timetable, CalendarException , Section, ArchivalAttendance
 from .serializers import (
     SessionSerializer, AttendanceSerializer , TimetableCreateSerializer, TeacherSerializer, StudentSerializer,
     TimetableSerializer, CalendarExceptionSerializer, ProgramSerializer , SubjectSerializer , SectionSerializer
     , AdminTeacherSerializer , AdminStudentSerializer , AdminTimetableSerializer,AttendanceStatsSerializer,
-    StudentDetailSerializer, AttendanceSummarySerializer, SingleSessionTimetableSerializer
+    StudentDetailSerializer, AttendanceSummarySerializer, SingleSessionTimetableSerializer, ArchivalAttendanceSerializer
 )
 from django.db.models.functions import Concat
 from django.db import IntegrityError,transaction
@@ -2153,6 +2153,431 @@ class MySQLBackupView(APIView):
             print(f"An unexpected error occurred: {error_message}")
             return Response(
                 {"error": error_message},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ArchivalAttendanceView(APIView):
+    """
+    Admin-only view for managing archival attendance records.
+    GET: Retrieve archived attendance with filtering
+    POST: Create archival snapshot from existing attendance records
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+    
+    def get(self, request):
+        """
+        Retrieve archived attendance with optional filters:
+        - student_roll_number: Filter by student
+        - subject_name: Filter by subject
+        - section_name: Filter by section
+        - semester: Filter by semester
+        - start_date: Filter by session date (from)
+        - end_date: Filter by session date (to)
+        - archived_after: Filter by archive date (from)
+        """
+        try:
+            archives = ArchivalAttendance.objects.all()
+            
+            # Apply filters
+            student_roll = request.query_params.get('student_roll_number')
+            if student_roll:
+                archives = archives.filter(student_roll_number__icontains=student_roll)
+            
+            subject = request.query_params.get('subject_name')
+            if subject:
+                archives = archives.filter(subject_name__icontains=subject)
+            
+            section = request.query_params.get('section_name')
+            if section:
+                archives = archives.filter(section_name__icontains=section)
+            
+            semester = request.query_params.get('semester')
+            if semester:
+                archives = archives.filter(semester=semester)
+            
+            start_date = request.query_params.get('start_date')
+            if start_date:
+                archives = archives.filter(session_date__gte=start_date)
+            
+            end_date = request.query_params.get('end_date')
+            if end_date:
+                archives = archives.filter(session_date__lte=end_date)
+            
+            archived_after = request.query_params.get('archived_after')
+            if archived_after:
+                archives = archives.filter(archived_at__gte=archived_after)
+            
+            # Pagination
+            paginator = StandardPagination()
+            paginated_archives = paginator.paginate_queryset(archives, request)
+            serializer = ArchivalAttendanceSerializer(paginated_archives, many=True)
+            
+            return paginator.get_paginated_response(serializer.data)
+        
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to retrieve archival attendance: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def post(self, request):
+        """
+        Create archival snapshot from existing attendance records.
+        Required fields:
+        - filters: Dict with filters (program_id, semester, start_date, end_date)
+        - archive_note: Optional note about this archive
+        
+        This will snapshot all matching attendance records into the archive.
+        """
+        try:
+            teacher = Teacher.objects.get(user=request.user)
+            
+            filters = request.data.get('filters', {})
+            archive_note = request.data.get('archive_note', '')
+            
+            # Build attendance query
+            attendance_query = Attendance.objects.select_related(
+                'student', 'student__section', 'student__section__program',
+                'session', 'session__timetable', 'session__timetable__subject',
+                'recorded_by'
+            ).all()
+            
+            # Apply filters
+            program_id = filters.get('program_id')
+            if program_id:
+                attendance_query = attendance_query.filter(student__section__program_id=program_id)
+            
+            semester = filters.get('semester')
+            if semester:
+                attendance_query = attendance_query.filter(student__semester=semester)
+            
+            start_date = filters.get('start_date')
+            if start_date:
+                attendance_query = attendance_query.filter(session__date__gte=start_date)
+            
+            end_date = filters.get('end_date')
+            if end_date:
+                attendance_query = attendance_query.filter(session__date__lte=end_date)
+            
+            # Create archival records
+            archival_records = []
+            for attendance in attendance_query:
+                recorded_by_name = "Unknown"
+                if attendance.recorded_by:
+                    recorded_by_name = f"{attendance.recorded_by.first_name} {attendance.recorded_by.last_name}"
+                
+                archival_record = ArchivalAttendance(
+                    student_roll_number=attendance.student.roll_number,
+                    student_name=f"{attendance.student.first_name} {attendance.student.last_name}",
+                    section_name=str(attendance.student.section),
+                    subject_name=attendance.session.timetable.subject.name,
+                    session_date=attendance.session.date,
+                    semester=attendance.student.semester,
+                    status=attendance.status,
+                    original_timestamp=attendance.timestamp,
+                    original_recorded_by=recorded_by_name,
+                    archived_by=teacher,
+                    archive_note=archive_note
+                )
+                archival_records.append(archival_record)
+            
+            if not archival_records:
+                return Response(
+                    {"error": "No attendance records found matching the specified filters"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Bulk create archival records
+            ArchivalAttendance.objects.bulk_create(archival_records)
+            
+            return Response({
+                "message": f"Successfully archived {len(archival_records)} attendance records",
+                "count": len(archival_records),
+                "archived_by": f"{teacher.first_name} {teacher.last_name}",
+                "archived_at": timezone.now()
+            }, status=status.HTTP_201_CREATED)
+        
+        except Teacher.DoesNotExist:
+            return Response(
+                {"error": "Teacher profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to create archival snapshot: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ArchivalAttendanceStatsView(APIView):
+    """
+    Admin-only view for getting statistics about archived attendance.
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+    
+    def get(self, request):
+        """
+        Get summary statistics about archived attendance records.
+        """
+        try:
+            total_archived = ArchivalAttendance.objects.count()
+            
+            # Stats by semester
+            semester_stats = ArchivalAttendance.objects.values('semester').annotate(
+                count=Count('id'),
+                present_count=Sum(Case(When(status=True, then=1), default=0, output_field=IntegerField())),
+                absent_count=Sum(Case(When(status=False, then=1), default=0, output_field=IntegerField()))
+            ).order_by('semester')
+            
+            # Recent archives
+            recent_archives = ArchivalAttendance.objects.values(
+                'archived_at', 'archived_by__first_name', 'archived_by__last_name'
+            ).annotate(
+                count=Count('id')
+            ).order_by('-archived_at')[:10]
+            
+            # Format recent archives
+            recent_formatted = []
+            for archive in recent_archives:
+                recent_formatted.append({
+                    'archived_at': archive['archived_at'],
+                    'archived_by': f"{archive['archived_by__first_name']} {archive['archived_by__last_name']}" if archive['archived_by__first_name'] else "Unknown",
+                    'count': archive['count']
+                })
+            
+            return Response({
+                "total_archived_records": total_archived,
+                "semester_statistics": list(semester_stats),
+                "recent_archives": recent_formatted
+            }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to retrieve archival statistics: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+
+class ArchivalAttendanceDeleteView(APIView):
+    """
+    Admin-only view for deleting archival attendance records by semester.
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+    
+    def delete(self, request):
+        """
+        Delete archival attendance with filters:
+        - program_id: Filter by program (optional)
+        - semester: Filter by semester (required)
+        - start_date: Filter by session date from (optional)
+        - end_date: Filter by session date to (optional)
+        """
+        try:
+            semester = request.query_params.get('semester')
+            
+            if not semester:
+                return Response(
+                    {"error": "Semester is required for deletion"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            program_id = request.query_params.get('program_id')
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            
+            # Build query
+            archives = ArchivalAttendance.objects.filter(semester=semester)
+            
+            if program_id:
+                program = Program.objects.get(id=program_id)
+                archives = archives.filter(section_name__icontains=program.name)
+            
+            if start_date:
+                archives = archives.filter(session_date__gte=start_date)
+            
+            if end_date:
+                archives = archives.filter(session_date__lte=end_date)
+            
+            count = archives.count()
+            
+            if count == 0:
+                return Response(
+                    {"error": "No archival records found matching the criteria"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Delete the records
+            archives.delete()
+            
+            return Response({
+                "message": f"Successfully deleted {count} archival records",
+                "deleted_count": count,
+                "semester": semester
+            }, status=status.HTTP_200_OK)
+        
+        except Program.DoesNotExist:
+            return Response(
+                {"error": "Subject not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to delete archival attendance: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ArchivalAttendanceExportView(APIView):
+    """
+    Admin-only view for exporting archival attendance in XLSX or CSV format.
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+    
+    def get(self, request):
+        """
+        Export archival attendance with filters:
+        - program_id: Filter by program
+        - semester: Filter by semester
+        - start_date: Filter by session date from
+        - end_date: Filter by session date to
+        - format: 'xlsx' or 'csv' (default: xlsx)
+        """
+        try:
+            # Get filters
+            program_id = request.query_params.get('program_id')
+            semester = request.query_params.get('semester')
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            export_format = request.query_params.get('format', 'xlsx')
+            
+            # Build query
+            archives = ArchivalAttendance.objects.all()
+            
+            if program_id:
+                archives = archives.filter(section_name__icontains=Program.objects.get(id=program_id).name)
+            
+            if semester:
+                archives = archives.filter(semester=semester)
+            
+            if start_date:
+                archives = archives.filter(session_date__gte=start_date)
+            
+            if end_date:
+                archives = archives.filter(session_date__lte=end_date)
+            
+            archives = archives.order_by('semester', 'section_name', 'subject_name', 'student_roll_number', 'session_date')
+            
+            if export_format == 'csv':
+                # CSV Export
+                response = HttpResponse(content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename="archival_attendance_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+                
+                writer = csv.writer(response)
+                writer.writerow([
+                    'Roll Number', 'Student Name', 'Section', 'Subject', 
+                    'Semester', 'Session Date', 'Status', 'Original Timestamp',
+                    'Recorded By', 'Archived By', 'Archived At', 'Archive Note'
+                ])
+                
+                for archive in archives:
+                    archived_by = f"{archive.archived_by.first_name} {archive.archived_by.last_name}" if archive.archived_by else "Unknown"
+                    writer.writerow([
+                        archive.student_roll_number,
+                        archive.student_name,
+                        archive.section_name,
+                        archive.subject_name,
+                        archive.semester,
+                        archive.session_date.strftime('%Y-%m-%d'),
+                        'Present' if archive.status else 'Absent',
+                        archive.original_timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                        archive.original_recorded_by,
+                        archived_by,
+                        archive.archived_at.strftime('%Y-%m-%d %H:%M:%S'),
+                        archive.archive_note or ''
+                    ])
+                
+                return response
+            
+            else:
+                # XLSX Export using openpyxl
+                try:
+                    from openpyxl import Workbook
+                    from openpyxl.styles import Font, PatternFill, Alignment
+                except ImportError:
+                    return Response(
+                        {"error": "openpyxl library not installed. Please install it to export XLSX files."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "Archival Attendance"
+                
+                # Header styling
+                header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                header_font = Font(bold=True, color="FFFFFF")
+                
+                headers = [
+                    'Roll Number', 'Student Name', 'Section', 'Subject', 
+                    'Semester', 'Session Date', 'Status', 'Original Timestamp',
+                    'Recorded By', 'Archived By', 'Archived At', 'Archive Note'
+                ]
+                
+                for col_num, header in enumerate(headers, 1):
+                    cell = ws.cell(row=1, column=col_num)
+                    cell.value = header
+                    cell.fill = header_fill
+                    cell.font = header_font
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                
+                # Data rows
+                for row_num, archive in enumerate(archives, 2):
+                    archived_by = f"{archive.archived_by.first_name} {archive.archived_by.last_name}" if archive.archived_by else "Unknown"
+                    ws.cell(row=row_num, column=1, value=archive.student_roll_number)
+                    ws.cell(row=row_num, column=2, value=archive.student_name)
+                    ws.cell(row=row_num, column=3, value=archive.section_name)
+                    ws.cell(row=row_num, column=4, value=archive.subject_name)
+                    ws.cell(row=row_num, column=5, value=archive.semester)
+                    ws.cell(row=row_num, column=6, value=archive.session_date.strftime('%Y-%m-%d'))
+                    ws.cell(row=row_num, column=7, value='Present' if archive.status else 'Absent')
+                    ws.cell(row=row_num, column=8, value=archive.original_timestamp.strftime('%Y-%m-%d %H:%M:%S'))
+                    ws.cell(row=row_num, column=9, value=archive.original_recorded_by)
+                    ws.cell(row=row_num, column=10, value=archived_by)
+                    ws.cell(row=row_num, column=11, value=archive.archived_at.strftime('%Y-%m-%d %H:%M:%S'))
+                    ws.cell(row=row_num, column=12, value=archive.archive_note or '')
+                
+                # Auto-adjust column widths
+                for column in ws.columns:
+                    max_length = 0
+                    column_letter = column[0].column_letter
+                    for cell in column:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+                    adjusted_width = min(max_length + 2, 50)
+                    ws.column_dimensions[column_letter].width = adjusted_width
+                
+                # Save to response
+                response = HttpResponse(
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                response['Content-Disposition'] = f'attachment; filename="archival_attendance_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
+                wb.save(response)
+                
+                return response
+        
+        except Program.DoesNotExist:
+            return Response(
+                {"error": "Subject not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to export archival attendance: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

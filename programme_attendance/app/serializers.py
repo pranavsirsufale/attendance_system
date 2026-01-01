@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Teacher,Student, Subject , Program , Timetable , Session, Attendance , Section , CalendarException
+from .models import Teacher,Student, Subject , Program , Timetable , Session, Attendance , Section , CalendarException, ArchivalAttendance
 
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
@@ -255,3 +255,26 @@ class AttendanceStatsSerializer(serializers.Serializer):
     absent = serializers.IntegerField()
     attendance_percentage = serializers.FloatField()
     recorded_by_name = serializers.CharField()
+
+
+class ArchivalAttendanceSerializer(serializers.ModelSerializer):
+    archived_by_name = serializers.SerializerMethodField()
+    status_display = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ArchivalAttendance
+        fields = [
+            'id', 'student_roll_number', 'student_name', 'section_name',
+            'subject_name', 'session_date', 'semester', 'status', 'status_display',
+            'original_timestamp', 'original_recorded_by', 'archived_by',
+            'archived_by_name', 'archived_at', 'archive_note'
+        ]
+        read_only_fields = ['id', 'archived_at', 'archived_by']
+    
+    def get_archived_by_name(self, obj):
+        if obj.archived_by:
+            return f"{obj.archived_by.first_name} {obj.archived_by.last_name}"
+        return "Unknown"
+    
+    def get_status_display(self, obj):
+        return "Present" if obj.status else "Absent"

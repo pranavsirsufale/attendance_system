@@ -396,7 +396,7 @@ function StudentProfile({ notifyUser }) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [students, setStudents] = useState([]);
-  const [page, setPage] = useState(0);
+  // const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -485,7 +485,12 @@ function StudentProfile({ notifyUser }) {
           setSubjects(data.results.subjects);
           setStudents(data.results.students);
           setTotalCount(data.count);
-          setPage(newPage);
+          if (startDate && endDate) {
+          notifyUser(`Successfully retreived ${data.count} records, from ${startDate} to ${endDate}`, 'success')
+          }else {
+            notifyUser(`Successfully retreived ${data.count} records`, 'success')
+          }
+          // setPage(newPage);
         } else {
           notifyUser('No records found for the selected criteria.', 'warning');
           setSubjects([]);
@@ -504,17 +509,15 @@ function StudentProfile({ notifyUser }) {
     }
   };
 
-  // Handle page change
+
   const handleChangePage = (event, newPage) => {
     fetchStudentAttendance(newPage);
   };
 
-  // Handle row click
   const handleRowClick = (studentId) => {
     navigate(`/admin/student/${studentId}`);
   };
 
-  // Validate date range
   const validateDateRange = () => {
     if (startDate && endDate) {
       const start = new Date(startDate);
@@ -546,7 +549,7 @@ function StudentProfile({ notifyUser }) {
     setSemesters([]);
     setStudents([]);
     setSubjects([]);
-    setPage(0);
+    // setPage(0);
     setTotalCount(0);
     if (selectedProgram) {
       fetchSections(selectedProgram);
@@ -558,7 +561,7 @@ function StudentProfile({ notifyUser }) {
     setSemesters([]);
     setStudents([]);
     setSubjects([]);
-    setPage(0);
+    // setPage(0);
     setTotalCount(0);
     if (selectedSection) {
       fetchSemesters(selectedSection);
@@ -568,7 +571,7 @@ function StudentProfile({ notifyUser }) {
   useEffect(() => {
     setStudents([]);
     setSubjects([]);
-    setPage(0);
+    // setPage(0);
     setTotalCount(0);
     if (selectedProgram && selectedSection && selectedSemester && validateDateRange()) {
       fetchStudentAttendance(0);
@@ -700,6 +703,7 @@ function StudentProfile({ notifyUser }) {
             <Table sx={{ mb: 3, minWidth: 650, overflowX: 'auto' }}>
               <TableHead>
                 <TableRow sx={{ background: 'linear-gradient(to right, #3f51b5, #9c27b0)' }}>
+                  <TableCell sx={{ color: '#fff', fontWeight: 'bold'}}>Sr</TableCell>
                   <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>ID</TableCell>
                   <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Roll Number</TableCell>
                   <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Name</TableCell>
@@ -711,12 +715,13 @@ function StudentProfile({ notifyUser }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {students.map((student) => (
+                {students.map((student, index) => (
                   <TableRow
                     key={student.id}
                     onClick={() => handleRowClick(student.id)}
                     sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
                   >
+                    <TableCell>{index+1}</TableCell>
                     <TableCell>{student.id}</TableCell>
                     <TableCell>{student.roll_number}</TableCell>
                     <TableCell>{student.name}</TableCell>
@@ -733,15 +738,15 @@ function StudentProfile({ notifyUser }) {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
-            <TablePagination
+              </Table>
+            {/* <TableRow
               component="div"
-              count={totalCount}
+              totalCount
               page={page}
               onPageChange={handleChangePage}
               rowsPerPage={rowsPerPage}
               rowsPerPageOptions={[rowsPerPage]}
-            />
+              /> */}
           </>
         ) : (
           <Typography color="textSecondary">

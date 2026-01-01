@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Teacher,Student, Subject , Program , Timetable , Session, Attendance , Section , CalendarException
+from .models import Teacher,Student, Subject , Program , Timetable , Session, Attendance , Section , CalendarException, ArchivalAttendance
 
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
@@ -146,7 +146,7 @@ class TimetableCreateSerializer(serializers.Serializer):
             required_fields = ['day_of_week', 'subject', 'start_time']
             if not all(field in schedule for field in required_fields):
                 raise serializers.ValidationError(f"Each schedule must include {required_fields}")
-            if schedule['day_of_week'] not in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+            if schedule['day_of_week'] not in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']:
                 raise serializers.ValidationError("Invalid day of week")
             if schedule['start_time'] not in [slot[0] for slot in LECTURE_SLOTS]:
                 raise serializers.ValidationError(f"Start time must be one of {[slot[0] for slot in LECTURE_SLOTS]}")
@@ -167,6 +167,13 @@ class TimetableCreateSerializer(serializers.Serializer):
             if subject.semester != semester:
                 raise serializers.ValidationError(f"Subject {subject.name} (Semester {subject.semester}) does not match selected semester {semester}")
         return data
+
+class SingleSessionTimetableSerializer(serializers.Serializer):
+    section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())
+    subject = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all())
+    day_of_week = serializers.ChoiceField(choices=Timetable.DAY_CHOICES)
+    start_time = serializers.ChoiceField(choices=Timetable.LECTURE_SLOTS)
+    session_date = serializers.DateField()
 
 class AdminTeacherSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only = True ,
@@ -248,3 +255,26 @@ class AttendanceStatsSerializer(serializers.Serializer):
     absent = serializers.IntegerField()
     attendance_percentage = serializers.FloatField()
     recorded_by_name = serializers.CharField()
+
+
+class ArchivalAttendanceSerializer(serializers.ModelSerializer):
+    archived_by_name = serializers.SerializerMethodField()
+    status_display = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ArchivalAttendance
+        fields = [
+            'id', 'student_roll_number', 'student_name', 'section_name',
+            'subject_name', 'session_date', 'semester', 'status', 'status_display',
+            'original_timestamp', 'original_recorded_by', 'archived_by',
+            'archived_by_name', 'archived_at', 'archive_note'
+        ]
+        read_only_fields = ['id', 'archived_at', 'archived_by']
+    
+    def get_archived_by_name(self, obj):
+        if obj.archived_by:
+            return f"{obj.archived_by.first_name} {obj.archived_by.last_name}"
+        return "Unknown"
+    
+    def get_status_display(self, obj):
+        return "Present" if obj.status else "Absent"

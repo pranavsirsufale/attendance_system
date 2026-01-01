@@ -1,7 +1,7 @@
-# Manikchand Pahade Law College, Aurangabad Attendance Management System
+# Manikchand Pahade Law College, Chh. Sambhajinagar Attendance Moniterning/Tracking Portal
 
 <div align="center">
-  <img src="/attendance_system/attendance/frontend/public/logo.jpeg" alt="Law College Attendance System Logo" width="200"/>
+  <img src="frontend/public/logo.jpeg" alt="Law College Attendance Portal Logo" width="200"/>
   <br>
   <p><em>Streamlining attendance management for legal education</em></p>
   <!-- <p>
@@ -56,9 +56,9 @@ The **Manikchand Pahade Law College, Aurangabad Attendance Management System** i
 
 ## 💻 System Requirements
 
-- **Python**: `3.8+`
-- **Node.js**: `14.0+`
-- **Database**: MySQL `5.7+`
+- **Python**: `3.11+`
+- **Node.js**: `22+`
+- **Database**: MySQL `8+`
 - **Client Browsers**: Chrome, Firefox, Safari, Edge (latest versions)
 
 ## 🚀 Installation
@@ -172,11 +172,11 @@ Response:
   "results": [
     {
       "id": 1,
-      "student": "John Doe",
+      "student": "Pranav Sirsufale",
       "session": "Constitutional Law (Mon, 9:00 AM)",
       "status": "present",
       "timestamp": "2025-04-01T09:15:00Z",
-      "recorded_by": "Prof. Smith"
+      "recorded_by": "C. M. Rao"
     },
     // More records...
   ]
@@ -298,15 +298,15 @@ Regular database backups are essential:
 mysqldump -u root -p law_college > attendance_backup_$(date +%Y%m%d).sql
 
 # Restore from backup
-mysql -u root -p law_college < attendance_backup_20250401.sql
+mysql -u root -p law_college < {created unique database name}.sql
 ```
 
 ## 🆘 Support and Maintenance
 
 For technical support or system maintenance:
 - 📧 Email: [pranavsirsfuale@gmail.com](mailto:pranavsirsfuale@gmail.com) | [pranav.sirsufale@antaris.global](mailto:pranav.sirsufale@antaris.global)
-- ☎️ Phone: (+91) 8482852301
-- 📚 Documentation: See the [wiki](https://github.com/pranavsirsufale/attendance_system) section of this repository
+- ☎️ Phone: (+91) 8482852301, (+91) 8308822538
+- 📚 Documentation: See the [wiki](https://docs.google.com/document/d/e/2PACX-1vTUoNeKtTcvEG8-Ln_54hum8e_8CtpvEwIiEVRts9bbFMKT-Kl-K5vWpYVlBUNx0_yW5O2b94Z6KDop/pub?urp=gmail_link) section of this repository
 
 ## 📃 License
 
@@ -314,7 +314,7 @@ This software is proprietary and licensed exclusively to Manikchand Pahade law c
 
 ## 👏 Acknowledgments
 
-- Developed by [Pranav Sirsufale](https://www.linkedin.com/in/pranav-sirsufale-488ba4269/) ,[Rohan Managar](https://github.com/RohanMagar7)
+- Developed by [Pranav Sirsufale](https://www.linkedin.com/in/pranav-sirsufale-488ba4269/) ,[Rohan Magar](https://github.com/RohanMagar7)
 - Special thanks to [Dr. Bharti W. Gawali](https://bamu.irins.org/profile/57209) and the faculty and administrative staff for their input and testing feedback
 
 ---
@@ -322,8 +322,9 @@ This software is proprietary and licensed exclusively to Manikchand Pahade law c
 <div align="center">
   <p>© 2025 Manikchan Pahade Law College. Chh. Sambhajinagar All Rights Reserved by Pranav Sirsufale.</p>
   <p>
-    <a href="https://yourwebsite.edu">Website</a> •
-    <a href="https://twitter.com/yourlawcollege">Twitter</a> •
-    <a href="https://facebook.com/yourlawcollege">Facebook</a>
+    <a href="https://hashnode.com/@pranavsirsufale">Hashnode</a> •
+    <a href="https://www.linkedin.com/in/pranav-sirsufale-488ba4269/">Linkedin</a> •
+    <a href="https://github.com/pranavsirsufale">Github</a> •
+    <a href="https://docs.google.com/document/d/e/2PACX-1vTUoNeKtTcvEG8-Ln_54hum8e_8CtpvEwIiEVRts9bbFMKT-Kl-K5vWpYVlBUNx0_yW5O2b94Z6KDop/pub?urp=gmail_link">Manual of Attendance Portal<a>
   </p>
 </div>

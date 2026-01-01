@@ -653,7 +653,7 @@ function AdminDashboard({ notifyUser }) {
           </Link>
 
           {/* Card for Manage Timetables */}
-          <Link to="/admin/timetables" className="w-full flex justify-center">
+          {/* <Link to="/admin/timetables" className="w-full flex justify-center">
             <StyledCard
               whilehover={{ scale: 1.02 }}
               whiletap={{ scale: 0.98 }}
@@ -667,7 +667,7 @@ function AdminDashboard({ notifyUser }) {
                 <button className="card__button">View Timetables</button>
               </form>
             </StyledCard>
-          </Link>
+          </Link> */}
 
           {/* Card for Manage Sessions */}
           <Link to="/admin/sessions" className="w-full flex justify-center">
@@ -754,6 +754,8 @@ function AdminDashboard({ notifyUser }) {
             </StyledCard>
           </Link>
 
+
+
           {/* Card for Student Profiles */}
           <Link to="/admin/student-profile" className="w-full flex justify-center">
             <StyledCard
@@ -770,6 +772,41 @@ function AdminDashboard({ notifyUser }) {
               </form>
             </StyledCard>
           </Link>
+
+          {/* Card for backup of database */}
+          <Link to="/admin/database-backup" className="w-full flex justify-center">
+            <StyledCard
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
+              className="database-backup"
+            >
+              <span className="card__title">Get Database Backup</span>
+              <p className="card__content">
+                Get the all database backup along with all records and tables.
+              </p>
+              <form className="card__form">
+                <button className="card__button">retreive backup</button>
+              </form>
+            </StyledCard>
+          </Link>
+
+          {/* Card for Archival Attendance */}
+          <Link to="/admin/archival-attendance" className="w-full flex justify-center">
+            <StyledCard
+              whilehover={{ scale: 1.02 }}
+              whiletap={{ scale: 0.98 }}
+              className="archival-attendance-card"
+            >
+              <span className="card__title">Archival Attendance</span>
+              <p className="card__content">
+                Create and view permanent historical attendance snapshots preserved independently.
+              </p>
+              <form className="card__form">
+                <button className="card__button">Manage Archives</button>
+              </form>
+            </StyledCard>
+          </Link>
+
         </motion.div>
       )}
     </div>

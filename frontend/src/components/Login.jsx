@@ -27,15 +27,13 @@ function Login({setIsAdmin , notifyUser}) {
         notifyUser('Logged in Succcessfully.' , 'success')
         const token = response.data.access;
         if (response?.data?.access){
-          console.log("Token:", token);
           const response = await axios.get(
             "http://localhost:8000/api/teacher-info/",
             {
               headers: { Authorization: `Bearer ${token}` },
             }
           );
-          console.log(response)
-                setIsAdmin(response.data.is_admin);
+        setIsAdmin(response.data.is_admin);
 
       }}
 

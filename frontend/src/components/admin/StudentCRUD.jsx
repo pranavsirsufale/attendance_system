@@ -83,7 +83,7 @@ function StudentCRUD({notifyUser}) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPrograms(response.data);
-      console.log("Programs fetched:", response.data);
+      // console.log("Programs fetched:", response.data);
     } catch (err) {
       setError(`Failed to load programs: ${err.response?.data?.detail || err.message}`);
     } finally {
@@ -98,7 +98,7 @@ function StudentCRUD({notifyUser}) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSections(response.data);
-      console.log(`Sections for program ${programId}:`, response.data);
+      // console.log(`Sections for program ${programId}:`, response.data);
     } catch (err) {
       setError(`Failed to load sections: ${err.response?.data?.detail || err.message}`);
     }
@@ -111,7 +111,7 @@ function StudentCRUD({notifyUser}) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSemesters(response.data.semesters);
-      console.log(`Semesters for section ${sectionId}:`, response.data.semesters);
+      // console.log(`Semesters for section ${sectionId}:`, response.data.semesters);
     } catch (err) {
       setError(`Failed to load semesters: ${err.response?.data?.detail || err.message}`);
       setSemesters([]);
@@ -129,7 +129,6 @@ function StudentCRUD({notifyUser}) {
       if(response.status === 200){
         notifyUser(`${response.data.length} records found successfully for the semester ${semester}` , 'info')
       }
-   console.log(response)
     } catch (err) {
       setError(`Failed to load students: ${err.response?.data?.detail || err.message}`);
       notifyUser(`Failed to load students: ${err.response?.data?.detail || err.message}` , 'error');
@@ -152,7 +151,6 @@ function StudentCRUD({notifyUser}) {
     }
     try {
       const payload = { ...formData };
-      console.log("Submitting payload:", payload);
       if (editingStudentId) {
         const response = await axios.put(
           `http://localhost:8000/api/admin/students/${editingStudentId}/`,

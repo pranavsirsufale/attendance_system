@@ -1,5 +1,7 @@
+import calendar, subprocess, os, sys, jwt, csv, re, traceback, logging
 from django.shortcuts import render
 import rest_framework
+from django.conf import settings
 from rest_framework.viewsets import ModelViewSet
 from django.http import HttpResponse,StreamingHttpResponse
 from django.utils import timezone
@@ -14,41 +16,25 @@ from app.permissions import IsAdmin
 from django.db.models import Count, Q , F , ExpressionWrapper , FloatField , DecimalField, CharField , Value,Sum , Case, When, IntegerField
 from django.contrib.auth.models import User
 from datetime import datetime, timedelta
-import calendar
-from .models import Session , Program, Attendance, Teacher, Student, Subject, Timetable, CalendarException , Section
+from .models import Session , Program, Attendance, Teacher, Student, Subject, Timetable, CalendarException , Section, ArchivalAttendance
 from .serializers import (
     SessionSerializer, AttendanceSerializer , TimetableCreateSerializer, TeacherSerializer, StudentSerializer,
     TimetableSerializer, CalendarExceptionSerializer, ProgramSerializer , SubjectSerializer , SectionSerializer
     , AdminTeacherSerializer , AdminStudentSerializer , AdminTimetableSerializer,AttendanceStatsSerializer,
-    StudentDetailSerializer, AttendanceSummarySerializer
+    StudentDetailSerializer, AttendanceSummarySerializer, SingleSessionTimetableSerializer, ArchivalAttendanceSerializer
 )
 from django.db.models.functions import Concat
 from django.db import IntegrityError,transaction
-import logging
-import traceback
-import sys
-import jwt
-import csv
 from io import StringIO
-import re
 
 
-
-# Logging setup
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', stream=sys.stdout)
-
 
 class StandardPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
     max_page_size = 100
-
-
-# class AttendanceStatsPagination(PageNumberPagination):
-#     page_size = 20
-#     page_size_query_param = 'page_size'
-#     max_page_size = 100
 
 class StudentListView(APIView):
     permission_classes = [IsAuthenticated]
@@ -148,9 +134,7 @@ class AdminAttendanceStatsView(APIView):
             semester = request.query_params.get('semester')
             date = request.query_params.get('date')
             end_date = request.query_params.get('end_date')
-
             sessions = Session.objects.select_related('timetable__section__program', 'timetable__subject', 'timetable__teacher').filter(status='Completed')
-
             if section_id:
                 sessions = sessions.filter(timetable__section_id=section_id)
             if subject_id:
@@ -165,8 +149,8 @@ class AdminAttendanceStatsView(APIView):
                 sessions = sessions.filter(timetable__section__year=year)
             if semester:
                 sessions = sessions.filter(timetable__subject__semester=semester)
-
             if period == 'daily' and date:
+                start_date = date
                 sessions = sessions.filter(date=date)
                 if not end_date:
                     end_date = (datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
@@ -182,10 +166,12 @@ class AdminAttendanceStatsView(APIView):
                 start_date = sessions.filter(timetable__subject__semester=semester).order_by('date').first().date if sessions.exists() else datetime.now().date()
                 end_date = sessions.filter(timetable__subject__semester=semester).order_by('-date').first().date if sessions.exists() else datetime.now().date()
                 sessions = sessions.filter(date__range=[start_date, end_date])
+            elif period == "custom" and date and end_date:
+                start_date = date
+                sessions = sessions.filter(date__range=[start_date, end_date])
             else:
                 start_date = sessions.order_by('date').first().date if sessions.exists() else datetime.now().date()
                 end_date = sessions.order_by('-date').first().date if sessions.exists() else datetime.now().date()
-
             stats = (
                 Attendance.objects.filter(session__in=sessions)
                 .select_related('student', 'recorded_by')
@@ -403,7 +389,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
         if not daily_schedules:
             raise ValidationError("At least one daily schedule is required.")
 
-        for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+        for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']:
             existing = Timetable.objects.filter(section=section, day_of_week=day, teacher=teacher).count()
             new_for_day = len([s for s in daily_schedules if s['day_of_week'] == day])
             if existing + new_for_day > 5:
@@ -418,7 +404,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
                 ).exists():
                     raise ValidationError(f"Teacher already scheduled on {day} at {schedule['start_time']} for this semester.")
 
-        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
+        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6}
         created_timetables = []
         for schedule in daily_schedules:
             timetable = Timetable.objects.create(
@@ -446,6 +432,63 @@ class TimetableViewSet(viewsets.ModelViewSet):
 
         timetable_serializer = TimetableSerializer(created_timetables, many=True)
         return timetable_serializer.data
+
+class SingleSessionTimetableView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            serializer = SingleSessionTimetableSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
+            teacher = Teacher.objects.get(user=request.user)
+            section = data['section']
+            subject = data['subject']
+            day_of_week = data['day_of_week']
+            start_time = data['start_time']
+            session_date = data['session_date']
+
+            # Validate date matches day_of_week
+            day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6}
+            if session_date.weekday() != day_of_week_map[day_of_week]:
+                return Response({"detail": f"Selected date {session_date} does not match {day_of_week}"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check for conflicts
+            if Timetable.objects.filter(
+                teacher=teacher,
+                day_of_week=day_of_week,
+                start_time=start_time,
+                semester_start_date__lte=session_date,
+                semester_end_date__gte=session_date
+            ).exists():
+                return Response({"detail": f"Teacher already scheduled on {day_of_week} at {start_time}"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create timetable with a single-day duration
+            timetable = Timetable.objects.create(
+                section=section,
+                teacher=teacher,
+                subject=subject,
+                day_of_week=day_of_week,
+                start_time=start_time,
+                semester_start_date=session_date,
+                semester_end_date=session_date
+            )
+
+            # Create single session
+            session = Session.objects.create(
+                timetable=timetable,
+                date=session_date,
+                status='Scheduled'
+            )
+
+            return Response(TimetableSerializer(timetable).data, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Teacher.DoesNotExist:
+            return Response({"detail": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error("Unexpected error: %s\n%s", str(e), traceback.format_exc())
+            return Response({"detail": f"Server error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 '''
 
@@ -722,13 +765,15 @@ class MarkAttendanceView(generics.GenericAPIView):
                     continue
                 # Convert string status to boolean
                 status_value = True if entry['status'] == 'Present' else False
+                combined_datetime = datetime.combine(session.date, session.timetable.start_time)
                 Attendance.objects.update_or_create(
                     student=student,
                     session=session,
                     defaults={
                         'status': status_value,
                         'recorded_by': teacher,
-                        'timestamp': session.date
+                        'timestamp': combined_datetime
+                        # 'timestamp': session.date
                     })
 
             session.status = 'Completed'
@@ -756,7 +801,6 @@ class AttendanceStatsView(generics.GenericAPIView):
         try:
             student = Student.objects.get(roll_number=roll_number)
             section = student.section
-
             sessions = Session.objects.filter(
                 timetable__section=section, status='Completed'
             )
@@ -865,16 +909,12 @@ def get_sections(request):
 @permission_classes([IsAuthenticated])
 def get_subjects_for_section(request):
     section_id = request.query_params.get('section_id')
-
     semester_start_date = request.query_params.get('semester_start_date')
-
     if not section_id or not semester_start_date:
         return Response({"error": "Section ID and semester start date are required"}, status=status.HTTP_400_BAD_REQUEST)
     try:
         section = Section.objects.get(id=section_id)
-
         start_date = datetime.strptime(semester_start_date, '%Y-%m-%d').date()
-
         # Infer semester: Jan-Jun = odd (1, 3, 5), Jul-Dec = even (2, 4, 6)
         semester = (section.year * 2 - 1) if start_date.month <= 6 else (section.year * 2)
         # Filter subjects by semester and optionally by section-specific logic if Subject model has a section relation
@@ -923,6 +963,7 @@ class SectionSemesterWiseDataView(APIView):
 #!                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 #!                       █    THE ADMIN VIEWS APPEAR HERE     █
 #!                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
 class AdminTeacherViewSet(viewsets.ModelViewSet):
     queryset = Teacher.objects.all()
     serializer_class = AdminTeacherSerializer
@@ -991,7 +1032,6 @@ class AdminTeacherViewSet(viewsets.ModelViewSet):
             logger.error(f"Failed to update teacher : {str(e)}")
             raise
 
-
     def destroy(self,request , *args,**kwargs):
         teacher = self.get_object()
         user = teacher.user
@@ -1009,7 +1049,6 @@ class SemesterForSectionViewTest(APIView):
         section = request.query_params.get('section_id')
         return Response({"data":'section has found good !!!!!!!!'})
 
-# -- new endpoint for semester ---
 class SemestersForSectionView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
     def get(self, request):
@@ -1163,7 +1202,6 @@ class AdminSubjectViewSet(viewsets.ModelViewSet):
     serializer_class = SubjectSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
 
-
     def get_queryset(self):
         queryset = super().get_queryset()
         semester = self.request.query_params.get('semester')
@@ -1176,9 +1214,6 @@ class AdminSubjectViewSet(viewsets.ModelViewSet):
         return queryset
 
 class AdminSectionViewSet(viewsets.ModelViewSet):
-    """
-    Admin-only viewset for managing sections.
-    """
     queryset = Section.objects.all()
     serializer_class = SectionSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -1266,8 +1301,8 @@ class AdminTimetableViewSet(viewsets.ModelViewSet):
         if self.action == 'create' :
             return TimetableCreateSerializer
         elif self.action in ['update', 'partial_update']:
-            return AdminTimetableSerializer  # for update
-        return TimetableSerializer ### For read operation
+            return AdminTimetableSerializer
+        return TimetableSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -1276,8 +1311,6 @@ class AdminTimetableViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(section_id = section_id)
         return queryset
 
-
-
     def perform_create(self,serializer):
         validated_data = serializer.validated_data
         teacher = validated_data['teacher']
@@ -1285,14 +1318,10 @@ class AdminTimetableViewSet(viewsets.ModelViewSet):
         section = validated_data['section']
         semester_start_date = validated_data.get('semester_start_date')
         semester_end_date = validated_data.get('semester_end_date')
-
         if not daily_schedules:
             raise ValidationError('At least one daily schedules is required ')
-
-
-        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
+        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6}
         created_timetables = []
-
         for schedule in daily_schedules:
             timetable = Timetable.objects.create(
                 section = section ,
@@ -1317,17 +1346,14 @@ class AdminTimetableViewSet(viewsets.ModelViewSet):
                     )
                 current_date += timedelta(days = 1)
 
-        # REturn serialized data for reponse
         timetable_serializer = TimetableSerializer(created_timetables , many = True)
-        self.response_data = timetable_serializer.data # Store for response
-
+        self.response_data = timetable_serializer.data
 
     def create(self,request,*args,**kwargs):
         serializer = self.get_serializer(data = request.data)
         serializer.is_valid(raise_exception = True)
         self.perform_create(serializer)
         return Response(self.response_data, status = status.HTTP_201_CREATED)
-
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -1339,8 +1365,6 @@ class AdminTimetableViewSet(viewsets.ModelViewSet):
         created_timetables = serializer.context.get('created_timetables', [serializer.instance])
         response_serializer = TimetableSerializer(created_timetables, many=True)
         return Response(response_serializer.data)
-
-
 
     '''
     def perform_update(self,serializer):
@@ -1366,7 +1390,6 @@ class AdminTimetableViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         instance = serializer.save()
-        # Delete existing sessions for all related timetables
         related_timetables = Timetable.objects.filter(
             section=instance.section,
             teacher=instance.teacher,
@@ -1374,9 +1397,7 @@ class AdminTimetableViewSet(viewsets.ModelViewSet):
             semester_end_date=instance.semester_end_date
         )
         Session.objects.filter(timetable__in=related_timetables).delete()
-
-        # Regenerate sessions for all related timetables
-        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5}
+        day_of_week_map = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6}
         start_date = instance.semester_start_date
         end_date = instance.semester_end_date
         for timetable in related_timetables:
@@ -1404,7 +1425,6 @@ class SectionForProgramView(APIView):
         program_id = request.query_params.get('program_id')
         if not program_id:
             return Response({'error':"program_id is required" }, status = status.HTTP_400_BAD_REQUEST)
-
         try:
             sections = Section.objects.filter(program_id = program_id)
             print(sections)
@@ -1415,7 +1435,6 @@ class SectionForProgramView(APIView):
         except ValueError as e:
             return Response({"error":"the program Id must be an integer"},status = status.HTTP_400_BAD_REQUEST)
 
-# Ensure semester For Section View is unchanged and works
 class SemestersForSectionView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -1589,7 +1608,6 @@ class RemoveStudentsView(APIView):
             logger.error(f"Error in RemoveStudentsView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
-# admin attendance export by teacher-subject
 class AdminAttendanceExportView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -1756,11 +1774,6 @@ class AdminHolidayManagement(generics.ListCreateAPIView):
         holiday = serializer.save()
         Session.objects.filter(date=holiday.date).update(status='Cancelled')
 
-class SessionPagination(PageNumberPagination):
-    page_size = 20 # default batch size
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
 class BulkStudentUploadView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -1820,10 +1833,8 @@ class BulkStudentUploadView(APIView):
                     section_id=student['section_id'],
                     semester=student['semester']
                 ))
-
             if errors:
                 return Response({"error": "; ".join(errors)}, status=400)
-
             # Bulk create students
             try:
                 Student.objects.bulk_create(student_objects)
@@ -1845,13 +1856,13 @@ class AdminSessionViewSet(viewsets.ModelViewSet):
     queryset = Session.objects.all()
     serializer_class = SessionSerializer
     permission_classes = [IsAuthenticated , IsAdmin]
-    pagination_class = SessionPagination # ADd pagination
+    pagination_class = StandardPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()
         section_id = self.request.query_params.get('section_id')
-        teacher_id = self.request.query_params.get('teacher_id') # add teacher filter
-        semester = self.request.query_params.get('semester')        # add semester filter
+        teacher_id = self.request.query_params.get('teacher_id')
+        semester = self.request.query_params.get('semester')
 
         if section_id :
             queryset = queryset.filter( timetable__section_id = section_id)
@@ -1860,32 +1871,24 @@ class AdminSessionViewSet(viewsets.ModelViewSet):
         if semester :
             queryset = queryset.filter( timetable__subject__semester = semester)
 
-        return queryset.order_by('date') # Order for consistency
-
-
-
-
-    permission_classes = [IsAuthenticated]
+        return queryset.order_by('date')
 
     def get(self, request):
         try:
-            date = request.query_params.get('date')  # Format: yyyy-MM-dd
+            date = request.query_params.get('date')
             section_id = request.query_params.get('section_id')
             if not date:
                 return Response({"error": "Date parameter is required (format: yyyy-MM-dd)"}, status=400)
-
             try:
                 date_obj = datetime.strptime(date, '%Y-%m-%d').date()
             except ValueError:
                 return Response({"error": "Invalid date format. Use yyyy-MM-dd"}, status=400)
-
             sessions = Session.objects.filter(
                 date=date_obj,
                 timetable__subject__teacher_id=request.user.id
             )
             if section_id:
                 sessions = sessions.filter(timetable__section_id=section_id)
-
             serializer = SessionSerializer(sessions, many=True)
             return Response(serializer.data, status=200)
 
@@ -1898,7 +1901,7 @@ class ScheduledDatesView(APIView):
 
     def get(self, request):
         try:
-            month = request.query_params.get('month')  # Format: yyyy-MM
+            month = request.query_params.get('month')
             section_id = request.query_params.get('section_id')
             if not month:
                 return Response({"error": "Month parameter is required (format: yyyy-MM)"}, status=400)
@@ -1929,7 +1932,7 @@ class SessionsByDateView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
-            date = request.query_params.get('date')  # Format: yyyy-MM-dd
+            date = request.query_params.get('date')
             section_id = request.query_params.get('section_id')
             if not date:
                 return Response({"error": "Date parameter is required (format: yyyy-MM-dd)"}, status=400)
@@ -1952,15 +1955,9 @@ class SessionsByDateView(APIView):
             logger.error(f"Error in SessionsByDateView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
-# class StudentAttendancePagination(PageNumberPagination):
-#     page_size = 20
-#     page_size_query_param = 'page_size'
-#     max_page_size = 100
-
 class StudentAttendanceView(APIView):
     permission_classes = [IsAuthenticated]
-    pagination_class = StandardPagination
-
+    # pagination_class = StandardPagination
     def get(self, request):
         try:
             program_id = request.query_params.get('program_id')
@@ -2054,17 +2051,533 @@ class StudentAttendanceView(APIView):
 
             # Prepare student data
             student_data = list(student_attendance.values())
-            paginator = self.pagination_class()
-            paginated_students = paginator.paginate_queryset(student_data, request)
+            # paginator = self.pagination_class()
+            # paginated_students = paginator.paginate_queryset(student_data, request)
+            # print(paginated_students)
 
-            return paginator.get_paginated_response({
+            # return paginator.get_paginated_response({
+            return Response({
+                'count' : len(student_data),
+                "results": {
                 'subjects': SubjectSerializer(subjects, many=True).data,
-                'students': paginated_students,
+                'students': student_data,
                 'start_date': start_date.isoformat() if start_date else None,
                 'end_date': end_date.isoformat() if end_date else None
-            })
+            }})
 
         except Exception as e:
             logger.error(f"Error in StudentAttendanceView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
+
+class MySQLBackupView(APIView):
+    permission_classes = [IsAdmin]
+
+    def post(self, request, *args, **kwargs):
+        db_config = settings.DATABASES.get('default')
+
+        if not db_config:
+            return Response(
+                {"error": "Default database configuration not found in settings.py."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        MYSQL_HOST = db_config.get('HOST', 'localhost')
+        MYSQL_USER = db_config.get('USER')
+        MYSQL_PASSWORD = db_config.get('PASSWORD')
+        MYSQL_DATABASE = db_config.get('NAME')
+        if not all([MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE]):
+            return Response(
+                {"error": "Missing essential MySQL database credentials (USER, PASSWORD, NAME) in settings.py."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        BACKUP_DIR = getattr(settings, 'MYSQL_BACKUP_DIR', os.path.join(settings.BASE_DIR, 'mysql_backups'))
+        # 1. Ensure the backup directory exists
+        try:
+            os.makedirs(BACKUP_DIR, exist_ok=True)
+        except OSError as e:
+            print(f"Error creating backup directory {BACKUP_DIR}: {e}")
+            return Response(
+                {"error": f"Failed to create backup directory on server: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file_name = f"{MYSQL_DATABASE}_backup_{timestamp}.sql"
+        backup_path = os.path.join(BACKUP_DIR, backup_file_name)
+
+        try:
+            command = [
+                'mysqldump',
+                f'--host={MYSQL_HOST}',
+                f'--user={MYSQL_USER}',
+                f'--password={MYSQL_PASSWORD}',
+                '--single-transaction',
+                MYSQL_DATABASE
+            ]
+
+            process = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+
+            with open(backup_path, 'w', encoding='utf-8') as f:
+                f.write(process.stdout)
+
+            print(f"MySQL backup successful: {backup_path}")
+            return Response(
+                {
+                    "message": f"Database '{MYSQL_DATABASE}' backed up successfully.",
+                    "filename": backup_file_name,
+                    "path": backup_path
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except subprocess.CalledProcessError as e:
+            error_message = f"MySQL backup command failed. Stderr: {e.stderr.strip()}"
+            print(f"Error during mysqldump execution: {error_message}")
+            return Response(
+                {"error": error_message},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except FileNotFoundError:
+            error_message = "'mysqldump' command not found. Please ensure it's installed and in your server's PATH."
+            print(f"Error: {error_message}")
+            return Response(
+                {"error": error_message},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            error_message = f"An unexpected server error occurred during backup: {str(e)}"
+            print(f"An unexpected error occurred: {error_message}")
+            return Response(
+                {"error": error_message},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ArchivalAttendanceView(APIView):
+    """
+    Admin-only view for managing archival attendance records.
+    GET: Retrieve archived attendance with filtering
+    POST: Create archival snapshot from existing attendance records
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+    
+    def get(self, request):
+        """
+        Retrieve archived attendance with optional filters:
+        - student_roll_number: Filter by student
+        - subject_name: Filter by subject
+        - section_name: Filter by section
+        - semester: Filter by semester
+        - start_date: Filter by session date (from)
+        - end_date: Filter by session date (to)
+        - archived_after: Filter by archive date (from)
+        """
+        try:
+            archives = ArchivalAttendance.objects.all()
+            
+            # Apply filters
+            student_roll = request.query_params.get('student_roll_number')
+            if student_roll:
+                archives = archives.filter(student_roll_number__icontains=student_roll)
+            
+            subject = request.query_params.get('subject_name')
+            if subject:
+                archives = archives.filter(subject_name__icontains=subject)
+            
+            section = request.query_params.get('section_name')
+            if section:
+                archives = archives.filter(section_name__icontains=section)
+            
+            semester = request.query_params.get('semester')
+            if semester:
+                archives = archives.filter(semester=semester)
+            
+            start_date = request.query_params.get('start_date')
+            if start_date:
+                archives = archives.filter(session_date__gte=start_date)
+            
+            end_date = request.query_params.get('end_date')
+            if end_date:
+                archives = archives.filter(session_date__lte=end_date)
+            
+            archived_after = request.query_params.get('archived_after')
+            if archived_after:
+                archives = archives.filter(archived_at__gte=archived_after)
+            
+            # Pagination
+            paginator = StandardPagination()
+            paginated_archives = paginator.paginate_queryset(archives, request)
+            serializer = ArchivalAttendanceSerializer(paginated_archives, many=True)
+            
+            return paginator.get_paginated_response(serializer.data)
+        
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to retrieve archival attendance: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def post(self, request):
+        """
+        Create archival snapshot from existing attendance records.
+        Required fields:
+        - filters: Dict with filters (program_id, semester, start_date, end_date)
+        - archive_note: Optional note about this archive
+        
+        This will snapshot all matching attendance records into the archive.
+        """
+        try:
+            teacher = Teacher.objects.get(user=request.user)
+            
+            filters = request.data.get('filters', {})
+            archive_note = request.data.get('archive_note', '')
+            
+            # Build attendance query
+            attendance_query = Attendance.objects.select_related(
+                'student', 'student__section', 'student__section__program',
+                'session', 'session__timetable', 'session__timetable__subject',
+                'recorded_by'
+            ).all()
+            
+            # Apply filters
+            program_id = filters.get('program_id')
+            if program_id:
+                attendance_query = attendance_query.filter(student__section__program_id=program_id)
+            
+            semester = filters.get('semester')
+            if semester:
+                attendance_query = attendance_query.filter(student__semester=semester)
+            
+            start_date = filters.get('start_date')
+            if start_date:
+                attendance_query = attendance_query.filter(session__date__gte=start_date)
+            
+            end_date = filters.get('end_date')
+            if end_date:
+                attendance_query = attendance_query.filter(session__date__lte=end_date)
+            
+            # Create archival records
+            archival_records = []
+            for attendance in attendance_query:
+                recorded_by_name = "Unknown"
+                if attendance.recorded_by:
+                    recorded_by_name = f"{attendance.recorded_by.first_name} {attendance.recorded_by.last_name}"
+                
+                archival_record = ArchivalAttendance(
+                    student_roll_number=attendance.student.roll_number,
+                    student_name=f"{attendance.student.first_name} {attendance.student.last_name}",
+                    section_name=str(attendance.student.section),
+                    subject_name=attendance.session.timetable.subject.name,
+                    session_date=attendance.session.date,
+                    semester=attendance.student.semester,
+                    status=attendance.status,
+                    original_timestamp=attendance.timestamp,
+                    original_recorded_by=recorded_by_name,
+                    archived_by=teacher,
+                    archive_note=archive_note
+                )
+                archival_records.append(archival_record)
+            
+            if not archival_records:
+                return Response(
+                    {"error": "No attendance records found matching the specified filters"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Bulk create archival records
+            ArchivalAttendance.objects.bulk_create(archival_records)
+            
+            return Response({
+                "message": f"Successfully archived {len(archival_records)} attendance records",
+                "count": len(archival_records),
+                "archived_by": f"{teacher.first_name} {teacher.last_name}",
+                "archived_at": timezone.now()
+            }, status=status.HTTP_201_CREATED)
+        
+        except Teacher.DoesNotExist:
+            return Response(
+                {"error": "Teacher profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to create archival snapshot: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ArchivalAttendanceStatsView(APIView):
+    """
+    Admin-only view for getting statistics about archived attendance.
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+    
+    def get(self, request):
+        """
+        Get summary statistics about archived attendance records.
+        """
+        try:
+            total_archived = ArchivalAttendance.objects.count()
+            
+            # Stats by semester
+            semester_stats = ArchivalAttendance.objects.values('semester').annotate(
+                count=Count('id'),
+                present_count=Sum(Case(When(status=True, then=1), default=0, output_field=IntegerField())),
+                absent_count=Sum(Case(When(status=False, then=1), default=0, output_field=IntegerField()))
+            ).order_by('semester')
+            
+            # Recent archives
+            recent_archives = ArchivalAttendance.objects.values(
+                'archived_at', 'archived_by__first_name', 'archived_by__last_name'
+            ).annotate(
+                count=Count('id')
+            ).order_by('-archived_at')[:10]
+            
+            # Format recent archives
+            recent_formatted = []
+            for archive in recent_archives:
+                recent_formatted.append({
+                    'archived_at': archive['archived_at'],
+                    'archived_by': f"{archive['archived_by__first_name']} {archive['archived_by__last_name']}" if archive['archived_by__first_name'] else "Unknown",
+                    'count': archive['count']
+                })
+            
+            return Response({
+                "total_archived_records": total_archived,
+                "semester_statistics": list(semester_stats),
+                "recent_archives": recent_formatted
+            }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to retrieve archival statistics: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+
+class ArchivalAttendanceDeleteView(APIView):
+    """
+    Admin-only view for deleting archival attendance records by semester.
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+    
+    def delete(self, request):
+        """
+        Delete archival attendance with filters:
+        - program_id: Filter by program (optional)
+        - semester: Filter by semester (required)
+        - start_date: Filter by session date from (optional)
+        - end_date: Filter by session date to (optional)
+        """
+        try:
+            semester = request.query_params.get('semester')
+            
+            if not semester:
+                return Response(
+                    {"error": "Semester is required for deletion"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            program_id = request.query_params.get('program_id')
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            
+            # Build query
+            archives = ArchivalAttendance.objects.filter(semester=semester)
+            
+            if program_id:
+                program = Program.objects.get(id=program_id)
+                archives = archives.filter(section_name__icontains=program.name)
+            
+            if start_date:
+                archives = archives.filter(session_date__gte=start_date)
+            
+            if end_date:
+                archives = archives.filter(session_date__lte=end_date)
+            
+            count = archives.count()
+            
+            if count == 0:
+                return Response(
+                    {"error": "No archival records found matching the criteria"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Delete the records
+            archives.delete()
+            
+            return Response({
+                "message": f"Successfully deleted {count} archival records",
+                "deleted_count": count,
+                "semester": semester
+            }, status=status.HTTP_200_OK)
+        
+        except Program.DoesNotExist:
+            return Response(
+                {"error": "Subject not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to delete archival attendance: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ArchivalAttendanceExportView(APIView):
+    """
+    Admin-only view for exporting archival attendance in XLSX or CSV format.
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+    
+    def get(self, request):
+        """
+        Export archival attendance with filters:
+        - program_id: Filter by program
+        - semester: Filter by semester
+        - start_date: Filter by session date from
+        - end_date: Filter by session date to
+        - format: 'xlsx' or 'csv' (default: xlsx)
+        """
+        try:
+            # Get filters
+            program_id = request.query_params.get('program_id')
+            semester = request.query_params.get('semester')
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            export_format = request.query_params.get('format', 'xlsx')
+            
+            # Build query
+            archives = ArchivalAttendance.objects.all()
+            
+            if program_id:
+                archives = archives.filter(section_name__icontains=Program.objects.get(id=program_id).name)
+            
+            if semester:
+                archives = archives.filter(semester=semester)
+            
+            if start_date:
+                archives = archives.filter(session_date__gte=start_date)
+            
+            if end_date:
+                archives = archives.filter(session_date__lte=end_date)
+            
+            archives = archives.order_by('semester', 'section_name', 'subject_name', 'student_roll_number', 'session_date')
+            
+            if export_format == 'csv':
+                # CSV Export
+                response = HttpResponse(content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename="archival_attendance_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+                
+                writer = csv.writer(response)
+                writer.writerow([
+                    'Roll Number', 'Student Name', 'Section', 'Subject', 
+                    'Semester', 'Session Date', 'Status', 'Original Timestamp',
+                    'Recorded By', 'Archived By', 'Archived At', 'Archive Note'
+                ])
+                
+                for archive in archives:
+                    archived_by = f"{archive.archived_by.first_name} {archive.archived_by.last_name}" if archive.archived_by else "Unknown"
+                    writer.writerow([
+                        archive.student_roll_number,
+                        archive.student_name,
+                        archive.section_name,
+                        archive.subject_name,
+                        archive.semester,
+                        archive.session_date.strftime('%Y-%m-%d'),
+                        'Present' if archive.status else 'Absent',
+                        archive.original_timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                        archive.original_recorded_by,
+                        archived_by,
+                        archive.archived_at.strftime('%Y-%m-%d %H:%M:%S'),
+                        archive.archive_note or ''
+                    ])
+                
+                return response
+            
+            else:
+                # XLSX Export using openpyxl
+                try:
+                    from openpyxl import Workbook
+                    from openpyxl.styles import Font, PatternFill, Alignment
+                except ImportError:
+                    return Response(
+                        {"error": "openpyxl library not installed. Please install it to export XLSX files."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "Archival Attendance"
+                
+                # Header styling
+                header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                header_font = Font(bold=True, color="FFFFFF")
+                
+                headers = [
+                    'Roll Number', 'Student Name', 'Section', 'Subject', 
+                    'Semester', 'Session Date', 'Status', 'Original Timestamp',
+                    'Recorded By', 'Archived By', 'Archived At', 'Archive Note'
+                ]
+                
+                for col_num, header in enumerate(headers, 1):
+                    cell = ws.cell(row=1, column=col_num)
+                    cell.value = header
+                    cell.fill = header_fill
+                    cell.font = header_font
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                
+                # Data rows
+                for row_num, archive in enumerate(archives, 2):
+                    archived_by = f"{archive.archived_by.first_name} {archive.archived_by.last_name}" if archive.archived_by else "Unknown"
+                    ws.cell(row=row_num, column=1, value=archive.student_roll_number)
+                    ws.cell(row=row_num, column=2, value=archive.student_name)
+                    ws.cell(row=row_num, column=3, value=archive.section_name)
+                    ws.cell(row=row_num, column=4, value=archive.subject_name)
+                    ws.cell(row=row_num, column=5, value=archive.semester)
+                    ws.cell(row=row_num, column=6, value=archive.session_date.strftime('%Y-%m-%d'))
+                    ws.cell(row=row_num, column=7, value='Present' if archive.status else 'Absent')
+                    ws.cell(row=row_num, column=8, value=archive.original_timestamp.strftime('%Y-%m-%d %H:%M:%S'))
+                    ws.cell(row=row_num, column=9, value=archive.original_recorded_by)
+                    ws.cell(row=row_num, column=10, value=archived_by)
+                    ws.cell(row=row_num, column=11, value=archive.archived_at.strftime('%Y-%m-%d %H:%M:%S'))
+                    ws.cell(row=row_num, column=12, value=archive.archive_note or '')
+                
+                # Auto-adjust column widths
+                for column in ws.columns:
+                    max_length = 0
+                    column_letter = column[0].column_letter
+                    for cell in column:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+                    adjusted_width = min(max_length + 2, 50)
+                    ws.column_dimensions[column_letter].width = adjusted_width
+                
+                # Save to response
+                response = HttpResponse(
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                response['Content-Disposition'] = f'attachment; filename="archival_attendance_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
+                wb.save(response)
+                
+                return response
+        
+        except Program.DoesNotExist:
+            return Response(
+                {"error": "Subject not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to export archival attendance: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 

@@ -74,7 +74,7 @@ class Student(models.Model):
             models.Index(fields=['roll_number']),
             models.Index(fields=['first_name', 'last_name']),
         ]
-        ordering = ['roll_number']  # <-- fixed typo here  
+        ordering = ['roll_number']  # <-- fixed typo here
 
 class Timetable(models.Model):
     DAY_CHOICES = [
@@ -84,13 +84,22 @@ class Timetable(models.Model):
         ('Thursday', 'Thursday'),
         ('Friday', 'Friday'),
         ('Saturday', 'Saturday'),
+        ('Sunday', 'Sunday')
     ]
     LECTURE_SLOTS = [
+    ('08:00:00', '08:00 AM - 09:00 AM'),
     ('08:30:00', '08:30 AM - 09:30 AM'),
+    ('09:00:00', '09:00 AM - 10:00 AM'),
     ('09:30:00', '09:30 AM - 10:30 AM'),
+    ('10:00:00', '10:00 AM - 11:00 AM'),
     ('10:30:00', '10:30 AM - 11:30 AM'),
+    ('11:00:00', '11:00 AM - 12:00 AM'),
+    ('11:30:00', '11:30 AM - 12:30 AM'),
     ('12:00:00', '12:00 PM - 01:00 PM'),
+    ('12:30:00', '12:30 PM - 01:30 PM'),
     ('01:00:00', '01:00 PM - 02:00 PM'),
+    ('01:30:00', '01:30 PM - 02:30 PM'),
+    ('02:00:00', '02:00 PM - 03:00 PM')
     ]
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="timetable")
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="timetable")
@@ -123,7 +132,6 @@ class Session(models.Model):
         verbose_name = "Session"
         verbose_name_plural = "Sessions"
 
-
 '''
 !! the first previous attendance model with string ( status )
 class Attendance(models.Model):
@@ -147,9 +155,7 @@ class Attendance(models.Model):
 class Attendance(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="attendance", db_index=True)
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="attendance", db_index=True)
-
     status = models.BooleanField(default=False, db_index=True)  # False = Absent, True = Present
-
     timestamp = models.DateTimeField(db_index=True)
     recorded_by = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True,db_index= True ,  related_name="attendance_records")
 
@@ -171,5 +177,42 @@ class CalendarException(models.Model):
     class Meta:
         verbose_name = "Calendar Exception"
         verbose_name_plural = "Calendar Exceptions"
+
+
+class ArchivalAttendance(models.Model):
+    """
+    Permanent historical attendance archive for admin-only access.
+    This stores attendance snapshots that are preserved even when 
+    students, sessions, or sections are deleted.
+    """
+    # Stored as text fields to preserve data even if originals are deleted
+    student_roll_number = models.CharField(max_length=20, db_index=True)
+    student_name = models.CharField(max_length=150)
+    section_name = models.CharField(max_length=100)
+    subject_name = models.CharField(max_length=100)
+    session_date = models.DateField(db_index=True)
+    semester = models.PositiveIntegerField()
+    status = models.BooleanField(default=False)  # False = Absent, True = Present
+    
+    # Original timestamp from the attendance record
+    original_timestamp = models.DateTimeField()
+    original_recorded_by = models.CharField(max_length=200)
+    
+    # Archive metadata
+    archived_by = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name="archived_records")
+    archived_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    archive_note = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"Archive: {self.student_roll_number} - {self.subject_name} on {self.session_date}"
+    
+    class Meta:
+        verbose_name = "Archival Attendance"
+        verbose_name_plural = "Archival Attendance Records"
+        ordering = ['-archived_at', '-session_date']
+        indexes = [
+            models.Index(fields=['student_roll_number', 'session_date']),
+            models.Index(fields=['archived_at']),
+        ]
 
 

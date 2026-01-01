@@ -41,12 +41,14 @@ urlpatterns = [
     path('teacher-attendance-stats/', views.TeacherAttendanceStatsView.as_view(), name='teacher_attendance_stats'),
 
     # path('semesters-for-section/' , views.SemestersForSectionView.as_view() , name = 'semester-for-section'),
+    path('backup/', views.MySQLBackupView.as_view(), name="get-database-backup"),
     path('students/bulk/',views.BulkStudentUploadView.as_view() , name='students-bulk'),
     path('students/pass/', views.PassStudentsView.as_view(), name='pass-students'),
     path("students-remove/", views.RemoveStudentsView.as_view(), name='remove-students'),
     path('student-details/<int:pk>/', views.StudentDetailView.as_view(), name='student-detail'),
     path('scheduled-dates/', views.ScheduledDatesView.as_view(), name='scheduled-dates'),
     path('sessions-by-date/', views.SessionsByDateView.as_view(), name='sessions-by-date'),
+    path('timetables/single-session/', views.SingleSessionTimetableView.as_view(), name='single-session-timetable'),
 
     path('semesters-for-section/', views.SemestersForSectionView.as_view(), name='semesters-for-section'),
     path('sections-for-program/', views.SectionForProgramView.as_view(), name='sections-for-program'),
@@ -56,6 +58,13 @@ urlpatterns = [
     path('admin/holidays/', views.AdminHolidayManagement.as_view(), name='admin-holidays'),
     path('admin/semesters/', views.SemestersForSectionView.as_view(), name='admin-semesters'),
     path('admin/section-semester-data/', views.SectionSemesterWiseDataView.as_view(), name='section-semester-data'),
+    
+    # Archival Attendance (Admin only) - MUST come before router.urls
+    path('admin/archival-attendance/export/', views.ArchivalAttendanceExportView.as_view(), name='admin-archival-export'),
+    path('admin/archival-attendance/delete/', views.ArchivalAttendanceDeleteView.as_view(), name='admin-archival-delete'),
+    path('admin/archival-attendance/stats/', views.ArchivalAttendanceStatsView.as_view(), name='admin-archival-stats'),
+    path('admin/archival-attendance/', views.ArchivalAttendanceView.as_view(), name='admin-archival-attendance'),
+    
     path('', include(router.urls)),
 ]
 

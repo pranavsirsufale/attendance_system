@@ -133,13 +133,29 @@ function AdminAttendanceStats({ notifyUser }) {
     if (program) url += `&program=${program}`;
     if (year) url += `&year=${year}`;
     if (semester) url += `&semester=${semester}`;
+    // if (period === 'daily' && date) {
+    //   url += `&date=${date}`;
+    //   const selectedDate = new Date(date);
+    //   const nextDay = new Date(selectedDate);
+    //   nextDay.setDate(selectedDate.getDate() + 1);
+    //   const computedEndDate = nextDay.toISOString().split('T')[0];
+    //   url += `&end_date=${computedEndDate}`;
+    // }
     if (period === 'daily' && date) {
       url += `&date=${date}`;
-      const selectedDate = new Date(date);
-      const nextDay = new Date(selectedDate);
-      nextDay.setDate(selectedDate.getDate() + 1);
-      const computedEndDate = nextDay.toISOString().split('T')[0];
-      url += `&end_date=${computedEndDate}`;
+      // const selectedDate = new Date(date);
+      // const nextDay = new Date(selectedDate);
+      // nextDay.setDate(selectedDate.getDate() + 1);
+      // const computedEndDate = nextDay.toISOString().split('T')[0];
+      // url += `&end_date=${computedEndDate}`;
+    }if (period === 'custom' && teacherStartDate) {
+      url += `&date=${teacherStartDate}&end_date=${teacherEndDate}`;
+      // const selectedDate = new Date(studentStartDate);
+      // const nextDay = new Date(selectedDate);
+      // nextDay.setDate(selectedDate.getDate() + 1);
+      // const computedEndDate = nextDay.toISOString().split('T')[0];
+      // setDate((currentDate)=> (studentStartDate))
+      // url += `&end_date=${teacherEndDate}`;
     }
 
     try {
@@ -148,7 +164,6 @@ function AdminAttendanceStats({ notifyUser }) {
       });
       setTeacherStats(response.data.results.stats);
       setSelectedTeacherName(response.data.results.stats.recorded_by_name)
-      // console.log(response.data.results)
       setTeacherStartDate(response.data.results.start_date);
       setTeacherEndDate(response.data.results.end_date);
       setTeacherNextPage(response.data.next);
@@ -184,11 +199,19 @@ function AdminAttendanceStats({ notifyUser }) {
     if (semester) url += `&semester=${semester}`;
     if (period === 'daily' && date) {
       url += `&date=${date}`;
-      const selectedDate = new Date(date);
-      const nextDay = new Date(selectedDate);
-      nextDay.setDate(selectedDate.getDate() + 1);
-      const computedEndDate = nextDay.toISOString().split('T')[0];
-      url += `&end_date=${computedEndDate}`;
+      // const selectedDate = new Date(date);
+      // const nextDay = new Date(selectedDate);
+      // nextDay.setDate(selectedDate.getDate() + 1);
+      // const computedEndDate = nextDay.toISOString().split('T')[0];
+      // url += `&end_date=${computedEndDate}`;
+    }if (period === 'custom' && teacherStartDate) {
+      url += `&date=${teacherStartDate}&end_date=${teacherEndDate}`;
+      // const selectedDate = new Date(studentStartDate);
+      // const nextDay = new Date(selectedDate);
+      // nextDay.setDate(selectedDate.getDate() + 1);
+      // const computedEndDate = nextDay.toISOString().split('T')[0];
+      // setDate((currentDate)=> (studentStartDate))
+      // url += `&end_date=${teacherEndDate}`;
     }
 
     try {
@@ -223,8 +246,8 @@ function AdminAttendanceStats({ notifyUser }) {
     } else {
       setTeacherSubjects([]);
       setTeacherStats([]);
-      setTeacherStartDate('');
-      setTeacherEndDate('');
+      // setTeacherStartDate('');
+      // setTeacherEndDate('');
       setTeacherTotalCount(0);
       setTeacherNextPage(null);
       setTeacherPrevPage(null);
@@ -237,8 +260,8 @@ function AdminAttendanceStats({ notifyUser }) {
       fetchTeacherStats();
     } else {
       setTeacherStats([]);
-      setTeacherStartDate('');
-      setTeacherEndDate('');
+      // setTeacherStartDate('');
+      // setTeacherEndDate('');
       setTeacherTotalCount(0);
       setTeacherNextPage(null);
       setTeacherPrevPage(null);
@@ -306,6 +329,10 @@ function AdminAttendanceStats({ notifyUser }) {
     if (year) url += `&year=${year}`;
     if (semester) url += `&semester=${semester}`;
     if (period === 'daily' && date) url += `&date=${date}`;
+    if (period === 'custom' && teacherStartDate) {
+      url += `&date=${teacherStartDate}&end_date=${teacherEndDate}`;
+      // url += ``;
+    }
 
     try {
         const response = await axios.get(url, {
@@ -319,7 +346,7 @@ function AdminAttendanceStats({ notifyUser }) {
         link.click();
         notifyUser(`Exported attendance report as ${format}`, 'success');
     } catch (err) {
-        notifyUser('Failed to export report', 'error');
+        notifyUser(`Failed to export report, ${err}`, 'error');
         console.error(err);
     }
 };
@@ -352,9 +379,9 @@ function AdminAttendanceStats({ notifyUser }) {
 
       <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
 
-       <FormControl sx={{ minWidth: 120 }}>
+       <FormControl >
           <InputLabel>Period</InputLabel>
-          <Select value={period} onChange={(e) => { setPeriod(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); setStartDate(''); setEndDate(''); }}>
+          <Select value={period} onChange={(e) => { setPeriod(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); setTeacherStartDate(''); setTeacherEndDate(''); }}>
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="daily">Daily</MenuItem>
             <MenuItem value="weekly">Weekly</MenuItem>
@@ -364,21 +391,21 @@ function AdminAttendanceStats({ notifyUser }) {
           </Select>
         </FormControl>
 
-        <TextField
+        {/* <TextField
           label="Section ID"
           type="number"
           value={section}
           onChange={(e) => { setSection(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
-          sx={{ minWidth: 120 }}
+
         />
         <TextField
           label="Subject ID"
           type="number"
           value={subject}
           onChange={(e) => { setSubject(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
-          sx={{ minWidth: 120 }}
-        />
-        <FormControl sx={{ minWidth: 120 }}>
+
+        /> */}
+        {/* <FormControl >
           <InputLabel>Program</InputLabel>
           <Select value={program} onChange={(e) => { setProgram(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}>
             <MenuItem value="">All</MenuItem>
@@ -391,14 +418,14 @@ function AdminAttendanceStats({ notifyUser }) {
           type="number"
           value={year}
           onChange={(e) => { setYear(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
-          sx={{ minWidth: 120 }}
-        />
+
+        /> */}
         <TextField
           label="Semester"
           type="number"
           value={semester}
           onChange={(e) => { setSemester(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
-          sx={{ minWidth: 120 }}
+
         />
         {period === 'daily' && (
           <TextField
@@ -407,16 +434,35 @@ function AdminAttendanceStats({ notifyUser }) {
             value={date}
             onChange={(e) => { setDate(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
             InputLabelProps={{ shrink: true }}
-            sx={{ minWidth: 120 }}
+
           />
+        )}
+        {period === 'custom' && (<>
+          <TextField
+            label="Start Date"
+            type="date"
+            value={teacherStartDate}
+            onChange={(e) => { setTeacherStartDate(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
+            InputLabelProps={{ shrink: true }}
+
+            />
+          <TextField
+            label="End Date"
+            type="date"
+            value={teacherEndDate}
+            onChange={(e) => { setTeacherEndDate(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
+            InputLabelProps={{ shrink: true }}
+
+            />
+            </>
         )}
       </Box>
 
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Select Teacher (Total Teachers: {teachers.length})</Typography>
+      <Box >
+        <Typography variant="h6" >Select Teacher (Total Teachers: {teachers.length})</Typography>
         <Grid container spacing={2}>
           {teachers.map((teacher) => (
-            <Grid item xs={12} sm={6} md={4} key={teacher.id}>
+            <Grid  key={teacher.id}>
               <Card
                 sx={{
                   cursor: 'pointer',
@@ -449,16 +495,16 @@ function AdminAttendanceStats({ notifyUser }) {
 
       {teacherSubjects.length > 0 && (
         <>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
+          <Typography variant="subtitle1" >
             Period: {teacherStartDate || 'N/A'} to {teacherEndDate || 'N/A'} | Total Records: {teacherTotalCount}
           </Typography>
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
+          <Box >
+            <Typography variant="h6" >
               Subjects Taught ({teacherSubjects.length})
             </Typography>
             <Grid container spacing={2}>
               {teacherSubjects.map((subject) => (
-                <Grid item xs={12} sm={6} md={4} key={subject}>
+                <Grid    key={subject}>
                   <Card
                     sx={{
                       cursor: 'pointer',
@@ -490,8 +536,8 @@ function AdminAttendanceStats({ notifyUser }) {
       )}
 
       {selectedSubject && teacherStats.length > 0 && (
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+        <Box >
+          <Typography variant="h6" >
             Subject: {selectedSubject}
 
           </Typography>
@@ -564,13 +610,13 @@ function AdminAttendanceStats({ notifyUser }) {
       )}
 
       <Box sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
+        <Typography variant="h6" >
           Select Student (Total Students: {studentTotalCount})
         </Typography>
         {students.length > 0 ? (
           <Grid container spacing={2}>
             {students.map((student) => (
-              <Grid item xs={12} sm={6} md={4} key={student.id}>
+              <Grid    key={student.id}>
                 <Card
                   sx={{
                     cursor: 'pointer',
@@ -624,10 +670,10 @@ function AdminAttendanceStats({ notifyUser }) {
 
       {studentStats.length > 0 && (
         <>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
+          <Typography variant="subtitle1" >
             Period: {studentStartDate} to {studentEndDate} | Showing {studentStats.length} of {studentTotalCount} records
           </Typography>
-          <Box sx={{ mb: 4 }}>
+          <Box >
             <Button
               variant="contained"
               onClick={() => handleStudentExport('csv')}

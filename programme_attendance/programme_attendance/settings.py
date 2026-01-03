@@ -1,10 +1,6 @@
-#                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-#                       █    DEVELOPED BY PRANAV SIRSUFALE   █
-#                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+#                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+#                       █    DEVELOPED BY PRANAV SIRSUFALE and ROHAN MAGAR   █
+#                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
 
 from pathlib import Path
@@ -17,6 +13,14 @@ SECRET_KEY = "django-insecure-^i)7vl*p4w&*4pd1snts7u-*ahrw3irm6$bei2$c1c-+@vks!!
 
 DEBUG = False
 
+LANGUAGE_CODE = "en-us"
+
+TIME_ZONE = "UTC"
+
+USE_I18N = True
+USE_TZ = True
+STATIC_URL = "static/"
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 ALLOWED_HOSTS = ['http://localhost:5173','*']
 
@@ -35,26 +39,6 @@ INSTALLED_APPS = [
     'app',
     'corsheaders'
 ]
-
-### added rest-famewokr app and simplejwt
-### added rest framework
-'''
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES':(
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES':(
-        'rest_framework.permission.IsAuthenticated',
-    )
-}
-'''
-
-'''
-Build the attendance marking feature?
-Create the stats display?
-Refine the calendar (e.g., styling, filters)? Let me know!
-'''
-
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -126,14 +110,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "programme_attendance.wsgi.application"
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#     }
-# }
-
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
@@ -164,25 +140,3 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-
-LANGUAGE_CODE = "en-us"
-
-TIME_ZONE = "UTC"
-
-USE_I18N = True
-
-USE_TZ = True
-
-
-STATIC_URL = "static/"
-
-
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-#                       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-#                       █    DEVELOPED BY PRANAV SIRSUFALE   █
-#                       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     DEVELOPED BY PRANAV SIRSUFALE                         ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝

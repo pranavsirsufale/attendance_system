@@ -1,0 +1,7 @@
+{
+    "python.testing.pytestArgs": [
+        "programme_attendance"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+}

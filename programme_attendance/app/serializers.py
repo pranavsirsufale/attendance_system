@@ -194,7 +194,7 @@ class AdminSectionSerializer(serializers.ModelSerializer):
 class AdminStudentSerializer(serializers.ModelSerializer):
     section = AdminSectionSerializer()
     subjects = SubjectSerializer(many = True , read_only = True )
-    print(section)
+    # print(section)
     class Meta:
         model = Student
         fields = ['id', 'roll_number', 'first_name', 'last_name', 'email', 'phone', 'section','semester', 'subjects']

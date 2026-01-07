@@ -53,31 +53,32 @@ function AdminStudentAttendance({ notifyUser }) {
         Student Attendance (Admin)
       </motion.h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="col-span-1 bg-white p-4 rounded-xl shadow-md">
-          <h3 className="font-semibold mb-2">Teachers (click to open their calendar)</h3>
-          {loading ? (
-            <div>Loading...</div>
-          ) : (
-            <ul className="space-y-2 max-h-96 overflow-y-auto">
-              {teachers.map((t) => (
-                <li key={t.id}>
-                  <button
-                    onClick={() => handleTeacherSelect(t)}
-                    className={`w-full text-left p-3 rounded-md mb-2 ${selectedTeacher?.id === t.id ? 'bg-indigo-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                  >
-                    <div className="font-medium">{t.first_name} {t.last_name}</div>
-                    <div className="text-sm text-gray-600">{t.email || ''}</div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="col-span-1 bg-white p-4 rounded-xl shadow-md flex items-center justify-center">
-          <div className="text-gray-600">Click any teacher to open their calendar and mark attendance on their behalf.</div>
-        </div>
+      <div className="w-full">
+        <h3 className="sr-only">Teachers</h3>
+        {loading ? (
+          <div className="text-center py-20">Loading...</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {teachers.map((t) => (
+              <motion.button
+                key={t.id}
+                onClick={() => handleTeacherSelect(t)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`w-full h-44 bg-white rounded-2xl shadow-lg p-6 text-left flex flex-col justify-between transition-colors ${selectedTeacher?.id === t.id ? 'ring-4 ring-indigo-200' : 'hover:shadow-xl'}`}
+              >
+                <div>
+                  <div className="text-xl font-semibold text-indigo-800">{t.first_name} {t.last_name}</div>
+                  <div className="text-sm text-gray-500 mt-1">{t.email || ''}</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Click to open calendar</div>
+                  <div className="text-xs text-gray-400">ID: {t.id}</div>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2359,6 +2359,154 @@ class ArchivalAttendanceStatsView(APIView):
             )
 
 
+class ArchivalSemesterSummaryView(APIView):
+    """
+    Admin-only: Return semester-wise subject summary from archival records.
+    Query params: semester (required), section_name (optional)
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        try:
+            semester = request.query_params.get('semester')
+            if not semester:
+                return Response({"error": "semester query parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            archives = ArchivalAttendance.objects.filter(semester=semester)
+            section = request.query_params.get('section_name')
+            if section:
+                archives = archives.filter(section_name__icontains=section)
+
+            stats = (
+                archives.values('subject_name')
+                .annotate(
+                    present_count=Sum(Case(When(status=True, then=1), default=0, output_field=IntegerField())),
+                    absent_count=Sum(Case(When(status=False, then=1), default=0, output_field=IntegerField())),
+                    total_records=Count('id')
+                )
+                .order_by('subject_name')
+            )
+
+            # compute percentage safely
+            result = []
+            for s in stats:
+                total = s['total_records'] or 0
+                present = s['present_count'] or 0
+                percent = (present * 100.0 / total) if total > 0 else 0.0
+                result.append({
+                    'subject_name': s['subject_name'],
+                    'present': present,
+                    'absent': s['absent_count'] or 0,
+                    'total_records': total,
+                    'present_percent': round(percent, 2)
+                })
+
+            return Response({'semester': int(semester), 'subjects': result}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error("Error in ArchivalSemesterSummaryView: %s", str(e), exc_info=True)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ArchivalSubjectStudentsView(APIView):
+    """
+    Admin-only: For a given semester and subject, return per-student totals.
+    Query params: semester (required), subject_name (required), section_name (optional)
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        try:
+            semester = request.query_params.get('semester')
+            subject = request.query_params.get('subject_name')
+            if not semester or not subject:
+                return Response({"error": "semester and subject_name are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            archives = ArchivalAttendance.objects.filter(semester=semester, subject_name__icontains=subject)
+            section = request.query_params.get('section_name')
+            if section:
+                archives = archives.filter(section_name__icontains=section)
+
+            students = (
+                archives.values('student_roll_number', 'student_name')
+                .annotate(
+                    present=Sum(Case(When(status=True, then=1), default=0, output_field=IntegerField())),
+                    absent=Sum(Case(When(status=False, then=1), default=0, output_field=IntegerField())),
+                    total=Count('id')
+                )
+                .order_by('student_roll_number')
+            )
+
+            result = []
+            for st in students:
+                total = st['total'] or 0
+                present = st['present'] or 0
+                percent = (present * 100.0 / total) if total > 0 else 0.0
+                result.append({
+                    'student_roll_number': st['student_roll_number'],
+                    'student_name': st['student_name'],
+                    'present': present,
+                    'absent': st['absent'] or 0,
+                    'total_records': total,
+                    'present_percent': round(percent, 2)
+                })
+
+            return Response({'semester': int(semester), 'subject_name': subject, 'students': result}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error("Error in ArchivalSubjectStudentsView: %s", str(e), exc_info=True)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ArchivalStudentDetailView(APIView):
+    """
+    Admin-only: For a given student (roll) and subject+semester return detailed attendance list and summary.
+    Query params: semester (required), subject_name (required), student_roll_number (required)
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        try:
+            semester = request.query_params.get('semester')
+            subject = request.query_params.get('subject_name')
+            roll = request.query_params.get('student_roll_number')
+            if not semester or not subject or not roll:
+                return Response({"error": "semester, subject_name and student_roll_number are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            archives = ArchivalAttendance.objects.filter(semester=semester, subject_name__icontains=subject, student_roll_number__icontains=roll).order_by('session_date')
+
+            total = archives.count()
+            present = archives.filter(status=True).count()
+            absent = archives.filter(status=False).count()
+            percent = (present * 100.0 / total) if total > 0 else 0.0
+
+            records = [
+                {
+                    'session_date': a.session_date,
+                    'status': 'Present' if a.status else 'Absent',
+                    'original_timestamp': a.original_timestamp,
+                    'original_recorded_by': a.original_recorded_by
+                }
+                for a in archives
+            ]
+
+            return Response({
+                'semester': int(semester),
+                'subject_name': subject,
+                'student_roll_number': roll,
+                'student_name': archives.first().student_name if archives.exists() else None,
+                'total_records': total,
+                'present': present,
+                'absent': absent,
+                'present_percent': round(percent, 2),
+                'records': records
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error("Error in ArchivalStudentDetailView: %s", str(e), exc_info=True)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 class ArchivalAttendanceDeleteView(APIView):
     """

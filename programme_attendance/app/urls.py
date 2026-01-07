@@ -61,6 +61,9 @@ urlpatterns = [
     
     # Archival Attendance (Admin only) - MUST come before router.urls
     path('admin/archival-attendance/export/', views.ArchivalAttendanceExportView.as_view(), name='admin-archival-export'),
+    path('admin/archival-attendance/semester-summary/', views.ArchivalSemesterSummaryView.as_view(), name='admin-archival-semester-summary'),
+    path('admin/archival-attendance/subject-students/', views.ArchivalSubjectStudentsView.as_view(), name='admin-archival-subject-students'),
+    path('admin/archival-attendance/student-detail/', views.ArchivalStudentDetailView.as_view(), name='admin-archival-student-detail'),
     path('admin/archival-attendance/delete/', views.ArchivalAttendanceDeleteView.as_view(), name='admin-archival-delete'),
     path('admin/archival-attendance/stats/', views.ArchivalAttendanceStatsView.as_view(), name='admin-archival-stats'),
     path('admin/archival-attendance/', views.ArchivalAttendanceView.as_view(), name='admin-archival-attendance'),

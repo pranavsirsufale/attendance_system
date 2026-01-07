@@ -33,6 +33,7 @@ import RemoveStudents from "./components/utilities/RemoveStudents";
 import CalendarPicker from "./components/utilities/CalendarPicker";
 import GetBackup from "./components/utilities/GetBackup";
 import ArchivalAttendance from "./components/ArchivalAttendance";
+import AdminStudentAttendance from "./components/admin/AdminStudentAttendance";
 // Sample Lottie animation (law-themed scales of justice)
 // import lawAnimationData from "https://lottie.host/9c9f6f1d-3b3e-4b7e-9e1a-3f3d6b8e7f2a/justice-scales.json";
 
@@ -352,6 +353,11 @@ function App() {
                           element={
                             <ArchivalAttendance notifyUser={notifyUser} />
                           }
+                        />
+
+                        <Route
+                          path="/admin/student-attendance"
+                          element={<AdminStudentAttendance notifyUser={notifyUser} />}
                         />
 
 

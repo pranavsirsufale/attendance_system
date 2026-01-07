@@ -86,14 +86,10 @@ class TeacherSubjectsView(APIView):
             teacher_id = request.query_params.get('teacher')
             if not teacher_id:
                 return Response({"error": "Teacher ID is required"}, status=400)
-
-            subjects = (
-                Session.objects.filter(timetable__teacher_id=teacher_id, status='Completed')
-                .values('timetable__subject__name')
-                .distinct()
-                .order_by('timetable__subject__name')
-            )
-            subject_list = [subject['timetable__subject__name'] for subject in subjects]
+            # Return all subjects assigned to the teacher via timetables
+            from .models import Subject
+            subject_qs = Subject.objects.filter(timetable__teacher_id=teacher_id).distinct().order_by('name')
+            subject_list = list(subject_qs.values_list('name', flat=True))
             return Response({"subjects": subject_list}, status=200)
         except Exception as e:
             logger.error(f"Error in TeacherSubjectsView: {str(e)}", exc_info=True)
@@ -720,8 +716,15 @@ class MarkAttendanceView(generics.GenericAPIView):
     def get(self, request, session_id):
         try:
             session = Session.objects.get(id=session_id)
-            teacher = Teacher.objects.get(user=request.user)
-            if session.timetable.teacher != teacher:
+            try:
+                user_teacher = Teacher.objects.get(user=request.user)
+            except Teacher.DoesNotExist:
+                user_teacher = None
+
+            # allow if the requesting user is the session teacher or an admin teacher
+            if user_teacher is None:
+                return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
+            if session.timetable.teacher != user_teacher and not user_teacher.is_admin:
                 return Response({"error": "Not authorized to mark this session"}, status=status.HTTP_403_FORBIDDEN)
 
             students = Student.objects.filter(section=session.timetable.section)
@@ -751,8 +754,14 @@ class MarkAttendanceView(generics.GenericAPIView):
     def post(self, request, session_id):
         try:
             session = Session.objects.get(id=session_id)
-            teacher = Teacher.objects.get(user=request.user)
-            if session.timetable.teacher != teacher:
+            try:
+                user_teacher = Teacher.objects.get(user=request.user)
+            except Teacher.DoesNotExist:
+                user_teacher = None
+
+            if user_teacher is None:
+                return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
+            if session.timetable.teacher != user_teacher and not user_teacher.is_admin:
                 return Response({"error": "Not authorized to mark this session"}, status=status.HTTP_403_FORBIDDEN)
 
             attendance_data = request.data.get('attendance', [])
@@ -766,14 +775,15 @@ class MarkAttendanceView(generics.GenericAPIView):
                 # Convert string status to boolean
                 status_value = True if entry['status'] == 'Present' else False
                 combined_datetime = datetime.combine(session.date, session.timetable.start_time)
+                # If admin is marking on behalf, record the session's teacher as recorder
+                recorded_by = user_teacher if not (user_teacher and user_teacher.is_admin) else session.timetable.teacher
                 Attendance.objects.update_or_create(
                     student=student,
                     session=session,
                     defaults={
                         'status': status_value,
-                        'recorded_by': teacher,
+                        'recorded_by': recorded_by,
                         'timestamp': combined_datetime
-                        # 'timestamp': session.date
                     })
 
             session.status = 'Completed'
@@ -1877,16 +1887,31 @@ class AdminSessionViewSet(viewsets.ModelViewSet):
         try:
             date = request.query_params.get('date')
             section_id = request.query_params.get('section_id')
+            # support explicit teacher_id (admin) and subject_name filters
+            teacher_param = request.query_params.get('teacher') or request.query_params.get('teacher_id')
+            subject_name = request.query_params.get('subject_name')
             if not date:
                 return Response({"error": "Date parameter is required (format: yyyy-MM-dd)"}, status=400)
             try:
                 date_obj = datetime.strptime(date, '%Y-%m-%d').date()
             except ValueError:
                 return Response({"error": "Invalid date format. Use yyyy-MM-dd"}, status=400)
-            sessions = Session.objects.filter(
-                date=date_obj,
-                timetable__subject__teacher_id=request.user.id
-            )
+            # build base queryset depending on teacher filters
+            if teacher_param:
+                try:
+                    teacher_obj = Teacher.objects.get(id=int(teacher_param))
+                    sessions = Session.objects.filter(date=date_obj, timetable__teacher=teacher_obj)
+                except Teacher.DoesNotExist:
+                    return Response({"error": "Teacher not found"}, status=404)
+            else:
+                # fallback to current user's teacher if exists
+                try:
+                    teacher = Teacher.objects.get(user=request.user)
+                    sessions = Session.objects.filter(date=date_obj, timetable__teacher=teacher)
+                except Teacher.DoesNotExist:
+                    sessions = Session.objects.filter(date=date_obj)
+            if subject_name:
+                sessions = sessions.filter(timetable__subject__name=subject_name)
             if section_id:
                 sessions = sessions.filter(timetable__section_id=section_id)
             serializer = SessionSerializer(sessions, many=True)
@@ -1903,6 +1928,9 @@ class ScheduledDatesView(APIView):
         try:
             month = request.query_params.get('month')
             section_id = request.query_params.get('section_id')
+            # optional filters
+            teacher_param = request.query_params.get('teacher') or request.query_params.get('teacher_id')
+            subject_name = request.query_params.get('subject_name')
             if not month:
                 return Response({"error": "Month parameter is required (format: yyyy-MM)"}, status=400)
             try:
@@ -1912,14 +1940,24 @@ class ScheduledDatesView(APIView):
                 end_date = datetime(year, month, last_day).date()
             except ValueError:
                 return Response({"error": "Invalid month format. Use yyyy-MM"}, status=400)
-            try:
-                teacher = Teacher.objects.get(user=request.user)
-            except Teacher.DoesNotExist:
-                logger.error(f"Teacher not found for user: {request.user}")
-                return Response({"error": "Teacher not found"}, status=404)
-            sessions = Session.objects.filter(date__range=[start_date, end_date], timetable__teacher=teacher)
+            # determine teacher filter
+            if teacher_param:
+                try:
+                    teacher_obj = Teacher.objects.get(id=int(teacher_param))
+                    sessions = Session.objects.filter(date__range=[start_date, end_date], timetable__teacher=teacher_obj)
+                except Teacher.DoesNotExist:
+                    return Response({"error": "Teacher not found"}, status=404)
+            else:
+                try:
+                    teacher = Teacher.objects.get(user=request.user)
+                    sessions = Session.objects.filter(date__range=[start_date, end_date], timetable__teacher=teacher)
+                except Teacher.DoesNotExist:
+                    # admin or non-teacher: return all sessions in range
+                    sessions = Session.objects.filter(date__range=[start_date, end_date])
             if section_id:
                 sessions = sessions.filter(timetable__section_id=section_id)
+            if subject_name:
+                sessions = sessions.filter(timetable__subject__name=subject_name)
             dates = sessions.values('date').distinct().values_list('date', flat=True)
             date_list = [date.strftime('%Y-%m-%d') for date in dates]
             return Response({"dates": date_list}, status=200)
@@ -1934,18 +1972,31 @@ class SessionsByDateView(APIView):
         try:
             date = request.query_params.get('date')
             section_id = request.query_params.get('section_id')
+            # optionally allow specifying a teacher id (for admin browsing)
+            teacher_param = request.query_params.get('teacher') or request.query_params.get('teacher_id')
+            subject_name = request.query_params.get('subject_name')
             if not date:
                 return Response({"error": "Date parameter is required (format: yyyy-MM-dd)"}, status=400)
             try:
                 date_obj = datetime.strptime(date, '%Y-%m-%d').date()
             except ValueError:
                 return Response({"error": "Invalid date format. Use yyyy-MM-dd"}, status=400)
-            try:
-                teacher = Teacher.objects.get(user=request.user)
-            except Teacher.DoesNotExist:
-                logger.error(f"Teacher not found for user: {request.user}")
-                return Response({"error": "Teacher not found"}, status=404)
-            sessions = Session.objects.filter(date=date_obj, timetable__teacher=teacher)
+            # determine teacher filter: either explicit param or current user
+            if teacher_param:
+                try:
+                    teacher_obj = Teacher.objects.get(id=int(teacher_param))
+                except Teacher.DoesNotExist:
+                    return Response({"error": "Teacher not found"}, status=404)
+                sessions = Session.objects.filter(date=date_obj, timetable__teacher=teacher_obj)
+            else:
+                try:
+                    teacher = Teacher.objects.get(user=request.user)
+                    sessions = Session.objects.filter(date=date_obj, timetable__teacher=teacher)
+                except Teacher.DoesNotExist:
+                    # if current user is not a teacher and no teacher param provided, return all sessions for date
+                    sessions = Session.objects.filter(date=date_obj)
+            if subject_name:
+                sessions = sessions.filter(timetable__subject__name=subject_name)
             if section_id:
                 sessions = sessions.filter(timetable__section_id=section_id)
             serializer = SessionSerializer(sessions, many=True)

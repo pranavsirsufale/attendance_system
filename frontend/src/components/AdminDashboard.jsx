@@ -300,169 +300,10 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import styled from "styled-components";
+import './AdminDashboard.css';
 import Button from "./utilities/Button";
 import LogOutButton from "./utilities/LogOutButton";
-// --- START: Styled Card Component ---
-const StyledCard = styled(motion.div)`
-  /* Base card container */
-  position: relative;
-  width: 100%; /* Make it fill its grid column */
-  max-width: 300px; /* Limit max width to original style's 300px */
-  padding: 20px;
-
-  /* Apply the fixed white background and black border/shadow from the provided style */
-  background: #fff; /* Card background is fixed white */
-  border: 6px solid #000;
-  box-shadow: 12px 12px 0 #000;
-
-  transition: transform 0.3s, box-shadow 0.3s;
-  box-sizing: border-box; /* Include padding and border in the element's total width and height */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between; /* Distribute space for content and button */
-  min-height: 200px; /* Ensure cards have consistent minimum height */
-
-  &:hover {
-    transform: translate(-5px, -5px);
-    box-shadow: 17px 17px 0 #000;
-  }
-
-  /* Card Title */
-  .card__title {
-    font-size: 28px; /* Adjusted slightly for dashboard context */
-    font-weight: 900;
-    color: #000;
-    text-transform: uppercase;
-    margin-bottom: 15px;
-    display: block;
-    position: relative;
-    overflow: hidden;
-    text-align: center; /* Center the title */
-  }
-
-  .card__title::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 5%; /* Adjusted for centering */
-    width: 90%; /* Adjusted for centering */
-    height: 3px;
-    background-color: #000;
-    transform: translateX(-100%);
-    transition: transform 0.3s;
-  }
-
-  &:hover .card__title::after {
-    transform: translateX(0);
-  }
-
-  /* Card Content / Paragraph */
-  .card__content {
-    font-size: 16px;
-    line-height: 1.4;
-    color: #000;
-    margin-bottom: 20px;
-    text-align: center; /* Center the content paragraph */
-    flex-grow: 1; /* Allow content to take available space */
-  }
-
-  /* Card Form (adapted for button only) */
-  .card__form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    align-items: center; /* Center the button */
-    width: 100%;
-  }
-
-  /* Input style (not used for these cards, but keeping for reference) */
-  .card__form input {
-    padding: 10px;
-    border: 3px solid #000;
-    font-size: 16px;
-    font-family: inherit;
-    transition: transform 0.3s;
-    width: calc(100% - 26px); /* Adjust for padding and border */
-  }
-
-  .card__form input:focus {
-    outline: none;
-    transform: scale(1.05);
-    background-color: #000;
-    color: #ffffff;
-  }
-
-  /* Card Button */
-  .card__button {
-    border: 3px solid #000;
-    background: #000;
-    color: #fff;
-    padding: 10px;
-    font-size: 16px; /* Slightly reduced for better fit */
-    font-weight: bold;
-    text-transform: uppercase;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.3s;
-    width: 80%; /* Adjusted to fill more of the card width */
-    /* height: 100%; Removed fixed height as it's not applicable to a single button */
-    text-align: center;
-  }
-
-  .card__button::before {
-    content: "View"; /* Changed default text for dashboard links */
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 105%;
-    background-color: #5ad641; /* Green hover effect */
-    color: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transform: translateY(100%);
-    transition: transform 0.3s;
-  }
-
-  /* Specific hover text for each card */
-  &.teachers-card .card__button::before { content: "Teachers"; }
-  &.students-card .card__button::before { content: "Students"; }
-  &.programs-card .card__button::before { content: "Programs"; }
-  &.subjects-card .card__button::before { content: "Subjects"; }
-  &.timetables-card .card__button::before { content: "Timetables"; }
-  &.sessions-card .card__button::before { content: "Sessions"; }
-  &.stats-card .card__button::before { content: "Stats"; }
-  &.add-bulk-students-card .card__button::before { content: "Add Bulk"; }
-  &.remove-bulk-students-card .card__button::before { content: "Remove Bulk"; }
-  &.promote-students-card .card__button::before { content: "Promote"; }
-  &.student-profiles-card .card__button::before { content: "Profiles"; }
-
-
-  .card__button:hover::before {
-    transform: translateY(0);
-  }
-
-  .card__button:active {
-    transform: scale(0.95);
-  }
-
-  /* The glitch effect is not directly part of the card hover,
-     but if you wanted to apply it to something, you could use this class */
-  /* .glitch {
-    animation: glitch 0.3s infinite;
-  }
-  @keyframes glitch {
-    0% { transform: translate(2px, 2px); }
-    25% { transform: translate(-2px, -2px); }
-    50% { transform: translate(-2px, 2px); }
-    75% { transform: translate(2px, -2px); }
-    100% { transform: translate(2px, 2px); }
-  } */
-`;
-// --- END: Styled Card Component ---
+// Styling moved to AdminDashboard.css to avoid CSS-in-JSX
 
 
 function AdminDashboard({ notifyUser }) {
@@ -586,10 +427,10 @@ function AdminDashboard({ notifyUser }) {
         >
           {/* Card for Manage Teachers */}
           <Link to="/admin/teachers" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }} /* Subtle scale for this style */
-              whiletap={{ scale: 0.98 }}
-              className="teachers-card" /* Add specific class for hover text */
+            <motion.div
+              whileHover={{ scale: 1.02 }} /* Subtle scale for this style */
+              whileTap={{ scale: 0.98 }}
+              className="styled-card teachers-card" /* Add specific class for hover text */
             >
               <span className="card__title">Manage Teachers</span>
               <p className="card__content">
@@ -598,15 +439,15 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">View Teachers</button>
               </form>
-            </StyledCard>
+            </motion.div>
           </Link>
 
           {/* Card for Manage Students */}
           <Link to="/admin/students" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }}
-              whiletap={{ scale: 0.98 }}
-              className="students-card"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card students-card"
             >
               <span className="card__title">Manage Students</span>
               <p className="card__content">
@@ -615,15 +456,15 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">View Students</button>
               </form>
-            </StyledCard>
+            </motion.div>
           </Link>
 
           {/* Card for Manage Programs */}
           <Link to="/admin/programs" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }}
-              whiletap={{ scale: 0.98 }}
-              className="programs-card"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card programs-card"
             >
               <span className="card__title">Manage Programs</span>
               <p className="card__content">
@@ -632,15 +473,15 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">View Programs</button>
               </form>
-            </StyledCard>
+            </motion.div>
           </Link>
 
           {/* Card for Manage Subjects */}
           <Link to="/admin/subjects" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }}
-              whiletap={{ scale: 0.98 }}
-              className="subjects-card"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card subjects-card"
             >
               <span className="card__title">Manage Subjects</span>
               <p className="card__content">
@@ -649,7 +490,7 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">View Subjects</button>
               </form>
-            </StyledCard>
+            </motion.div>
           </Link>
 
           {/* Card for Manage Timetables */}
@@ -671,10 +512,10 @@ function AdminDashboard({ notifyUser }) {
 
           {/* Card for Manage Sessions */}
           <Link to="/admin/sessions" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }}
-              whiletap={{ scale: 0.98 }}
-              className="sessions-card"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card sessions-card"
             >
               <span className="card__title">Manage Sessions</span>
               <p className="card__content">
@@ -683,15 +524,15 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">View Sessions</button>
               </form>
-            </StyledCard>
+            </motion.div>
           </Link>
 
           {/* Card for View All Stats */}
           <Link to="/admin/attendance-stats" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }}
-              whiletap={{ scale: 0.98 }}
-              className="stats-card"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card stats-card"
             >
               <span className="card__title">View All Stats</span>
               <p className="card__content">
@@ -700,15 +541,15 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">View Stats</button>
               </form>
-            </StyledCard>
+            </motion.div>
           </Link>
 
           {/* Card for Add Bulk Students */}
           <Link to="/admin/add-builk-student" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }}
-              whiletap={{ scale: 0.98 }}
-              className="add-bulk-students-card"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card add-bulk-students-card"
             >
               <span className="card__title">Add Bulk Students</span>
               <p className="card__content">
@@ -717,15 +558,15 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">Add Bulk Students</button>
               </form>
-            </StyledCard>
+            </motion.div>
           </Link>
 
           {/* Card for Remove Bulk Students */}
           <Link to="/admin/remove-builk-student" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }}
-              whiletap={{ scale: 0.98 }}
-              className="remove-bulk-students-card"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card remove-bulk-students-card"
             >
               <span className="card__title">Remove Bulk Students</span>
               <p className="card__content">
@@ -734,15 +575,15 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">Remove Bulk Students</button>
               </form>
-            </StyledCard>
+            </motion.div>
           </Link>
 
           {/* Card for Promote Students to Next Class */}
           <Link to="/admin/pass-students" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }}
-              whiletap={{ scale: 0.98 }}
-              className="promote-students-card"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card promote-students-card"
             >
               <span className="card__title">Promote Students</span>
               <p className="card__content">
@@ -751,17 +592,17 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">Promote Students</button>
               </form>
-            </StyledCard>
+            </motion.div>
           </Link>
 
 
 
           {/* Card for Student Profiles */}
           <Link to="/admin/student-profile" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }}
-              whiletap={{ scale: 0.98 }}
-              className="student-profiles-card"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card student-profiles-card"
             >
               <span className="card__title">Student Profiles</span>
               <p className="card__content">
@@ -770,15 +611,15 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">View Profiles</button>
               </form>
-            </StyledCard>
+            </motion.div>
           </Link>
 
           {/* Card for backup of database */}
           <Link to="/admin/database-backup" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }}
-              whiletap={{ scale: 0.98 }}
-              className="database-backup"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card database-backup"
             >
               <span className="card__title">Get Database Backup</span>
               <p className="card__content">
@@ -787,15 +628,15 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">retreive backup</button>
               </form>
-            </StyledCard>
+            </motion.div>
           </Link>
 
           {/* Card for Archival Attendance */}
           <Link to="/admin/archival-attendance" className="w-full flex justify-center">
-            <StyledCard
-              whilehover={{ scale: 1.02 }}
-              whiletap={{ scale: 0.98 }}
-              className="archival-attendance-card"
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card archival-attendance-card"
             >
               <span className="card__title">Archival Attendance</span>
               <p className="card__content">
@@ -804,7 +645,24 @@ function AdminDashboard({ notifyUser }) {
               <form className="card__form">
                 <button className="card__button">Manage Archives</button>
               </form>
-            </StyledCard>
+            </motion.div>
+          </Link>
+
+          {/* Card for Student Attendance (Admin marking on behalf of teachers) */}
+          <Link to="/admin/student-attendance" className="w-full flex justify-center">
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="styled-card student-attendance-card"
+            >
+              <span className="card__title">Student Attendance</span>
+              <p className="card__content">
+                Mark or update student attendance on behalf of teachers.
+              </p>
+              <form className="card__form">
+                <button className="card__button">Student Attendance</button>
+              </form>
+            </motion.div>
           </Link>
 
         </motion.div>

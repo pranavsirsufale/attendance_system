@@ -14,7 +14,18 @@ const CalendarPicker = ({isAdmin,notifyUser}) => {
   const [error, setError] = useState('');
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState('');
+  const [queryTeacher, setQueryTeacher] = useState(null);
+  const [querySubject, setQuerySubject] = useState(null);
   const navigate = useNavigate();
+
+  // Read query params for teacher/subject filtering (admin student-attendance flow)
+  useEffect(() => {
+    const qp = new URLSearchParams(window.location.search);
+    const teacher = qp.get('teacher');
+    const subject_name = qp.get('subject_name');
+    if (teacher) setQueryTeacher(teacher);
+    if (subject_name) setQuerySubject(subject_name);
+  }, []);
 
 
   useEffect(() => {
@@ -53,7 +64,10 @@ const CalendarPicker = ({isAdmin,notifyUser}) => {
     setError('');
     try {
       const month = start.toISOString().slice(0, 7);
-      const url = `http://localhost:8000/api/scheduled-dates/?month=${month}${selectedSection ? `&section_id=${selectedSection}` : ''}`;
+      let url = `http://localhost:8000/api/scheduled-dates/?month=${month}`;
+      if (selectedSection) url += `&section_id=${selectedSection}`;
+      if (queryTeacher) url += `&teacher=${queryTeacher}`;
+      if (querySubject) url += `&subject_name=${encodeURIComponent(querySubject)}`;
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -93,7 +107,10 @@ const CalendarPicker = ({isAdmin,notifyUser}) => {
     setLoading(true);
     setError('');
     try {
-      const url = `http://localhost:8000/api/sessions-by-date/?date=${dateStr}${selectedSection ? `&section_id=${selectedSection}` : ''}`;
+      let url = `http://localhost:8000/api/sessions-by-date/?date=${dateStr}`;
+      if (selectedSection) url += `&section_id=${selectedSection}`;
+      if (queryTeacher) url += `&teacher=${queryTeacher}`;
+      if (querySubject) url += `&subject_name=${encodeURIComponent(querySubject)}`;
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` },
       });

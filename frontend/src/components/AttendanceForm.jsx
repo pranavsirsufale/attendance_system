@@ -10,6 +10,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import { FaTimes } from "react-icons/fa";
+import './AttendanceForm.css';
 
 function AttendanceForm({ notifyUser, onClose = () => {} }) {
   const { sessionId } = useParams();
@@ -169,7 +170,7 @@ function AttendanceForm({ notifyUser, onClose = () => {} }) {
                           {student.first_name} {student.last_name}
                         </td>
                         <td className="border px-4 py-2">
-                          <label htmlFor={`attendance-${student.id}`} className="flex items-center cursor-pointer">
+                          <label htmlFor={`attendance-${student.id}`} className="flex items-center cursor-pointer attendance-toggle">
                             <div className="relative">
                               <input
                                 type="checkbox"
@@ -187,15 +188,7 @@ function AttendanceForm({ notifyUser, onClose = () => {} }) {
                               {attendance[student.id] ? "Present" : "Absent"}
                             </div>
                           </label>
-                          {/* Add this CSS to your project's main CSS file or a style tag for the toggle effect */}
-                          <style>{`
-                            input:checked ~ .dot {
-                              transform: translateX(100%);
-                            }
-                            input:checked ~ .block {
-                              background-color: #34D399; /* green-400 */
-                            }
-                          `}</style>
+                          {/* Toggle CSS moved to AttendanceForm.css */}
                         </td>
                       </tr>
                     ))}

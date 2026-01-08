@@ -1,0 +1,6 @@
+.attendance-toggle input:checked ~ .dot {
+  transform: translateX(100%);
+}
+.attendance-toggle input:checked ~ .block {
+  background-color: #34D399; 
+}

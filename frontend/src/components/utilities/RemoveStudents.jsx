@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import {Box, FormControl, FormHelperText, InputLabel, Select, MenuItem, Typography, Table, TableBody, TableCell,
+import {
+  Box, FormControl, FormHelperText, InputLabel, Select, MenuItem, Typography, Table, TableBody, TableCell,
   TableHead, TableRow, Card, CardContent, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Grid,
 } from '@mui/material';
 import { ToastContainer, toast } from 'react-toastify';
@@ -38,7 +39,7 @@ function RemoveStudents({ notifyUser }) {
       return;
     }
     try {
-      const response = await axios.get('http://localhost:8000/api/programs/', {
+      const response = await axios.get('/api/programs/', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPrograms(response.data);
@@ -53,7 +54,7 @@ function RemoveStudents({ notifyUser }) {
   const fetchSections = async (programId) => {
     const token = localStorage.getItem('access_token');
     try {
-      const response = await axios.get(`http://localhost:8000/api/sections-for-program/?program_id=${programId}`, {
+      const response = await axios.get(`/api/sections-for-program/?program_id=${programId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSections(response.data);
@@ -79,7 +80,7 @@ function RemoveStudents({ notifyUser }) {
     setLoading(true);
     const token = localStorage.getItem('access_token');
     try {
-      const response = await axios.get(`http://localhost:8000/api/students/`, {
+      const response = await axios.get(`/api/students/`, {
         params: {
           program_id: selectedProgram,
           section_id: selectedSection,
@@ -112,7 +113,7 @@ function RemoveStudents({ notifyUser }) {
     try {
       const token = localStorage.getItem('access_token');
       const studentIds = students.map((student) => ({ id: student.id }));
-      const response = await axios.post('http://localhost:8000/api/students-remove/', studentIds, {
+      const response = await axios.post('/api/students-remove/', studentIds, {
         headers: { Authorization: `Bearer ${token}` },
       });
       notifyUser(`Successfully removed ${response.data.removed} students`, 'success');
@@ -171,10 +172,10 @@ function RemoveStudents({ notifyUser }) {
   return (
     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
 
-           <Typography textAlign={"center"} variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
-                <Button onClick={() => navigate("/admin")}>Dashboard</Button>
-                  Promote Students
-                </Typography>
+      <Typography textAlign={"center"} variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
+        <Button onClick={() => navigate("/admin")}>Dashboard</Button>
+        Promote Students
+      </Typography>
 
 
       <AnimatePresence>
@@ -305,7 +306,7 @@ function RemoveStudents({ notifyUser }) {
                       <TableCell>{student.roll_number}</TableCell>
                       <TableCell>{`${student.first_name} ${student.last_name || ''}`}</TableCell>
                       {/* <TableCell>{student.section?.program?.name || 'N/A'}</TableCell> */}
-                      <TableCell>{student.section? `${student.section}` : 'N/A'}</TableCell>
+                      <TableCell>{student.section ? `${student.section}` : 'N/A'}</TableCell>
                       <TableCell>{student.semester}</TableCell>
                     </TableRow>
                   ))}

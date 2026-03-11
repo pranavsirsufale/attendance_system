@@ -1,852 +1,597 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const API = 'http://localhost:8000/api';
+const tok = () => localStorage.getItem('access_token');
+const authHead = () => ({ Authorization: `Bearer ${tok()}` });
+
+// ── tiny reusable stat card ──────────────────────────────────────────────────
+function StatCard({ label, value, color, icon }) {
+  return (
+    <motion.div whileHover={{ scale: 1.02 }}
+      className={`bg-white dark:bg-gray-800 rounded-xl shadow p-5 border-l-4 ${color} flex items-center gap-4`}>
+      <span className="text-3xl">{icon}</span>
+      <div>
+        <p className="text-2xl font-extrabold text-gray-900 dark:text-white">{value}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</p>
+      </div>
+    </motion.div>
+  );
+}
+
+// ── tab button ───────────────────────────────────────────────────────────────
+function Tab({ active, onClick, children }) {
+  return (
+    <button onClick={onClick}
+      className={`flex-1 py-3.5 px-6 font-semibold text-sm transition-all rounded-t-lg
+        ${active
+          ? 'bg-indigo-600 text-white shadow-inner'
+          : 'text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-gray-700'
+        }`}>
+      {children}
+    </button>
+  );
+}
+
+// ── select / input classes ───────────────────────────────────────────────────
+const sel = "w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:opacity-40 disabled:cursor-not-allowed";
+const inp = "w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all";
+
 function ArchivalAttendance({ notifyUser }) {
-  const [activeTab, setActiveTab] = useState('create'); // 'create', 'view', or 'semester-view'
+  const [activeTab, setActiveTab] = useState('create');
   const [loading, setLoading] = useState(false);
-  
-  // Create Archive State
+
+  // shared
   const [programs, setPrograms] = useState([]);
-  const [sections, setSections] = useState([]);
-  const [allSemesters, setAllSemesters] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]); // All possible semesters
-  const [availableCreateSemesters, setAvailableCreateSemesters] = useState([]); // Semesters for selected program in create tab
-  const [archiveFilters, setArchiveFilters] = useState({
-    program_id: '',
-    semester: '',
-    start_date: '',
-    end_date: ''
-  });
-  const [archiveNote, setArchiveNote] = useState('');
-  
-  // View Archives State
-  const [archives, setArchives] = useState([]);
   const [archiveStats, setArchiveStats] = useState(null);
-  const [viewFilters, setViewFilters] = useState({
-    student_roll_number: '',
-    subject_name: '',
-    section_name: '',
-    semester: '',
-    start_date: '',
-    end_date: ''
-  });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  
-  // Semester-wise view state
-  const [semesterWiseData, setSemesterWiseData] = useState({});
-  const [selectedSemesterView, setSelectedSemesterView] = useState('');
-  const [semesterViewFilters, setSemesterViewFilters] = useState({
-    program_id: '',
-    semester: '',
-    start_date: '',
-    end_date: ''
-  });
-  const [availableSemesters, setAvailableSemesters] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-  const [subjectStudents, setSubjectStudents] = useState({}); // per-subject student aggregates
+
+  // ── Create tab ──────────────────────────────────────────────────────────────
+  const [createProgram, setCreateProgram] = useState('');
+  const [createSemester, setCreateSemester] = useState('');
+  const [createSemesters, setCreateSemesters] = useState([]);
+
+  // ── View tab ────────────────────────────────────────────────────────────────
+  const [viewProgram, setViewProgram] = useState('');
+  const [viewSemester, setViewSemester] = useState('');
+  const [viewSemesters, setViewSemesters] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  const [viewStartDate, setViewStartDate] = useState('');
+  const [viewEndDate, setViewEndDate] = useState('');
+  const [semesterData, setSemesterData] = useState({});   // { subjectName: { totalPresent, totalAbsent, totalRecords, records[] } }
   const [openSubject, setOpenSubject] = useState(null);
+  const [subjectStudents, setSubjectStudents] = useState({});   // { subjectName: [ student… ] }
   const [studentDetail, setStudentDetail] = useState(null);
   const [studentDetailOpen, setStudentDetailOpen] = useState(false);
 
+  // ── init ────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    fetchPrograms();
-    fetchArchiveStats();
+    axios.get(`${API}/programs/`, { headers: authHead() })
+      .then(r => setPrograms(r.data))
+      .catch(() => notifyUser('Failed to load programs', 'error'));
+    fetchStats();
   }, []);
 
-  const fetchPrograms = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get('http://localhost:8000/api/programs/', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setPrograms(response.data);
-    } catch (error) {
-      console.error('Error fetching programs:', error);
-    }
+  const fetchStats = () => {
+    axios.get(`${API}/admin/archival-attendance/stats/`, { headers: authHead() })
+      .then(r => setArchiveStats(r.data))
+      .catch(console.error);
   };
 
-  const fetchArchiveStats = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get('http://localhost:8000/api/admin/archival-attendance/stats/', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setArchiveStats(response.data);
-    } catch (error) {
-      console.error('Error fetching archive stats:', error);
-    }
+  const semestersForProgram = (programId, programs) => {
+    const prog = programs.find(p => p.id === parseInt(programId));
+    if (!prog) return [];
+    return Array.from({ length: prog.duration_years * 2 }, (_, i) => i + 1);
   };
 
-  const fetchArchives = async (page = 1) => {
+  // ── CREATE ──────────────────────────────────────────────────────────────────
+  const handleCreate = async () => {
+    if (!createProgram) { notifyUser('Please select a program', 'warning'); return; }
+    if (!createSemester) { notifyUser('Please select a semester', 'warning'); return; }
     setLoading(true);
     try {
-      const token = localStorage.getItem('access_token');
-      const params = new URLSearchParams({ page, ...viewFilters });
-      
-      // Remove empty filters
-      Object.keys(viewFilters).forEach(key => {
-        if (!viewFilters[key]) params.delete(key);
-      });
-      
-      const response = await axios.get(`http://localhost:8000/api/admin/archival-attendance/?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setArchives(response.data.results);
-      setTotalPages(Math.ceil(response.data.count / 20));
-      setCurrentPage(page);
-    } catch (error) {
-      notifyUser('Failed to fetch archived attendance', 'error');
-      console.error('Error fetching archives:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateArchive = async () => {
-    if (!archiveFilters.program_id) {
-      notifyUser('Please select a program first', 'warning');
-      return;
-    }
-    if (!archiveFilters.semester) {
-      notifyUser('Please select a semester', 'warning');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('access_token');
-      
-      // Clean filters - remove empty values
-      const cleanFilters = {};
-      Object.keys(archiveFilters).forEach(key => {
-        if (archiveFilters[key]) cleanFilters[key] = archiveFilters[key];
-      });
-      
-      const response = await axios.post(
-        'http://localhost:8000/api/admin/archival-attendance/',
-        {
-          filters: cleanFilters,
-          archive_note: archiveNote
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await axios.post(`${API}/admin/archival-attendance/`,
+        { filters: { program_id: createProgram, semester: createSemester } },
+        { headers: authHead() }
       );
-      
-      notifyUser(`✅ Successfully archived ${response.data.count} records`, 'success');
-      setArchiveNote('');
-      setArchiveFilters({
-        program_id: '',
-        semester: '',
-        start_date: '',
-        end_date: ''
-      });
-      setAvailableCreateSemesters([]);
-      fetchArchiveStats();
-    } catch (error) {
-      notifyUser(error.response?.data?.error || 'Failed to create archive', 'error');
-      console.error('Error creating archive:', error);
+      notifyUser(`✅ Archived ${res.data.count} records`, 'success');
+      setCreateProgram('');
+      setCreateSemester('');
+      setCreateSemesters([]);
+      fetchStats();
+    } catch (err) {
+      notifyUser(err.response?.data?.error || 'Failed to create archive', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleProgramChange = (e) => {
-    const programId = e.target.value;
-    fetchSectionsForProgram(programId);
-    setArchiveFilters({ ...archiveFilters, section_id: '' });
-  };
-
-  const handleSectionChange = (e) => {
-    const sectionId = e.target.value;
-    setArchiveFilters({ ...archiveFilters, section_id: sectionId });
-  };
-
-  const fetchSemesterWiseArchives = async (filters) => {
+  // ── VIEW ────────────────────────────────────────────────────────────────────
+  const handleView = async () => {
+    if (!viewSemester) { notifyUser('Please select a semester', 'warning'); return; }
     setLoading(true);
+    setSemesterData({});
+    setOpenSubject(null);
+    setSubjectStudents({});
     try {
-      const token = localStorage.getItem('access_token');
-      const params = new URLSearchParams({ page_size: 10000 });
-      
-      if (filters.program_id) params.append('section_name', programs.find(p => p.id === parseInt(filters.program_id))?.name || '');
-      if (filters.semester) params.append('semester', filters.semester);
-      if (filters.start_date) params.append('start_date', filters.start_date);
-      if (filters.end_date) params.append('end_date', filters.end_date);
-      
-      const response = await axios.get(`http://localhost:8000/api/admin/archival-attendance/?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Group by subject
-      const groupedData = {};
-      response.data.results.forEach(record => {
-        if (!groupedData[record.subject_name]) {
-          groupedData[record.subject_name] = {
-            subject: record.subject_name,
-            records: [],
-            totalPresent: 0,
-            totalAbsent: 0,
-            totalRecords: 0
-          };
-        }
-        groupedData[record.subject_name].records.push(record);
-        groupedData[record.subject_name].totalRecords++;
-        if (record.status) {
-          groupedData[record.subject_name].totalPresent++;
-        } else {
-          groupedData[record.subject_name].totalAbsent++;
-        }
-      });
-      
-      setSemesterWiseData(groupedData);
-    } catch (error) {
-      notifyUser('Failed to fetch semester-wise archives', 'error');
-      console.error('Error fetching semester-wise archives:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSemesterViewSearch = () => {
-    if (!semesterViewFilters.semester) {
-      notifyUser('Please select a semester', 'warning');
-      return;
-    }
-    fetchSemesterWiseArchives(semesterViewFilters);
-  };
-
-  const handleDownloadArchive = (format) => {
-    if (!semesterViewFilters.semester) {
-      notifyUser('Please select a semester first', 'warning');
-      return;
-    }
-
-    const token = localStorage.getItem('access_token');
-    const params = new URLSearchParams({ format });
-    
-    if (semesterViewFilters.program_id) params.append('program_id', semesterViewFilters.program_id);
-    if (semesterViewFilters.semester) params.append('semester', semesterViewFilters.semester);
-    if (semesterViewFilters.start_date) params.append('start_date', semesterViewFilters.start_date);
-    if (semesterViewFilters.end_date) params.append('end_date', semesterViewFilters.end_date);
-    
-    window.open(
-      `http://localhost:8000/api/admin/archival-attendance/export/?${params.toString()}`,
-      '_blank'
-    );
-    notifyUser(`Downloading ${format.toUpperCase()} file...`, 'success');
-  };
-
-  const handleDeleteArchive = async () => {
-    if (!semesterViewFilters.semester) {
-      notifyUser('Please select a semester first', 'warning');
-      return;
-    }
-
-    const dateRangeText = (semesterViewFilters.start_date || semesterViewFilters.end_date) 
-      ? ` from ${semesterViewFilters.start_date || 'start'} to ${semesterViewFilters.end_date || 'end'}` 
-      : '';
-    
-    const confirmMessage = `Are you sure you want to delete all archived attendance for Semester ${semesterViewFilters.semester}${
-      semesterViewFilters.program_id ? ' in the selected program' : ''
-    }${dateRangeText}?`;
-
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('access_token');
-      const params = new URLSearchParams();
-      
-      if (semesterViewFilters.program_id) params.append('program_id', semesterViewFilters.program_id);
-      if (semesterViewFilters.semester) params.append('semester', semesterViewFilters.semester);
-      if (semesterViewFilters.start_date) params.append('start_date', semesterViewFilters.start_date);
-      if (semesterViewFilters.end_date) params.append('end_date', semesterViewFilters.end_date);
-      
-      const response = await axios.delete(
-        `http://localhost:8000/api/admin/archival-attendance/delete/?${params.toString()}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      notifyUser(`✅ ${response.data.message}`, 'success');
-      setSemesterWiseData({});
-      fetchArchiveStats();
-    } catch (error) {
-      notifyUser(error.response?.data?.error || 'Failed to delete archived attendance', 'error');
-      console.error('Error deleting archives:', error);
-    }
-  };
-
-  const fetchSubjectStudents = async (subjectName) => {
-    if (!semesterViewFilters.semester) {
-      notifyUser('Please select a semester first', 'warning');
-      return;
-    }
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('access_token');
-      const params = new URLSearchParams();
-      params.append('semester', semesterViewFilters.semester);
-      params.append('subject_name', subjectName);
-      if (semesterViewFilters.program_id) {
-        params.append('section_name', programs.find(p => p.id === parseInt(semesterViewFilters.program_id))?.name || '');
+      const params = new URLSearchParams({ page_size: 10000, semester: viewSemester });
+      if (viewProgram) {
+        const prog = programs.find(p => p.id === parseInt(viewProgram));
+        if (prog) params.append('section_name', prog.name);
       }
+      if (viewStartDate) params.append('start_date', viewStartDate);
+      if (viewEndDate) params.append('end_date', viewEndDate);
 
-      const response = await axios.get(`http://localhost:8000/api/admin/archival-attendance/subject-students/?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await axios.get(`${API}/admin/archival-attendance/?${params}`, { headers: authHead() });
+
+      const grouped = {};
+      res.data.results.forEach(rec => {
+        if (!grouped[rec.subject_name]) {
+          grouped[rec.subject_name] = { totalPresent: 0, totalAbsent: 0, totalRecords: 0 };
+        }
+        grouped[rec.subject_name].totalRecords++;
+        if (rec.status) grouped[rec.subject_name].totalPresent++;
+        else grouped[rec.subject_name].totalAbsent++;
       });
-
-      setSubjectStudents(prev => ({ ...prev, [subjectName]: response.data.students }));
-      setOpenSubject(subjectName);
-    } catch (error) {
-      notifyUser('Failed to fetch subject students', 'error');
-      console.error('Error fetching subject students:', error);
+      setSemesterData(grouped);
+      if (Object.keys(grouped).length === 0) notifyUser('No archived records found', 'info');
+    } catch {
+      notifyUser('Failed to fetch archives', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchStudentDetail = async (subjectName, studentRoll) => {
-    if (!semesterViewFilters.semester) return;
+  const handleSubjectToggle = async (subjectName) => {
+    if (openSubject === subjectName) { setOpenSubject(null); return; }
+    if (subjectStudents[subjectName]) { setOpenSubject(subjectName); return; }
     setLoading(true);
     try {
-      const token = localStorage.getItem('access_token');
-      const params = new URLSearchParams();
-      params.append('semester', semesterViewFilters.semester);
-      params.append('subject_name', subjectName);
-      params.append('student_roll_number', studentRoll);
-
-      const response = await axios.get(`http://localhost:8000/api/admin/archival-attendance/student-detail/?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      setStudentDetail(response.data);
-      setStudentDetailOpen(true);
-    } catch (error) {
-      notifyUser('Failed to fetch student detail', 'error');
-      console.error('Error fetching student detail:', error);
+      const params = new URLSearchParams({ semester: viewSemester, subject_name: subjectName });
+      if (viewProgram) {
+        const prog = programs.find(p => p.id === parseInt(viewProgram));
+        if (prog) params.append('section_name', prog.name);
+      }
+      const res = await axios.get(`${API}/admin/archival-attendance/subject-students/?${params}`, { headers: authHead() });
+      setSubjectStudents(prev => ({ ...prev, [subjectName]: res.data.students }));
+      setOpenSubject(subjectName);
+    } catch {
+      notifyUser('Failed to load students', 'error');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleStudentDetail = async (subjectName, roll) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ semester: viewSemester, subject_name: subjectName, student_roll_number: roll });
+      const res = await axios.get(`${API}/admin/archival-attendance/student-detail/?${params}`, { headers: authHead() });
+      setStudentDetail(res.data);
+      setStudentDetailOpen(true);
+    } catch {
+      notifyUser('Failed to load student detail', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = (format) => {
+    if (!viewSemester) { notifyUser('Please select a semester first', 'warning'); return; }
+    const params = new URLSearchParams({ format, semester: viewSemester });
+    if (viewProgram) params.append('program_id', viewProgram);
+    if (viewStartDate) params.append('start_date', viewStartDate);
+    if (viewEndDate) params.append('end_date', viewEndDate);
+    window.open(`${API}/admin/archival-attendance/export/?${params}`, '_blank');
+    notifyUser(`Downloading ${format.toUpperCase()}…`, 'success');
+  };
+
+  const handleDelete = async () => {
+    if (!viewSemester) { notifyUser('Please select a semester first', 'warning'); return; }
+    if (!window.confirm(`Delete all archived attendance for Semester ${viewSemester}? This cannot be undone.`)) return;
+    try {
+      const params = new URLSearchParams({ semester: viewSemester });
+      if (viewProgram) params.append('program_id', viewProgram);
+      if (viewStartDate) params.append('start_date', viewStartDate);
+      if (viewEndDate) params.append('end_date', viewEndDate);
+      const res = await axios.delete(`${API}/admin/archival-attendance/delete/?${params}`, { headers: authHead() });
+      notifyUser(`✅ ${res.data.message}`, 'success');
+      setSemesterData({});
+      fetchStats();
+    } catch (err) {
+      notifyUser(err.response?.data?.error || 'Delete failed', 'error');
+    }
+  };
+
+  // ── derived summary stats ────────────────────────────────────────────────────
+  const totalSubjects = Object.keys(semesterData).length;
+  const totalPresent = Object.values(semesterData).reduce((s, d) => s + d.totalPresent, 0);
+  const totalRecords = Object.values(semesterData).reduce((s, d) => s + d.totalRecords, 0);
+  const overallPct = totalRecords ? ((totalPresent / totalRecords) * 100).toFixed(1) : '—';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-7xl mx-auto"
-      >
-        <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-850 dark:to-gray-800 p-6">
+      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
+        className="max-w-6xl mx-auto">
+
+        {/* ── Page header ── */}
+        <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 mb-6">
           Archival Attendance Management
         </h1>
 
-        {/* Stats Cards */}
+        {/* ── Stats cards ── */}
         {archiveStats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="bg-white rounded-lg shadow-lg p-6"
-            >
-              <h3 className="text-gray-600 text-sm font-semibold mb-2">Total Archived Records</h3>
-              <p className="text-3xl font-bold text-blue-600">{archiveStats.total_archived_records}</p>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="bg-white rounded-lg shadow-lg p-6"
-            >
-              <h3 className="text-gray-600 text-sm font-semibold mb-2">Semesters Covered</h3>
-              <p className="text-3xl font-bold text-purple-600">{archiveStats.semester_statistics?.length || 0}</p>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="bg-white rounded-lg shadow-lg p-6"
-            >
-              <h3 className="text-gray-600 text-sm font-semibold mb-2">Recent Archives</h3>
-              <p className="text-3xl font-bold text-indigo-600">{archiveStats.recent_archives?.length || 0}</p>
-            </motion.div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <StatCard label="Total Archived Records" value={archiveStats.total_archived_records?.toLocaleString() ?? 0} color="border-indigo-500" icon="🗂️" />
+            <StatCard label="Semesters Covered" value={archiveStats.semester_statistics?.length ?? 0} color="border-purple-500" icon="📅" />
+            <StatCard label="Recent Snapshots" value={archiveStats.recent_archives?.length ?? 0} color="border-blue-500" icon="📸" />
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="bg-white rounded-t-lg shadow-lg">
-          <div className="flex border-b">
-            <button
-              onClick={() => setActiveTab('create')}
-              className={`flex-1 py-4 px-6 font-semibold transition-all ${
-                activeTab === 'create'
-                  ? 'bg-blue-600 text-white border-b-4 border-blue-800'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              Create Archive
-            </button>
-            <button
-              onClick={() => setActiveTab('semester-view')}
-              className={`flex-1 py-4 px-6 font-semibold transition-all ${
-                activeTab === 'semester-view'
-                  ? 'bg-blue-600 text-white border-b-4 border-blue-800'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              Semester-Wise View
-            </button>
-            {/* <button
-              onClick={() => {
-                setActiveTab('view');
-                fetchArchives(1);
-              }}
-              className={`flex-1 py-4 px-6 font-semibold transition-all ${
-                activeTab === 'view'
-                  ? 'bg-blue-600 text-white border-b-4 border-blue-800'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              All Archives
-            </button> */}
-          </div>
+        {/* ── Tabs ── */}
+        <div className="flex border-b border-gray-200 dark:border-gray-700 mb-0">
+          <Tab active={activeTab === 'create'} onClick={() => setActiveTab('create')}>
+            📦 Create Archive
+          </Tab>
+          <Tab active={activeTab === 'view'} onClick={() => setActiveTab('view')}>
+            🔍 Semester View
+          </Tab>
         </div>
 
-        {/* Tab Content */}
-        <div className="bg-white rounded-b-lg shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-b-xl rounded-tr-xl shadow-xl border border-gray-100 dark:border-gray-700 p-6">
           <AnimatePresence mode="wait">
-            {activeTab === 'create' ? (
-              <motion.div
-                key="create"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-              >
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">Create Archival Snapshot</h2>
-                <p className="text-gray-600 mb-6">
-                  First select a program, then choose the semester to archive. Optionally filter by date range.
+
+            {/* ════════════════ CREATE TAB ════════════════ */}
+            {activeTab === 'create' && (
+              <motion.div key="create"
+                initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
+
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-1">Create Archival Snapshot</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  Copies current semester attendance into long-term archive storage. Original records are not deleted.
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="">
-                    <label className="block text-gray-700 font-semibold mb-2 text-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                  {/* Program */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       Program <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      value={archiveFilters.program_id}
-                      onChange={(e) => {
-                        const programId = e.target.value;
-                        setArchiveFilters({ ...archiveFilters, program_id: programId, semester: '' });
-                        
-                        // Update available semesters based on program duration
-                        if (programId) {
-                          const selectedProgram = programs.find(p => p.id === parseInt(programId));
-                          if (selectedProgram) {
-                            const maxSemesters = selectedProgram.duration_years * 2;
-                            const semesterList = Array.from({ length: maxSemesters }, (_, i) => i + 1);
-                            setAvailableCreateSemesters(semesterList);
-                          }
-                        } else {
-                          setAvailableCreateSemesters([]);
-                        }
-                      }}
-                      className="w-full p-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-lg"
-                    >
-                      <option value="">-- Select Program (Required) --</option>
-                      {programs.map(prog => (
-                        <option key={prog.id} value={prog.id}>{prog.name}</option>
-                      ))}
+                    <select value={createProgram} className={sel}
+                      onChange={e => {
+                        setCreateProgram(e.target.value);
+                        setCreateSemester('');
+                        setCreateSemesters(e.target.value ? semestersForProgram(e.target.value, programs) : []);
+                      }}>
+                      <option value="">— Select Program —</option>
+                      {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
-                    <p className="text-sm text-gray-500 mt-1">Select the program first</p>
                   </div>
 
-                  <div className="">
-                    <label className="block text-gray-700 font-semibold mb-2 text-lg">
+                  {/* Semester */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       Semester <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      value={archiveFilters.semester}
-                      onChange={(e) => setArchiveFilters({ ...archiveFilters, semester: e.target.value })}
-                      className="w-full p-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-lg disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      disabled={!archiveFilters.program_id}
-                    >
-                      <option value="">
-                        {!archiveFilters.program_id 
-                          ? '-- Select Program First --' 
-                          : availableCreateSemesters.length === 0
-                            ? 'No Semesters Available'
-                            : '-- Select Semester (Required) --'}
-                      </option>
-                      {availableCreateSemesters.map(sem => (
-                        <option key={sem} value={sem}>Semester {sem}</option>
-                      ))}
+                    <select value={createSemester} disabled={!createProgram} className={sel}
+                      onChange={e => setCreateSemester(e.target.value)}>
+                      <option value="">{createProgram ? '— Select Semester —' : '— Select Program First —'}</option>
+                      {createSemesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
                     </select>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {archiveFilters.program_id 
-                        ? 'Select the semester you want to archive' 
-                        : 'Program selection required'}
-                    </p>
                   </div>
                 </div>
 
-                {/* <div className="mb-6">
-                  <label className="block text-gray-700 font-semibold mb-2">Archive Note (Optional)</label>
-                  <textarea
-                    value={archiveNote}
-                    onChange={(e) => setArchiveNote(e.target.value)}
-                    placeholder="Add a note about this archive (e.g., 'Semester 5 Final Backup - December 2025')"
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    rows="3"
-                  />
-                </div> */}
+                {/* Preview banner */}
+                <AnimatePresence>
+                  {createProgram && createSemester && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                      className="mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-200 dark:border-indigo-700">
+                      <p className="text-indigo-800 dark:text-indigo-200 font-medium">
+                        📚 Will archive all attendance for{' '}
+                        <strong>{programs.find(p => p.id === parseInt(createProgram))?.name}</strong>{' '}
+                        — <strong>Semester {createSemester}</strong>
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-                {archiveFilters.program_id && archiveFilters.semester && (
-                  <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h3 className="font-semibold text-blue-800 mb-2">Archive Summary:</h3>
-                    <p className="text-gray-700">
-                      📚 Archiving all attendance for <strong>{programs.find(p => p.id === parseInt(archiveFilters.program_id))?.name}</strong> - <strong>Semester {archiveFilters.semester}</strong>
-                      {(archiveFilters.start_date || archiveFilters.end_date) && ' within date range'}
-                    </p>
-                  </div>
-                )}
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleCreateArchive}
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold shadow-lg disabled:opacity-50"
-                >
-                  {loading ? 'Creating Archive...' : 'Create Archival Snapshot'}
+                <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                  onClick={handleCreate} disabled={loading || !createProgram || !createSemester}
+                  className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Creating Archive…
+                    </span>
+                  ) : 'Create Archival Snapshot'}
                 </motion.button>
               </motion.div>
-            ) : activeTab === 'semester-view' ? (
-              <motion.div
-                key="semester-view"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">Semester-Wise Archival View</h2>
-                <p className="text-gray-600 mb-6">
-                  Filter and view archived attendance by semester. Download complete data in XLSX or CSV format.
+            )}
+
+            {/* ════════════════ VIEW TAB ════════════════ */}
+            {activeTab === 'view' && (
+              <motion.div key="view"
+                initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-1">Semester-Wise Archival View</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                  Browse, export or delete archived attendance by semester.
                 </p>
 
-                {/* Filter Section */}
-                <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Filters</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* ── Filters ── */}
+                <div className="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-5 border border-gray-200 dark:border-gray-600 mb-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-2">
-                        Program <span className="text-red-500">*</span>
-                {studentDetailOpen && studentDetail && (
-                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg max-w-2xl w-full p-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xl font-bold">{studentDetail.student_roll_number} — {studentDetail.student_name}</h3>
-                        <button onClick={() => setStudentDetailOpen(false)} className="px-3 py-1 bg-gray-200 rounded">Close</button>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                       
-                        <div>
-                          <p className="text-sm text-gray-600">Present</p>
-                          <p className="font-bold text-lg text-green-600">{studentDetail.present}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600">Absent</p>
-                          <p className="font-bold text-lg text-red-600">{studentDetail.absent}</p>
-                        </div>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-gray-100">
-                              <th className="p-2 text-left">Session Date</th>
-                              <th className="p-2 text-left">Status</th>
-                              <th className="p-2 text-left">Recorded By</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {studentDetail.records.map((r, i) => (
-                              <tr key={i} className="hover:bg-gray-50">
-                                <td className="p-2">{new Date(r.session_date).toLocaleDateString()}</td>
-                                <td className="p-2">
-                                  <span className={`px-2 py-1 rounded ${r.status === 'Present' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                    {r.status}
-                                  </span>
-                                </td>
-                                <td className="p-2">{r.original_recorded_by}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                      </label>
-                      <select
-                        value={semesterViewFilters.program_id}
-                        onChange={(e) => {
-                          const programId = e.target.value;
-                          setSemesterViewFilters({ ...semesterViewFilters, program_id: programId });
-                          
-                          // Update available semesters based on program duration
-                          if (programId) {
-                            const selectedProgram = programs.find(p => p.id === parseInt(programId));
-                            if (selectedProgram) {
-                              const maxSemesters = selectedProgram.duration_years * 2;
-                              const semesterList = Array.from({ length: maxSemesters }, (_, i) => i + 1);
-                              setAvailableSemesters(semesterList);
-                            }
-                          } else {
-                            // Show all semesters when no program selected
-                            setAvailableSemesters([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-                          }
-                        }}
-                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      >
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1.5">Program</label>
+                      <select value={viewProgram} className={sel}
+                        onChange={e => {
+                          setViewProgram(e.target.value);
+                          setViewSemester('');
+                          setViewSemesters(e.target.value ? semestersForProgram(e.target.value, programs) : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+                        }}>
                         <option value="">All Programs</option>
-                        {programs.map(prog => (
-                          <option key={prog.id} value={prog.id}>{prog.name}</option>
-                        ))}
+                        {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-2">
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1.5">
                         Semester <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        value={semesterViewFilters.semester}
-                        onChange={(e) => setSemesterViewFilters({ ...semesterViewFilters, semester: e.target.value })}
-                        className="w-full p-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">-- Select Semester --</option>
-                        {availableSemesters.map(sem => (
-                          <option key={sem} value={sem}>Semester {sem}</option>
-                        ))}
+                      <select value={viewSemester} className={sel}
+                        onChange={e => { setViewSemester(e.target.value); setSemesterData({}); setOpenSubject(null); }}>
+                        <option value="">— Select Semester —</option>
+                        {viewSemesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
                       </select>
-                      {semesterViewFilters.program_id && (
-                        <p className="text-sm text-blue-600 mt-1">
-                          Showing semesters for selected program
-                        </p>
-                      )}
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-2">
-                        Start Date <span className="text-sm text-gray-500">(Optional)</span>
-                      </label>
-                      <input
-                        type="date"
-                        value={semesterViewFilters.start_date}
-                        onChange={(e) => setSemesterViewFilters({ ...semesterViewFilters, start_date: e.target.value })}
-                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1.5">Start Date</label>
+                      <input type="date" value={viewStartDate} onChange={e => setViewStartDate(e.target.value)} className={inp} />
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-2">
-                        End Date <span className="text-sm text-gray-500">(Optional)</span>
-                      </label>
-                      <input
-                        type="date"
-                        value={semesterViewFilters.end_date}
-                        onChange={(e) => setSemesterViewFilters({ ...semesterViewFilters, end_date: e.target.value })}
-                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1.5">End Date</label>
+                      <input type="date" value={viewEndDate} onChange={e => setViewEndDate(e.target.value)} className={inp} />
                     </div>
                   </div>
 
-                  <div className="flex gap-3 mt-4">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={handleSemesterViewSearch}
-                      disabled={loading || !semesterViewFilters.semester}
-                      className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold shadow-lg disabled:opacity-50"
-                    >
-                      {loading ? 'Loading...' : 'View Archives'}
-                    </motion.button>
-                  </div>
+                  <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                    onClick={handleView} disabled={loading || !viewSemester}
+                    className="w-full py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow">
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Loading…
+                      </span>
+                    ) : '🔍 View Archives'}
+                  </motion.button>
                 </div>
 
-                {/* Download & Delete Buttons */}
-                {Object.keys(semesterWiseData).length > 0 && (
-                  <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border-2 border-blue-200 mb-6">
-                    <div className="flex items-center justify-between">
+                {/* ── Action bar (export/delete) ── */}
+                <AnimatePresence>
+                  {Object.keys(semesterData).length > 0 && (
+                    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                      className="flex flex-wrap items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-50 to-blue-50 dark:from-gray-700 dark:to-gray-700 rounded-xl border border-blue-200 dark:border-gray-600 mb-5">
                       <div>
-                        <h3 className="font-semibold text-blue-800 mb-1">Actions</h3>
-                        <p className="text-sm text-gray-600">Export or delete filtered attendance records</p>
+                        <p className="font-semibold text-gray-800 dark:text-white text-sm">Semester {viewSemester} — {totalSubjects} subjects</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{totalRecords.toLocaleString()} records · Overall {overallPct}% attendance</p>
                       </div>
-                      <div className="flex gap-3">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => handleDownloadArchive('xlsx')}
-                          className="bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:bg-green-700 flex items-center gap-2"
-                        >
+                      <div className="flex gap-2">
+                        <button onClick={() => handleDownload('xlsx')}
+                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold shadow transition-colors flex items-center gap-1.5">
                           📊 XLSX
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => handleDownloadArchive('csv')}
-                          className="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:bg-blue-700 flex items-center gap-2"
-                        >
+                        </button>
+                        <button onClick={() => handleDownload('csv')}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow transition-colors flex items-center gap-1.5">
                           📄 CSV
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={handleDeleteArchive}
-                          className="bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:bg-red-700 flex items-center gap-2 border-2 border-red-700"
-                        >
+                        </button>
+                        <button onClick={handleDelete}
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold shadow transition-colors flex items-center gap-1.5">
                           🗑️ Delete
-                        </motion.button>
+                        </button>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
+                {/* ── Subject cards ── */}
                 {loading ? (
-                  <div className="text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+                  <div className="py-16 flex flex-col items-center gap-3 text-gray-400">
+                    <div className="w-10 h-10 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                    Loading archived records…
                   </div>
-                ) : semesterViewFilters.semester && Object.keys(semesterWiseData).length > 0 ? (
-                  <div className="space-y-6">
-                    <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
-                      <h3 className="text-xl font-bold text-blue-800 mb-2">
-                        Semester {semesterViewFilters.semester} - Summary
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-gray-600 text-sm">Total Subjects</p>
-                          <p className="text-2xl font-bold text-blue-600">{Object.keys(semesterWiseData).length}</p>
-                        </div>
-                        <div>
-                         
-                        </div>
-                        <div>
-                          <p className="text-gray-600 text-sm">Attendance Rate</p>
-                          <p className="text-2xl font-bold text-green-600">
-                            {(
-                              (Object.values(semesterWiseData).reduce((sum, subj) => sum + subj.totalPresent, 0) /
-                                Object.values(semesterWiseData).reduce((sum, subj) => sum + subj.totalRecords, 0)) *
-                              100
-                            ).toFixed(1)}%
-                          </p>
-                        </div>
-                      </div>
+                ) : Object.keys(semesterData).length > 0 ? (
+                  <div className="space-y-4">
+                    {/* Summary row */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-2">
+                      <StatCard label="Subjects" value={totalSubjects} color="border-indigo-400" icon="📖" />
+                      <StatCard label="Total Records" value={totalRecords.toLocaleString()} color="border-blue-400" icon="📋" />
+                      <StatCard label="Present" value={totalPresent.toLocaleString()} color="border-green-400" icon="✅" />
+                      <StatCard label="Attendance %" value={`${overallPct}%`} color="border-purple-400" icon="📊" />
                     </div>
 
-                    {/* Subject-wise breakdown */}
-                    {Object.entries(semesterWiseData).map(([subjectName, data]) => (
-                      <motion.div
-                        key={subjectName}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-500"
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="text-xl font-bold text-gray-800">{subjectName}</h3>
-                            <p className="text-gray-500 text-sm">Semester {selectedSemesterView}</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4 mb-4">
-                          <div className="bg-green-50 p-3 rounded-lg">
-                            <p className="text-xs text-gray-600">Present</p>
-                            <p className="text-lg font-bold text-green-600">{data.totalPresent}</p>
-                          </div>
-                          <div className="bg-red-50 p-3 rounded-lg">
-                            <p className="text-xs text-gray-600">Absent</p>
-                            <p className="text-lg font-bold text-red-600">{data.totalAbsent}</p>
-                          </div>
-                          <div className="bg-blue-50 p-3 rounded-lg">
-                            <p className="text-xs text-gray-600">Attendance %</p>
-                            <p className="text-lg font-bold text-blue-600">
-                              {((data.totalPresent / data.totalRecords) * 100).toFixed(1)}%
-                            </p>
-                          </div>
-                        </div>
-
-                      <div className="mt-4 flex gap-3 items-center">
-                          <button
-                            onClick={() => {
-                              if (openSubject === subjectName) {
-                                setOpenSubject(null);
-                              } else {
-                                fetchSubjectStudents(subjectName);
-                              }
-                            }}
-                            disabled={loading}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50"
-                          >
-                            {openSubject === subjectName ? 'Hide Students' : `View Students `}
-                          </button>
-                        </div>
-                        {/* Student list for this subject (aggregated) */}
-                        {openSubject === subjectName && subjectStudents[subjectName] && (
-                          <div className="mt-4 bg-gray-50 p-4 rounded-lg border">
-                            <h4 className="font-semibold mb-2">Students for {subjectName}</h4>
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="bg-white">
-                                    <th className="p-2 text-left">Roll</th>
-                                    <th className="p-2 text-left">Name</th>
-                                    <th className="p-2 text-left">Present</th>
-                                    <th className="p-2 text-left">Absent</th>
-                                    <th className="p-2 text-left">Total</th>
-                                    <th className="p-2 text-left">%</th>
-                                    <th className="p-2 text-left">Action</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {subjectStudents[subjectName].map((stu) => (
-                                    <tr key={stu.student_roll_number} className="hover:bg-gray-100">
-                                      <td className="p-2">{stu.student_roll_number}</td>
-                                      <td className="p-2">{stu.student_name}</td>
-                                      <td className="p-2">{stu.present}</td>
-                                      <td className="p-2">{stu.absent}</td>
-                                      <td className="p-2">{stu.total_records}</td>
-                                      <td className="p-2">{stu.present_percent}%</td>
-                                      <td className="p-2">
-                                        <button
-                                          onClick={() => fetchStudentDetail(subjectName, stu.student_roll_number)}
-                                          className="px-3 py-1 bg-green-600 text-white rounded text-sm"
-                                        >
-                                          View
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                    {Object.entries(semesterData).map(([subject, data]) => {
+                      const pct = data.totalRecords ? ((data.totalPresent / data.totalRecords) * 100).toFixed(1) : 0;
+                      const isOpen = openSubject === subject;
+                      return (
+                        <motion.div key={subject} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                          className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden shadow-sm">
+                          {/* Subject header */}
+                          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-700 dark:to-gray-700">
+                            <div className="flex items-center gap-4">
+                              <div>
+                                <h3 className="font-bold text-gray-800 dark:text-white">{subject}</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {data.totalRecords} records · {data.totalPresent} present · {data.totalAbsent} absent
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {/* Mini progress bar */}
+                              <div className="hidden sm:block">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-24 h-2 rounded-full bg-gray-200 dark:bg-gray-600 overflow-hidden">
+                                    <div className={`h-full rounded-full ${pct >= 75 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-400' : 'bg-red-500'}`}
+                                      style={{ width: `${Math.min(pct, 100)}%` }} />
+                                  </div>
+                                  <span className={`text-sm font-bold ${pct >= 75 ? 'text-green-600' : pct >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                    {pct}%
+                                  </span>
+                                </div>
+                              </div>
+                              <button onClick={() => handleSubjectToggle(subject)}
+                                disabled={loading}
+                                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${isOpen
+                                  ? 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                  }`}>
+                                {isOpen ? 'Hide ▲' : 'Students ▼'}
+                              </button>
                             </div>
                           </div>
-                        )}
-                      </motion.div>
-                    ))}
+
+                          {/* Student table (collapsible) */}
+                          <AnimatePresence>
+                            {isOpen && subjectStudents[subject] && (
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                <div className="overflow-x-auto border-t border-gray-100 dark:border-gray-600">
+                                  <table className="w-full text-sm">
+                                    <thead>
+                                      <tr className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wide">
+                                        <th className="p-3 text-left">Roll No</th>
+                                        <th className="p-3 text-left">Name</th>
+                                        <th className="p-3 text-center">Present</th>
+                                        <th className="p-3 text-center">Absent</th>
+                                        <th className="p-3 text-center">Total</th>
+                                        <th className="p-3 text-center">%</th>
+                                        <th className="p-3 text-center">Detail</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                      {subjectStudents[subject].map(stu => {
+                                        const sp = parseFloat(stu.present_percent);
+                                        return (
+                                          <tr key={stu.student_roll_number}
+                                            className={`hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors ${sp < 75 ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
+                                            <td className="p-3 font-semibold text-gray-800 dark:text-gray-200">{stu.student_roll_number}</td>
+                                            <td className="p-3 text-gray-600 dark:text-gray-300">{stu.student_name}</td>
+                                            <td className="p-3 text-center font-bold text-green-600 dark:text-green-400">{stu.present}</td>
+                                            <td className="p-3 text-center font-bold text-red-500 dark:text-red-400">{stu.absent}</td>
+                                            <td className="p-3 text-center text-gray-500">{stu.total_records}</td>
+                                            <td className="p-3 text-center">
+                                              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${sp >= 75 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'}`}>
+                                                {stu.present_percent}%
+                                              </span>
+                                            </td>
+                                            <td className="p-3 text-center">
+                                              <button
+                                                onClick={() => handleStudentDetail(subject, stu.student_roll_number)}
+                                                className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold transition-colors">
+                                                View
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      );
+                    })}
                   </div>
-                ) : semesterViewFilters.semester ? (
-                  <div className="text-center py-12 text-gray-500">
-                    No archived records found for Semester {semesterViewFilters.semester}
+                ) : viewSemester ? (
+                  <div className="py-16 text-center text-gray-400 dark:text-gray-500">
+                    <p className="text-5xl mb-3">📭</p>
+                    No archived records found for Semester {viewSemester}
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    Please select filters and click "View Archives"
+                  <div className="py-16 text-center text-gray-400 dark:text-gray-500">
+                    <p className="text-5xl mb-3">🗂️</p>
+                    Select a semester and click "View Archives"
                   </div>
                 )}
               </motion.div>
-            ) : (
-              <motion.div
-                key="view"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
-              </motion.div>
             )}
+
           </AnimatePresence>
         </div>
       </motion.div>
+
+      {/* ════════════════ STUDENT DETAIL MODAL ════════════════ */}
+      <AnimatePresence>
+        {studentDetailOpen && studentDetail && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={e => { if (e.target === e.currentTarget) setStudentDetailOpen(false); }}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden">
+
+              {/* Modal header */}
+              <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-700 dark:to-gray-700">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-white">{studentDetail.student_name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Roll: {studentDetail.student_roll_number}</p>
+                </div>
+                <button onClick={() => setStudentDetailOpen(false)}
+                  className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl leading-none font-bold transition-colors">×</button>
+              </div>
+
+              {/* Summary pills */}
+              <div className="flex gap-4 p-5 border-b border-gray-100 dark:border-gray-700">
+                <div className="flex-1 bg-green-50 dark:bg-green-900/20 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Present</p>
+                  <p className="text-xl font-extrabold text-green-600 dark:text-green-400">{studentDetail.present}</p>
+                </div>
+                <div className="flex-1 bg-red-50 dark:bg-red-900/20 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Absent</p>
+                  <p className="text-xl font-extrabold text-red-600 dark:text-red-400">{studentDetail.absent}</p>
+                </div>
+                <div className="flex-1 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Percentage</p>
+                  <p className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">
+                    {studentDetail.present + studentDetail.absent > 0
+                      ? ((studentDetail.present / (studentDetail.present + studentDetail.absent)) * 100).toFixed(1) + '%'
+                      : '—'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Records table */}
+              <div className="overflow-y-auto flex-1">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wide">
+                    <tr>
+                      <th className="p-3 text-left">#</th>
+                      <th className="p-3 text-left">Session Date</th>
+                      <th className="p-3 text-left">Status</th>
+                      <th className="p-3 text-left">Recorded By</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {studentDetail.records.map((r, i) => (
+                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td className="p-3 text-gray-400">{i + 1}</td>
+                        <td className="p-3 text-gray-700 dark:text-gray-300">{new Date(r.session_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${r.status === 'Present' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'}`}>
+                            {r.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-gray-500 dark:text-gray-400">{r.original_recorded_by}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

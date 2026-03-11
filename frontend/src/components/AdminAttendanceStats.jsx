@@ -48,7 +48,7 @@ function AdminAttendanceStats({ notifyUser }) {
     }
 
     try {
-      const response = await axios.get('http://localhost:8000/api/teachers/', {
+      const response = await axios.get('/api/teachers/', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTeachers(response.data);
@@ -68,7 +68,7 @@ function AdminAttendanceStats({ notifyUser }) {
     }
 
     try {
-      const response = await axios.get(`http://localhost:8000/api/students/?page=${page}`, {
+      const response = await axios.get(`/api/students/?page=${page}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const studentsData = response.data.results?.students || [];
@@ -101,7 +101,7 @@ function AdminAttendanceStats({ notifyUser }) {
     if (!selectedTeacher) return;
 
     try {
-      const response = await axios.get(`http://localhost:8000/api/teacher-subjects/?teacher=${selectedTeacher}`, {
+      const response = await axios.get(`/api/teacher-subjects/?teacher=${selectedTeacher}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTeacherSubjects(response.data.subjects);
@@ -126,7 +126,7 @@ function AdminAttendanceStats({ notifyUser }) {
 
     if (!selectedSubject) return;
 
-    let url = `http://localhost:8000/api/admin/attendance-stats/?period=${period}&page=${teacherPage}&subject_name=${encodeURIComponent(selectedSubject)}`;
+    let url = `/api/admin/attendance-stats/?period=${period}&page=${teacherPage}&subject_name=${encodeURIComponent(selectedSubject)}`;
     if (section) url += `&section=${section}`;
     if (subject) url += `&subject=${subject}`;
     if (selectedTeacher) url += `&teacher=${selectedTeacher}`;
@@ -191,7 +191,7 @@ function AdminAttendanceStats({ notifyUser }) {
     const selectedStudentData = students.find(student => student.id === selectedStudent);
     if (!selectedStudentData) return;
 
-    let url = `http://localhost:8000/api/attendance-stats/${selectedStudentData.roll_number}/?period=${period}&page=${studentPage}`;
+    let url = `/api/attendance-stats/${selectedStudentData.roll_number}/?period=${period}&page=${studentPage}`;
     if (section) url += `&section=${section}`;
     if (subject) url += `&subject=${subject}`;
     if (program) url += `&program=${program}`;
@@ -317,7 +317,7 @@ function AdminAttendanceStats({ notifyUser }) {
 
   const handleTeacherExport = async (format) => {
     const token = localStorage.getItem('access_token');
-    let url = `http://localhost:8000/api/admin/attendance-export/?`;
+    let url = `/api/admin/attendance-export/?`;
     if (section) url += `§section=${section}`;
     if (selectedSubject) {
         // Remove semester suffix

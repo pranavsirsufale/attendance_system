@@ -22,7 +22,7 @@ function AttendanceStats({notifyUser}) {
         return;
       }
 
-      let url = `http://localhost:8000/api/teacher-attendance-stats/?period=${period}`;
+      let url = `/api/teacher-attendance-stats/?period=${period}`;
       if (customRange && startDate && endDate) {
         url += `&start_date=${startDate}&end_date=${endDate}`;
       }

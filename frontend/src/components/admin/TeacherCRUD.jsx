@@ -28,7 +28,7 @@ function TeacherCRUD({ notifyUser }) {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://localhost:8000/api/admin/${resource}/`,
+        `/api/admin/${resource}/`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -54,7 +54,7 @@ function TeacherCRUD({ notifyUser }) {
     try {
       if (editingId) {
         const updateTeacher = await axios.put(
-          `http://localhost:8000/api/admin/${resource}/${editingId}/`,
+          `/api/admin/${resource}/${editingId}/`,
           formData,
           {
             headers: { Authorization: `Bearer ${token}` },
@@ -70,7 +70,7 @@ function TeacherCRUD({ notifyUser }) {
         }
       } else {
         const savedTeacherResponse = await axios.post(
-          `http://localhost:8000/api/admin/${resource}/`,
+          `/api/admin/${resource}/`,
           formData,
           {
             headers: { Authorization: `Bearer ${token}` },
@@ -109,7 +109,7 @@ function TeacherCRUD({ notifyUser }) {
     ) {
       try {
         const teacherDeleteResposne = await axios.delete(
-          `http://localhost:8000/api/admin/${resource}/${id}/`,
+          `/api/admin/${resource}/${id}/`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -336,7 +336,7 @@ function TeacherCRUD() {
     }
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:8000/api/admin/${resource}/`, {
+      const response = await axios.get(`/api/admin/${resource}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setItems(response.data);
@@ -355,11 +355,11 @@ function TeacherCRUD() {
     const token = localStorage.getItem("access_token");
     try {
       if (editingId) {
-        await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, formData, {
+        await axios.put(`/api/admin/${resource}/${editingId}/`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, formData, {
+        await axios.post(`/api/admin/${resource}/`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
@@ -380,7 +380,7 @@ function TeacherCRUD() {
     const token = localStorage.getItem("access_token");
     if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
       try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        await axios.delete(`/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setItems(items.filter((item) => item.id !== id));

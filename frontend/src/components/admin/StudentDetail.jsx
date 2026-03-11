@@ -1,6 +1,6 @@
 
 
-          {/* <Grid item xs={12} md={6}>
+{/* <Grid item xs={12} md={6}>
             <StyledCard>
               <CardContent>
                 <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
@@ -114,7 +114,7 @@ function StudentDetail({ notifyUser }) {
         params.start_date = format(startDate, 'yyyy-MM-dd');
         params.end_date = format(endDate, 'yyyy-MM-dd');
       }
-      const response = await axios.get(`http://localhost:8000/api/student-details/${id}/`, {
+      const response = await axios.get(`/api/student-details/${id}/`, {
         headers: { Authorization: `Bearer ${token}` },
         params,
       });
@@ -488,8 +488,10 @@ export default StudentDetail;
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import {Box, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography, Grid, Card, CardContent, Button,
-  CircularProgress, FormControl, InputLabel, Select, MenuItem, TextField} from '@mui/material';
+import {
+  Box, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography, Grid, Card, CardContent, Button,
+  CircularProgress, FormControl, InputLabel, Select, MenuItem, TextField
+} from '@mui/material';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -670,7 +672,7 @@ function StudentDetail({ notifyUser }) {
         params.start_date = format(startDate, 'yyyy-MM-dd');
         params.end_date = format(endDate, 'yyyy-MM-dd');
       }
-      const response = await axios.get(`http://localhost:8000/api/student-details/${id}/`, {
+      const response = await axios.get(`/api/student-details/${id}/`, {
         headers: { Authorization: `Bearer ${token}` },
         params,
       });

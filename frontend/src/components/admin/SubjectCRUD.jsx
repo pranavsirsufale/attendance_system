@@ -29,7 +29,7 @@ function SubjectCRUD({notifyUser}) {
     }
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:8000/api/admin/${resource}/`, {
+      const response = await axios.get(`/api/admin/${resource}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setItems(response.data);
@@ -58,14 +58,14 @@ function SubjectCRUD({notifyUser}) {
         semester: parseInt(formData.semester),
       };
       if (editingId) {
-        const response = await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
+        const response = await axios.put(`/api/admin/${resource}/${editingId}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if(response.status >= 200 && response.status <= 300){
           notifyUser('Record has been updated successfully ' , 'info')
         }
       } else {
-        const response = await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
+        const response = await axios.post(`/api/admin/${resource}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -91,7 +91,7 @@ function SubjectCRUD({notifyUser}) {
     const token = localStorage.getItem("access_token");
     if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
       try {
-        const response = await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        const response = await axios.delete(`/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setItems(items.filter((item) => item.id !== id));
@@ -295,7 +295,7 @@ function SubjectCRUD() {
     }
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:8000/api/admin/${resource}/`, {
+      const response = await axios.get(`/api/admin/${resource}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setItems(response.data);
@@ -319,11 +319,11 @@ function SubjectCRUD() {
         semester: parseInt(formData.semester),
       };
       if (editingId) {
-        await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
+        await axios.put(`/api/admin/${resource}/${editingId}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
+        await axios.post(`/api/admin/${resource}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
@@ -344,7 +344,7 @@ function SubjectCRUD() {
     const token = localStorage.getItem("access_token");
     if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
       try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        await axios.delete(`/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setItems(items.filter((item) => item.id !== id));

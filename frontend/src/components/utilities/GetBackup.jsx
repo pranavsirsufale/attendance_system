@@ -52,7 +52,7 @@ function GetBackup({ notifyUser }) {
 
       // Send a POST request to your Django REST Framework backup endpoint
       const response = await axios.post(
-        'http://localhost:8000/api/backup/', // Ensure this URL matches your Django URL
+        '/api/backup/', // Ensure this URL matches your Django URL
         {}, // Empty body for a POST request that triggers an action
         {
           headers: {

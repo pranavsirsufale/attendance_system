@@ -29,7 +29,7 @@ function ProgramCRUD({notifyUser}) {
     }
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:8000/api/admin/${resource}/`, {
+      const response = await axios.get(`/api/admin/${resource}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setItems(response.data);
@@ -54,7 +54,7 @@ function ProgramCRUD({notifyUser}) {
     try {
       const payload = { ...formData, duration_years: parseInt(formData.duration_years) };
       if (editingId) {
-        const programUpdateResponse = await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
+        const programUpdateResponse = await axios.put(`/api/admin/${resource}/${editingId}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -63,7 +63,7 @@ function ProgramCRUD({notifyUser}) {
         }
 
       } else {
-        const programSavedResponse = await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
+        const programSavedResponse = await axios.post(`/api/admin/${resource}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -89,7 +89,7 @@ function ProgramCRUD({notifyUser}) {
     const token = localStorage.getItem("access_token");
     if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?, by removing this Program might delete all the records related to this program `)) {
       try {
-        const deletedProgramResponse = await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        const deletedProgramResponse = await axios.delete(`/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setItems(items.filter((item) => item.id !== id));
@@ -281,7 +281,7 @@ function ProgramCRUD() {
     }
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:8000/api/admin/${resource}/`, {
+      const response = await axios.get(`/api/admin/${resource}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setItems(response.data);
@@ -301,11 +301,11 @@ function ProgramCRUD() {
     try {
       const payload = { ...formData, duration_years: parseInt(formData.duration_years) };
       if (editingId) {
-        await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
+        await axios.put(`/api/admin/${resource}/${editingId}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
+        await axios.post(`/api/admin/${resource}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
@@ -326,7 +326,7 @@ function ProgramCRUD() {
     const token = localStorage.getItem("access_token");
     if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
       try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        await axios.delete(`/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setItems(items.filter((item) => item.id !== id));

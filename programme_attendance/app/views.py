@@ -727,7 +727,8 @@ class MarkAttendanceView(generics.GenericAPIView):
             if session.timetable.teacher != user_teacher and not user_teacher.is_admin:
                 return Response({"error": "Not authorized to mark this session"}, status=status.HTTP_403_FORBIDDEN)
 
-            students = Student.objects.filter(section=session.timetable.section)
+            session_semester = session.timetable.subject.semester
+            students = Student.objects.filter(section=session.timetable.section, semester=session_semester)
             existing_attendance = Attendance.objects.filter(session=session).select_related('student')
 
             attendance_data = [
@@ -768,9 +769,10 @@ class MarkAttendanceView(generics.GenericAPIView):
             if not attendance_data:
                 return Response({"error": "Attendance data required"}, status=status.HTTP_400_BAD_REQUEST)
 
+            session_semester = session.timetable.subject.semester
             for entry in attendance_data:
                 student = Student.objects.get(id=entry['student_id'])
-                if student.section != session.timetable.section:
+                if student.section != session.timetable.section or student.semester != session_semester:
                     continue
                 # Convert string status to boolean
                 status_value = True if entry['status'] == 'Present' else False
@@ -2036,14 +2038,26 @@ class StudentAttendanceView(APIView):
                 logger.error(f"Semester {semester} invalid for section {section_id}")
                 return Response({"error": f"Semester {semester} is invalid (valid: {start_semester}-{end_semester})"}, status=400)
             subjects = Subject.objects.filter(semester=semester, timetable__section_id=section_id, timetable__section__program_id=program_id).distinct()
-            if not subjects.exists():
-                return Response({"count": 0, "subjects": [], "students": []}, status=200)
-            students = Student.objects.filter(section_id=section_id, semester=semester)
+            students = Student.objects.filter(section_id=section_id, semester=semester).order_by('roll_number')
             if not students.exists():
                 return Response({
                     "count": 0,
-                    "subjects": SubjectSerializer(subjects, many=True).data,
-                    "students": []
+                    "results": {
+                        "subjects": SubjectSerializer(subjects, many=True).data,
+                        "students": [],
+                        "start_date": None,
+                        "end_date": None
+                    }
+                }, status=200)
+            if not subjects.exists():
+                return Response({
+                    "count": students.count(),
+                    "results": {
+                        "subjects": [],
+                        "students": [{'id': s.id, 'roll_number': s.roll_number, 'name': f"{s.first_name} {s.last_name or ''}".strip(), 'attendance': []} for s in students],
+                        "start_date": None,
+                        "end_date": None
+                    }
                 }, status=200)
 
             # Apply date range filter if provided
@@ -2064,57 +2078,59 @@ class StudentAttendanceView(APIView):
                     logger.error(f"Invalid date format: start_date={start_date}, end_date={end_date}")
                     return Response({"error": "Invalid date format (use YYYY-MM-DD)"}, status=400)
 
-            # Fetch attendance data
+            # True total sessions per subject (NOT per student — sessions exist independent of attendance records)
+            subject_session_counts = {}
+            for sub in subjects:
+                subject_session_counts[sub.id] = sessions.filter(timetable__subject=sub).count()
+
+            # Fetch attendance data: only classes_attended per student per subject
             attendance_data = (
                 Attendance.objects.filter(session__in=sessions, student__in=students)
                 .values(
                     'student_id',
-                    'student__first_name',
-                    'student__last_name',
-                    'student__roll_number',
                     'session__timetable__subject__id',
-                    'session__timetable__subject__name'
                 )
                 .annotate(
-                    name=Concat(F('student__first_name'), Value(' '), F('student__last_name'), output_field=CharField()),
                     classes_attended=Count('id', filter=Q(status=True)),
-                    total_classes=Count('id')
                 )
             )
 
-            # Organize attendance by student
-            student_attendance = {}
+            # Index attended counts: {student_id: {subject_id: classes_attended}}
+            attended_map = {}
             for entry in attendance_data:
-                student_id = entry['student_id']
-                if student_id not in student_attendance:
-                    student_attendance[student_id] = {
-                        'id': student_id,
-                        'roll_number': entry['student__roll_number'],
-                        'name': entry['name'],
-                        'attendance': []
+                sid = entry['student_id']
+                subj_id = entry['session__timetable__subject__id']
+                attended_map.setdefault(sid, {})[subj_id] = entry['classes_attended']
+
+            # Pre-populate ALL students with ALL subjects, using correct session-based total_classes
+            student_attendance = {}
+            for s in students:
+                att_slots = [
+                    {
+                        'subject_id': sub.id,
+                        'subject_name': sub.name,
+                        'classes_attended': attended_map.get(s.id, {}).get(sub.id, 0),
+                        'total_classes': subject_session_counts.get(sub.id, 0)
                     }
-                student_attendance[student_id]['attendance'].append({
-                    'subject_id': entry['session__timetable__subject__id'],
-                    'subject_name': entry['session__timetable__subject__name'],
-                    'classes_attended': entry['classes_attended'],
-                    'total_classes': entry['total_classes']
-                })
+                    for sub in subjects
+                ]
+                student_attendance[s.id] = {
+                    'id': s.id,
+                    'roll_number': s.roll_number,
+                    'name': f"{s.first_name} {s.last_name or ''}".strip(),
+                    'attendance': att_slots
+                }
 
-            # Prepare student data
             student_data = list(student_attendance.values())
-            # paginator = self.pagination_class()
-            # paginated_students = paginator.paginate_queryset(student_data, request)
-            # print(paginated_students)
-
-            # return paginator.get_paginated_response({
             return Response({
-                'count' : len(student_data),
-                "results": {
-                'subjects': SubjectSerializer(subjects, many=True).data,
-                'students': student_data,
-                'start_date': start_date.isoformat() if start_date else None,
-                'end_date': end_date.isoformat() if end_date else None
-            }})
+                'count': students.count(),
+                'results': {
+                    'subjects': SubjectSerializer(subjects, many=True).data,
+                    'students': student_data,
+                    'start_date': start_date.isoformat() if not isinstance(start_date, str) and start_date else None,
+                    'end_date': end_date.isoformat() if not isinstance(end_date, str) and end_date else None
+                }
+            })
 
         except Exception as e:
             logger.error(f"Error in StudentAttendanceView: {str(e)}", exc_info=True)
@@ -2779,4 +2795,81 @@ class ArchivalAttendanceExportView(APIView):
                 {"error": f"Failed to export archival attendance: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class AdminSemesterAttendanceView(APIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardPagination
+
+    def get(self, request):
+        try:
+            program_id = request.query_params.get('program')
+            section_id = request.query_params.get('section')
+            semester = request.query_params.get('semester')
+            
+            sessions = Session.objects.filter(status='Completed')
+            if program_id:
+                sessions = sessions.filter(timetable__section__program_id=program_id)
+            if section_id:
+                sessions = sessions.filter(timetable__section_id=section_id)
+            if semester:
+                sessions = sessions.filter(timetable__subject__semester=semester)
+
+            attendance_qs = Attendance.objects.filter(session__in=sessions)
+            if semester:
+                attendance_qs = attendance_qs.filter(student__semester=semester)
+
+            stats = (
+                attendance_qs
+                .values(
+                    'student_id',
+                    'student__first_name',
+                    'student__last_name',
+                    'student__roll_number',
+                    'student__section__program__name',
+                    'student__section__year',
+                    'student__semester'
+                )
+                .annotate(
+                    name=Concat(F('student__first_name'), Value(' '), F('student__last_name'), output_field=CharField()),
+                    roll_number=F('student__roll_number'),
+                    program=F('student__section__program__name'),
+                    year=F('student__section__year'),
+                    semester=F('student__semester'),
+                    subject_name=Value('All Subjects', output_field=CharField()),
+                    recorded_by_name=Value('Various', output_field=CharField()),
+                    total_sessions=Count('session'),
+                    present=Count('session', filter=Q(status=True)),
+                    absent=Count('session', filter=Q(status=False)),
+                    attendance_percentage=ExpressionWrapper(
+                        (F('present') * 100.0) / F('total_sessions'),
+                        output_field=FloatField()
+                    )
+                )
+                .values(
+                    'student_id',
+                    'name',
+                    'roll_number',
+                    'program',
+                    'year',
+                    'semester',
+                    'subject_name',
+                    'recorded_by_name',
+                    'total_sessions',
+                    'present',
+                    'absent',
+                    'attendance_percentage'
+                )
+                .order_by('roll_number')
+            )
+            
+            paginator = self.pagination_class()
+            paginated_stats = paginator.paginate_queryset(stats, request)
+            serializer = AttendanceStatsSerializer(paginated_stats, many=True)
+            
+            return paginator.get_paginated_response({
+                'stats': serializer.data
+            })
+        except Exception as e:
+            logger.error(f"Error in AdminSemesterAttendanceView: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=500)
 

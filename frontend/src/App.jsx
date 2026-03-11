@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from "react-router-dom";
 import axios from "axios";
 import Login from "./components/Login";
 import Calendar from "./components/Calendar";
@@ -112,7 +112,7 @@ function App() {
       }
       try {
         const response = await axios.get(
-          "http://localhost:8000/api/teacher-info/",
+          "/api/teacher-info/",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -153,224 +153,224 @@ function App() {
       }
     >
       <AnimatePresence mode="wait">
+        <motion.div
+          key="app"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Router>
+            <AppShell isAdmin={isAdmin} setIsAdmin={setIsAdmin} notifyUser={notifyUser} />
+          </Router>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
 
+// ── inner shell: can use useLocation because it lives inside <Router> ─────────
+function AppShell({ isAdmin, setIsAdmin, notifyUser }) {
+  const location = useLocation();
+  const hideNav = location.pathname === '/admin';
+  const hidelogin = location.pathname === '/';
+  return (
+    <div className="min-h-screen transition-all duration-300 ease-in-out">
+      {!hideNav && !hidelogin && (
+        <nav className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700 p-4 shadow-lg flex justify-between items-center">
           <motion.div
-            key="app"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-white text-xl font-extrabold flex items-center gap-2"
           >
-            <Router>
-              <div className="min-h-screen transition-all duration-300 ease-in-out">
-                <nav className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700 p-4 shadow-lg flex justify-between items-center">
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6 }}
-                    className="text-white text-xl font-extrabold flex items-center gap-2"
-                  >
-                    <FaChalkboardTeacher className="text-white text-2xl" />
-                    Attendance System
-                  </motion.div>
-
-                  <div className="flex items-center gap-4">
-
-
-                    <ProfileIcon notifyUser={notifyUser} />
-                  </div>
-                </nav>
-
-                <ToastContainer
-                  position="top-right"
-                  autoClose={5000}
-                  hideProgressBar={false}
-                  newestOnTop={false}
-                  closeOnClick={false}
-                  rtl={false}
-                  pauseOnFocusLoss
-                  draggable
-                  pauseOnHover
-                  theme="dark"
-                  transition={Bounce}
-                />
-
-                <AnimatePresence mode="wait">
-                  <Routes>
-                    <Route
-                      path="/"
-                      element={<Login setIsAdmin={setIsAdmin} notifyUser={notifyUser} />}
-                    />
-
-                    <Route
-                      path="/calendar"
-                      element={
-                        <CalendarPicker isAdmin={isAdmin} notifyUser={notifyUser} />
-                      }
-                    />
-                    <Route
-                      path="/all-sessions"
-                      element={
-                        <Calendar admin={isAdmin} notifyUser={notifyUser} />
-                      }
-                    />
-
-
-
-
-
-                    <Route
-                      path="/attendance/:sessionId"
-                      element={
-                        <AttendanceForm
-                          notifyUser={notifyUser}
-                          onClose={() => window.history.back()}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/timetable"
-                      element={
-                        <TimetableForm
-                          notifyUser={notifyUser}
-                          onClose={() => window.history.back()}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/attendance-stats"
-                      element={<AttendanceStats notifyUser={notifyUser} />}
-                    />
-                    {isAdmin && (
-                      <>
-                        <Route
-                          path="/admin"
-                          element={<AdminDashboard notifyUser={notifyUser} />}
-                        />
-                        <Route
-                          path="/admin/teachers"
-                          element={
-                            <TeacherCRUD
-                              resource="teachers"
-                              notifyUser={notifyUser}
-                            />
-                          }
-                        />
-                        <Route
-                          path="/admin/students"
-                          element={
-                            <StudentCRUD
-                              notifyUser={notifyUser}
-                              resource="students"
-                            />
-                          }
-                        />
-                        <Route
-                          path="/admin/programs"
-                          element={
-                            <ProgramCRUD
-                              notifyUser={notifyUser}
-                              resource="programs"
-                            />
-                          }
-                        />
-                        <Route
-                          path="/admin/subjects"
-                          element={
-                            <SubjectCRUD
-                              notifyUser={notifyUser}
-                              resource="subjects"
-                            />
-                          }
-                        />
-                        <Route
-                          path="/admin/timetables"
-                          element={
-                            <TimetableCRUD
-                              notifyUser={notifyUser}
-                              resource="timetables"
-                            />
-                          }
-                        />
-
-
-                        <Route
-                          path="/admin/sessions"
-                          element={
-                            <SessionCRUD
-                              notifyUser={notifyUser}
-                              resource="sessions"
-                            />
-                          }
-                        />
-
-
-                        <Route
-                          path="/admin/attendance-stats"
-                          element={
-                            <AdminAttendanceStats notifyUser={notifyUser} />
-                          }
-                        />
-
-                        <Route
-                          path="/admin/add-builk-student"
-                          element={
-                            <AddBulkStudents notifyUser={notifyUser} />
-                          }
-                        />
-                          <Route
-                          path="/admin/remove-builk-student"
-                          element={
-                            <RemoveStudents notifyUser={notifyUser} />
-                          }
-                        />
-
-                        <Route
-                          path="/admin/pass-students"
-                          element={
-                            <PassStudents notifyUser={notifyUser} />
-                          }
-                        />
-
-                        <Route
-                          path="/admin/student-profile"
-                          element={<StudentProfile notifyUser={notifyUser} />}
-                        />
-                        <Route
-                          path="/admin/student/:studentId"
-                          element={<StudentDetail notifyUser={notifyUser} />}
-                        />
-
-                        <Route
-                          path="/admin/database-backup"
-                          element={
-                            <GetBackup notifyUser={notifyUser} />
-                          }
-                        />
-
-                        <Route
-                          path="/admin/archival-attendance"
-                          element={
-                            <ArchivalAttendance notifyUser={notifyUser} />
-                          }
-                        />
-
-                        <Route
-                          path="/admin/student-attendance"
-                          element={<AdminStudentAttendance notifyUser={notifyUser} />}
-                        />
-
-
-                      </>
-                    )}
-                  </Routes>
-                </AnimatePresence>
-              </div>
-            </Router>
-
-            {/* <Footer /> */}
+            <FaChalkboardTeacher className="text-white text-2xl" />
+            Attendance System
           </motion.div>
+          <div className="flex items-center gap-4">
+            <ProfileIcon notifyUser={notifyUser} />
+          </div>
+        </nav>
+      )}
 
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+        transition={Bounce}
+      />
+
+      <AnimatePresence mode="wait">
+        <Routes>
+          <Route
+            path="/"
+            element={<Login setIsAdmin={setIsAdmin} notifyUser={notifyUser} />}
+          />
+
+          <Route
+            path="/calendar"
+            element={
+              <CalendarPicker isAdmin={isAdmin} notifyUser={notifyUser} />
+            }
+          />
+          <Route
+            path="/all-sessions"
+            element={
+              <Calendar admin={isAdmin} notifyUser={notifyUser} />
+            }
+          />
+          <Route
+            path="/attendance/:sessionId"
+            element={
+              <AttendanceForm
+                notifyUser={notifyUser}
+                onClose={() => window.history.back()}
+              />
+            }
+          />
+          <Route
+            path="/timetable"
+            element={
+              <TimetableForm
+                notifyUser={notifyUser}
+                onClose={() => window.history.back()}
+              />
+            }
+          />
+          <Route
+            path="/attendance-stats"
+            element={<AttendanceStats notifyUser={notifyUser} />}
+          />
+          {isAdmin && (
+            <>
+              <Route
+                path="/admin"
+                element={<AdminDashboard notifyUser={notifyUser} />}
+              />
+              <Route
+                path="/admin/teachers"
+                element={
+                  <TeacherCRUD
+                    resource="teachers"
+                    notifyUser={notifyUser}
+                  />
+                }
+              />
+              <Route
+                path="/admin/students"
+                element={
+                  <StudentCRUD
+                    notifyUser={notifyUser}
+                    resource="students"
+                  />
+                }
+              />
+              <Route
+                path="/admin/programs"
+                element={
+                  <ProgramCRUD
+                    notifyUser={notifyUser}
+                    resource="programs"
+                  />
+                }
+              />
+              <Route
+                path="/admin/subjects"
+                element={
+                  <SubjectCRUD
+                    notifyUser={notifyUser}
+                    resource="subjects"
+                  />
+                }
+              />
+              <Route
+                path="/admin/timetables"
+                element={
+                  <TimetableCRUD
+                    notifyUser={notifyUser}
+                    resource="timetables"
+                  />
+                }
+              />
+
+
+              <Route
+                path="/admin/sessions"
+                element={
+                  <SessionCRUD
+                    notifyUser={notifyUser}
+                    resource="sessions"
+                  />
+                }
+              />
+
+
+              <Route
+                path="/admin/attendance-stats"
+                element={
+                  <AdminAttendanceStats notifyUser={notifyUser} />
+                }
+              />
+
+              <Route
+                path="/admin/add-builk-student"
+                element={
+                  <AddBulkStudents notifyUser={notifyUser} />
+                }
+              />
+              <Route
+                path="/admin/remove-builk-student"
+                element={
+                  <RemoveStudents notifyUser={notifyUser} />
+                }
+              />
+
+              <Route
+                path="/admin/pass-students"
+                element={
+                  <PassStudents notifyUser={notifyUser} />
+                }
+              />
+
+              <Route
+                path="/admin/student-profile"
+                element={<StudentProfile notifyUser={notifyUser} />}
+              />
+              <Route
+                path="/admin/student/:studentId"
+                element={<StudentDetail notifyUser={notifyUser} />}
+              />
+
+              <Route
+                path="/admin/database-backup"
+                element={
+                  <GetBackup notifyUser={notifyUser} />
+                }
+              />
+
+              <Route
+                path="/admin/archival-attendance"
+                element={
+                  <ArchivalAttendance notifyUser={notifyUser} />
+                }
+              />
+
+              <Route
+                path="/admin/student-attendance"
+                element={<AdminStudentAttendance notifyUser={notifyUser} />}
+              />
+            </>
+          )}
+          {/* catch-all: redirect unknown URLs to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </AnimatePresence>
     </div>
   );

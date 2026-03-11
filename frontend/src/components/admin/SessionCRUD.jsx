@@ -40,7 +40,7 @@ function SessionCRUD({notifyUser}) {
     }
     try {
       setLoading(true);
-      let url = `http://localhost:8000/api/admin/${resource}/?page=${page}&page_size=${pageSize}`;
+      let url = `/api/admin/${resource}/?page=${page}&page_size=${pageSize}`;
       if (selectedTeacher) url += `&teacher_id=${selectedTeacher}`;
       if (selectedSemester) url += `&semester=${selectedSemester}`;
       const response = await axios.get(url, {
@@ -67,7 +67,7 @@ function SessionCRUD({notifyUser}) {
   const fetchTeachers = async () => {
     const token = localStorage.getItem("access_token");
     try {
-      const response = await axios.get("http://localhost:8000/api/admin/teachers/", {
+      const response = await axios.get("/api/admin/teachers/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTeachers(response.data);
@@ -79,7 +79,7 @@ function SessionCRUD({notifyUser}) {
   const fetchTimetables = async () => {
     const token = localStorage.getItem("access_token");
     try {
-      const response = await axios.get("http://localhost:8000/api/admin/timetables/", {
+      const response = await axios.get("/api/admin/timetables/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTimetables(response.data);
@@ -91,7 +91,7 @@ function SessionCRUD({notifyUser}) {
   const fetchSemesters = async () => {
     const token = localStorage.getItem("access_token");
     try {
-      const response = await axios.get("http://localhost:8000/api/admin/subjects/", {
+      const response = await axios.get("/api/admin/subjects/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const uniqueSemesters = [...new Set(response.data.map(subject => subject.semester))].sort();
@@ -107,14 +107,14 @@ function SessionCRUD({notifyUser}) {
     const token = localStorage.getItem("access_token");
     try {
       if (editingId) {
-        const response = await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, formData, {
+        const response = await axios.put(`/api/admin/${resource}/${editingId}/`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if( response.status >= 200 && response.status <= 300 ){
           notifyUser(response.data.message || `Record has been updated successfully ✅ `,'success')
         }
       } else {
-        const response = await axios.post(`http://localhost:8000/api/admin/${resource}/`, formData, {
+        const response = await axios.post(`/api/admin/${resource}/`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if( response.status >= 200 && response.status <= 300 ){
@@ -145,7 +145,7 @@ function SessionCRUD({notifyUser}) {
     const token = localStorage.getItem("access_token");
     if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
       try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        await axios.delete(`/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if( response.status >= 200 && response.status <= 300 ){
@@ -518,7 +518,7 @@ function SessionCRUD() {
     }
     try {
       setLoading(true);
-      let url = `http://localhost:8000/api/admin/${resource}/?page=${page}&page_size=${pageSize}`;
+      let url = `/api/admin/${resource}/?page=${page}&page_size=${pageSize}`;
       if (selectedTeacher) url += `&teacher_id=${selectedTeacher}`;
       if (selectedSemester) url += `&semester=${selectedSemester}`;
       console.log(`Fetching from: ${url}`);
@@ -542,7 +542,7 @@ function SessionCRUD() {
   const fetchTeachers = async () => {
     const token = localStorage.getItem("access_token");
     try {
-      const response = await axios.get("http://localhost:8000/api/admin/teachers/", {
+      const response = await axios.get("/api/admin/teachers/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTeachers(response.data);
@@ -555,7 +555,7 @@ function SessionCRUD() {
   const fetchTimetables = async () => {
     const token = localStorage.getItem("access_token");
     try {
-      const response = await axios.get("http://localhost:8000/api/admin/timetables/", {
+      const response = await axios.get("/api/admin/timetables/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTimetables(response.data);
@@ -568,7 +568,7 @@ function SessionCRUD() {
   const fetchSemesters = async () => {
     const token = localStorage.getItem("access_token");
     try {
-      const response = await axios.get("http://localhost:8000/api/admin/subjects/", {
+      const response = await axios.get("/api/admin/subjects/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const uniqueSemesters = [...new Set(response.data.map(subject => subject.semester))].sort();
@@ -585,11 +585,11 @@ function SessionCRUD() {
     try {
       console.log("Submitting:", formData);
       if (editingId) {
-        await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, formData, {
+        await axios.put(`/api/admin/${resource}/${editingId}/`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, formData, {
+        await axios.post(`/api/admin/${resource}/`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
@@ -616,7 +616,7 @@ function SessionCRUD() {
     const token = localStorage.getItem("access_token");
     if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
       try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        await axios.delete(`/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         fetchItems(); // Refresh after delete

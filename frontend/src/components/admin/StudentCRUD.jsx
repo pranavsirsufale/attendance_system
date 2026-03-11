@@ -279,7 +279,7 @@ function StudentCRUD({ notifyUser }) {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search by name or roll number…"
-                  className="w-full pl-10 pr-4 py-3 border border-indigo-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-indigo-400 transition-all"
+                  className="w-full pl-10 pr-4 py-3 border border-indigo-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-400 transition-all"
                 />
               </div>
               <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300 whitespace-nowrap">
@@ -416,7 +416,7 @@ function StudentCRUD({ notifyUser }) {
                   <select
                     value={selectedProgram}
                     onChange={e => setSelectedProgram(e.target.value)}
-                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-400 transition-all"
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-400 transition-all"
                   >
                     <option value="">— Select Program —</option>
                     {programs.map(p => <option key={p.id} value={p.id}>{p.name} ({p.duration_years}yr)</option>)}
@@ -433,7 +433,7 @@ function StudentCRUD({ notifyUser }) {
                     onChange={handleChange}
                     disabled={!selectedProgram}
                     required
-                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-400 transition-all disabled:opacity-50"
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-400 transition-all disabled:opacity-50"
                   >
                     <option value="">— Select Section —</option>
                     {sections.map(s => <option key={s.id} value={s.id}>Year {s.year} – {s.name}</option>)}
@@ -450,7 +450,7 @@ function StudentCRUD({ notifyUser }) {
                     onChange={handleChange}
                     disabled={!formData.section}
                     required
-                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-400 transition-all disabled:opacity-50"
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-400 transition-all disabled:opacity-50"
                   >
                     <option value="">— Select Semester —</option>
                     {semesters.map(sem => <option key={sem} value={sem}>Semester {sem}</option>)}
@@ -473,7 +473,7 @@ function StudentCRUD({ notifyUser }) {
                         value={formData[f.name]}
                         onChange={handleChange}
                         required
-                        className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-400 transition-all"
+                        className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-400 transition-all"
                       />
                     </div>
                   ))}
@@ -496,7 +496,7 @@ function StudentCRUD({ notifyUser }) {
                       onChange={handleChange}
                       required={f.required}
                       placeholder={f.placeholder}
-                      className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-400 transition-all"
+                      className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-400 transition-all"
                     />
                   </div>
                 ))}

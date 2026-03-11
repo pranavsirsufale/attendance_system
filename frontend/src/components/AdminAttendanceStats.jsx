@@ -148,7 +148,7 @@ function AdminAttendanceStats({ notifyUser }) {
       // nextDay.setDate(selectedDate.getDate() + 1);
       // const computedEndDate = nextDay.toISOString().split('T')[0];
       // url += `&end_date=${computedEndDate}`;
-    }if (period === 'custom' && teacherStartDate) {
+    } if (period === 'custom' && teacherStartDate) {
       url += `&date=${teacherStartDate}&end_date=${teacherEndDate}`;
       // const selectedDate = new Date(studentStartDate);
       // const nextDay = new Date(selectedDate);
@@ -204,7 +204,7 @@ function AdminAttendanceStats({ notifyUser }) {
       // nextDay.setDate(selectedDate.getDate() + 1);
       // const computedEndDate = nextDay.toISOString().split('T')[0];
       // url += `&end_date=${computedEndDate}`;
-    }if (period === 'custom' && teacherStartDate) {
+    } if (period === 'custom' && teacherStartDate) {
       url += `&date=${teacherStartDate}&end_date=${teacherEndDate}`;
       // const selectedDate = new Date(studentStartDate);
       // const nextDay = new Date(selectedDate);
@@ -320,9 +320,9 @@ function AdminAttendanceStats({ notifyUser }) {
     let url = `/api/admin/attendance-export/?`;
     if (section) url += `§section=${section}`;
     if (selectedSubject) {
-        // Remove semester suffix
-        const cleanSubject = selectedSubject.replace(/\s*\(sem\s*-\s*[IVX]+\)\s*$/, '');
-        url += `&subject_name=${encodeURIComponent(cleanSubject)}`;
+      // Remove semester suffix
+      const cleanSubject = selectedSubject.replace(/\s*\(sem\s*-\s*[IVX]+\)\s*$/, '');
+      url += `&subject_name=${encodeURIComponent(cleanSubject)}`;
     }
     if (selectedTeacher) url += `&teacher=${selectedTeacher}`;
     if (program) url += `&program=${program}`;
@@ -335,28 +335,28 @@ function AdminAttendanceStats({ notifyUser }) {
     }
 
     try {
-        const response = await axios.get(url, {
-            headers: { Authorization: `Bearer ${token}` },
-            responseType: 'blob',
-        });
-        const blob = new Blob([response.data], { type: response.headers['content-type'] });
-        const link = document.createElement('a');
-        link.href = window.URL.createObjectURL(blob);
-        link.download = `attendance_report_${selectedSubject}_${selectedTeacher}.${format}`;
-        link.click();
-        notifyUser(`Exported attendance report as ${format}`, 'success');
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `attendance_report_${selectedSubject}_${selectedTeacher}.${format}`;
+      link.click();
+      notifyUser(`Exported attendance report as ${format}`, 'success');
     } catch (err) {
-        notifyUser(`Failed to export report, ${err}`, 'error');
-        console.error(err);
+      notifyUser(`Failed to export report, ${err}`, 'error');
+      console.error(err);
     }
-};
+  };
 
   return (
     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
 
 
       <Button onClick={() => navigate('/admin')}>Dashboard</Button>
- <Typography textAlign={"center"} variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
+      <Typography textAlign={"center"} variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
         Admin Attendance Dashboard
       </Typography>
       {/* <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
@@ -379,7 +379,7 @@ function AdminAttendanceStats({ notifyUser }) {
 
       <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
 
-       <FormControl >
+        <FormControl >
           <InputLabel>Period</InputLabel>
           <Select value={period} onChange={(e) => { setPeriod(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); setTeacherStartDate(''); setTeacherEndDate(''); }}>
             <MenuItem value="all">All</MenuItem>
@@ -445,7 +445,7 @@ function AdminAttendanceStats({ notifyUser }) {
             onChange={(e) => { setTeacherStartDate(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
             InputLabelProps={{ shrink: true }}
 
-            />
+          />
           <TextField
             label="End Date"
             type="date"
@@ -453,8 +453,8 @@ function AdminAttendanceStats({ notifyUser }) {
             onChange={(e) => { setTeacherEndDate(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
             InputLabelProps={{ shrink: true }}
 
-            />
-            </>
+          />
+        </>
         )}
       </Box>
 
@@ -462,7 +462,7 @@ function AdminAttendanceStats({ notifyUser }) {
         <Typography variant="h6" >Select Teacher (Total Teachers: {teachers.length})</Typography>
         <Grid container spacing={2}>
           {teachers.map((teacher) => (
-            <Grid  key={teacher.id}>
+            <Grid key={teacher.id}>
               <Card
                 sx={{
                   cursor: 'pointer',
@@ -504,7 +504,7 @@ function AdminAttendanceStats({ notifyUser }) {
             </Typography>
             <Grid container spacing={2}>
               {teacherSubjects.map((subject) => (
-                <Grid    key={subject}>
+                <Grid key={subject}>
                   <Card
                     sx={{
                       cursor: 'pointer',
@@ -542,12 +542,12 @@ function AdminAttendanceStats({ notifyUser }) {
 
           </Typography>
           <Button
-              variant="contained"
-              onClick={() => handleTeacherExport('csv')}
-              sx={{ mr: 2 }}
-            >
-              Export as CSV
-            </Button>
+            variant="contained"
+            onClick={() => handleTeacherExport('csv')}
+            sx={{ mr: 2 }}
+          >
+            Export as CSV
+          </Button>
 
 
 
@@ -616,7 +616,7 @@ function AdminAttendanceStats({ notifyUser }) {
         {students.length > 0 ? (
           <Grid container spacing={2}>
             {students.map((student) => (
-              <Grid    key={student.id}>
+              <Grid key={student.id}>
                 <Card
                   sx={{
                     cursor: 'pointer',

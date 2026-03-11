@@ -271,9 +271,17 @@ class TeacherAttendanceStatsView(APIView):
             period = request.query_params.get('period', 'semester')
             start_date_param = request.query_params.get('start_date', None)
             end_date_param = request.query_params.get('end_date', None)
+            subject_id = request.query_params.get('subject_id', None)
+            semester = request.query_params.get('semester', None)
             timetables = Timetable.objects.filter(teacher=teacher)
+            if subject_id:
+                timetables = timetables.filter(subject__id=subject_id)
+            if semester:
+                timetables = timetables.filter(subject__semester=semester)
             session_ids = Session.objects.filter(timetable__in=timetables).values_list('id', flat=True)
             students = Student.objects.filter(section__in=timetables.values('section')).distinct()
+            if semester:
+                students = students.filter(semester=semester)
             today = timezone.now().date()
             if start_date_param and end_date_param:
                 start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()

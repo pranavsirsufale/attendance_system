@@ -5,33 +5,33 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const EMPTY = { timetable: "", date: "", status: "" };
 
-const tok  = () => localStorage.getItem("access_token");
+const tok = () => localStorage.getItem("access_token");
 const authH = () => ({ Authorization: `Bearer ${tok()}` });
 
 const STATUS_META = {
-  Scheduled:  { color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",  dot: "bg-blue-500"  },
-  Completed:  { color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300", dot: "bg-green-500" },
-  Cancelled:  { color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",    dot: "bg-red-500"   },
+  Scheduled: { color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300", dot: "bg-blue-500" },
+  Completed: { color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300", dot: "bg-green-500" },
+  Cancelled: { color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300", dot: "bg-red-500" },
 };
 
 const PAGE_SIZE = 20;
 
 function SessionCRUD({ notifyUser }) {
-  const [items, setItems]                     = useState([]);
-  const [timetables, setTimetables]           = useState([]);
-  const [teachers, setTeachers]               = useState([]);
-  const [semesters, setSemesters]             = useState([]);
+  const [items, setItems] = useState([]);
+  const [timetables, setTimetables] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [semesters, setSemesters] = useState([]);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [selectedSemester, setSelectedSemester] = useState("");
-  const [formData, setFormData]               = useState(EMPTY);
-  const [editingId, setEditingId]             = useState(null);
-  const [showForm, setShowForm]               = useState(false);
-  const [deleteId, setDeleteId]               = useState(null);
-  const [loading, setLoading]                 = useState(false);
-  const [saving, setSaving]                   = useState(false);
-  const [page, setPage]                       = useState(1);
-  const [totalPages, setTotalPages]           = useState(1);
-  const [totalCount, setTotalCount]           = useState(0);
+  const [formData, setFormData] = useState(EMPTY);
+  const [editingId, setEditingId] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const navigate = useNavigate();
 
   /* ── bootstrap fetches (parallel) ────────────────────── */
@@ -56,7 +56,7 @@ function SessionCRUD({ notifyUser }) {
     try {
       setLoading(true);
       let url = `/api/admin/sessions/?page=${page}&page_size=${PAGE_SIZE}`;
-      if (selectedTeacher)  url += `&teacher_id=${selectedTeacher}`;
+      if (selectedTeacher) url += `&teacher_id=${selectedTeacher}`;
       if (selectedSemester) url += `&semester=${selectedSemester}`;
       const r = await axios.get(url, { headers: authH() });
       const data = r.data;
@@ -143,7 +143,7 @@ function SessionCRUD({ notifyUser }) {
 
   /* ── timetable label helper ───────────────────────────── */
   const ttLabel = (tt) =>
-    `${tt.section?.name ?? ""} · ${tt.subject?.name ?? ""}  (${tt.day_of_week ?? ""} ${tt.start_time?.slice(0,5) ?? ""})`;
+    `${tt.section?.name ?? ""} · ${tt.subject?.name ?? ""}  (${tt.day_of_week ?? ""} ${tt.start_time?.slice(0, 5) ?? ""})`;
 
   /* ── render ───────────────────────────────────────────── */
   return (
@@ -192,11 +192,10 @@ function SessionCRUD({ notifyUser }) {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => { setSelectedTeacher(null); setPage(1); }}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                !selectedTeacher
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${!selectedTeacher
                   ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
                   : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-indigo-400"
-              }`}
+                }`}
             >
               All
             </button>
@@ -204,11 +203,10 @@ function SessionCRUD({ notifyUser }) {
               <button
                 key={t.id}
                 onClick={() => { setSelectedTeacher(t.id); setPage(1); }}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                  selectedTeacher === t.id
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${selectedTeacher === t.id
                     ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
                     : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-indigo-400"
-                }`}
+                  }`}
               >
                 {t.first_name} {t.last_name}
               </button>
@@ -223,13 +221,13 @@ function SessionCRUD({ notifyUser }) {
             <select
               value={selectedSemester}
               onChange={e => { setSelectedSemester(e.target.value); setPage(1); }}
-              className="p-2 border border-indigo-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-indigo-400 transition-all"
+              className="p-2 border border-indigo-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200  focus:ring-2 focus:ring-indigo-400 transition-all"
             >
               <option value="">All</option>
               {semesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
             </select>
           </div>
-          <span className="ml-auto text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+          <span className="ml-auto text-sm text-indigo-600 dark:text-indigo-400 text-gray-800 dark:text-gray-200  font-medium">
             {totalCount} session{totalCount !== 1 ? "s" : ""}
           </span>
         </div>
@@ -349,11 +347,10 @@ function SessionCRUD({ notifyUser }) {
                     <button
                       key={p}
                       onClick={() => setPage(p)}
-                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
-                        p === page
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${p === page
                           ? "bg-indigo-600 text-white shadow-md"
                           : "text-gray-600 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-gray-700"
-                      }`}
+                        }`}
                     >
                       {p}
                     </button>
@@ -416,7 +413,7 @@ function SessionCRUD({ notifyUser }) {
                   <select
                     value={formData.timetable}
                     onChange={e => setFormData(f => ({ ...f, timetable: e.target.value }))}
-                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-400 transition-all"
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-400 transition-all"
                   >
                     <option value="">— Select Timetable —</option>
                     {timetables.map(tt => (
@@ -434,7 +431,7 @@ function SessionCRUD({ notifyUser }) {
                     type="date"
                     value={formData.date}
                     onChange={e => setFormData(f => ({ ...f, date: e.target.value }))}
-                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-400 transition-all"
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-400 transition-all"
                   />
                 </div>
 
@@ -449,11 +446,10 @@ function SessionCRUD({ notifyUser }) {
                         key={s}
                         type="button"
                         onClick={() => setFormData(f => ({ ...f, status: s }))}
-                        className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
-                          formData.status === s
+                        className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${formData.status === s
                             ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 shadow-sm"
                             : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"
-                        }`}
+                          }`}
                       >
                         <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${meta.dot}`} />
                         {s}

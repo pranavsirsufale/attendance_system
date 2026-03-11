@@ -192,14 +192,19 @@ class AdminSectionSerializer(serializers.ModelSerializer):
         fields = ['id','program','name','year']
 
 class AdminStudentSerializer(serializers.ModelSerializer):
-    section = AdminSectionSerializer()
-    subjects = SubjectSerializer(many = True , read_only = True )
-    # print(section)
+    section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())
+    subjects = SubjectSerializer(many=True, read_only=True)
+
     class Meta:
         model = Student
-        fields = ['id', 'roll_number', 'first_name', 'last_name', 'email', 'phone', 'section','semester', 'subjects']
+        fields = ['id', 'roll_number', 'first_name', 'last_name', 'email', 'phone', 'section', 'semester', 'subjects']
         read_only_fields = ['id', 'subjects']
-        extra_kwargs = {'roll_number' : {'required' : False , 'allow_blank' : True , 'default' : ''}}
+        extra_kwargs = {'roll_number': {'required': False, 'allow_blank': True, 'default': ''}}
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['section'] = AdminSectionSerializer(instance.section).data
+        return rep
 
 class AdminTimetableSerializer(serializers.ModelSerializer):
     section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())

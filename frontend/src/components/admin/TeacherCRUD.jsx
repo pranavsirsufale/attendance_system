@@ -1,463 +1,378 @@
-// src/components/admin/TeacherCRUD.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import Button from "../utilities/Button";
+
+const FIELDS = [
+  { key: "first_name", label: "First Name",  type: "text",     required: true  },
+  { key: "last_name",  label: "Last Name",   type: "text",     required: true  },
+  { key: "email",      label: "Email",       type: "email",    required: true  },
+  { key: "phone",      label: "Phone",       type: "text",     required: false },
+  { key: "password",   label: "Password",    type: "password", required: false },
+  { key: "is_admin",   label: "Admin Role",  type: "checkbox", required: false },
+];
+
+const EMPTY = { first_name: "", last_name: "", email: "", phone: "", password: "", is_admin: false };
+
+const tok = () => localStorage.getItem("access_token");
+const authH = () => ({ Authorization: `Bearer ${tok()}` });
+
+// ── small eye-toggle for password ────────────────────────────────────────────
+const EyeIcon = ({ off }) =>
+  off ? (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round"
+        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88L6.59 6.59m7.532 7.532l3.29 3.29M3 3l18 18" />
+    </svg>
+  ) : (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round"
+        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round"
+        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+  );
 
 function TeacherCRUD({ notifyUser }) {
-  const [items, setItems] = useState([]);
-  const [error, setError] = useState("");
-  const [formData, setFormData] = useState({});
+  const [teachers, setTeachers]   = useState([]);
+  const [form, setForm]           = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]     = useState(true);
+  const [saving, setSaving]       = useState(false);
+  const [showForm, setShowForm]   = useState(false);
+  const [search, setSearch]       = useState("");
+  const [showPass, setShowPass]   = useState(false);
+  const [deleteId, setDeleteId]   = useState(null); // confirm modal
+  const formRef = useRef(null);
   const navigate = useNavigate();
-  const resource = "teachers";
 
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
-  const fetchItems = async () => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      setError("Please log in first");
-      navigate("/");
-      return;
-    }
+  // ── fetch ──────────────────────────────────────────────────────────────────
+  const fetch = async () => {
+    if (!tok()) { navigate("/"); return; }
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await axios.get(
-        `/api/admin/${resource}/`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setItems(response.data);
-      setError("");
+      const res = await axios.get("/api/admin/teachers/", { headers: authH() });
+      setTeachers(res.data);
     } catch (err) {
-      const message =
-        err.response?.status === 404
-          ? "Resource not found"
-          : err.response?.data?.detail || "Unknown error";
-      setError(`Failed to load ${resource}: ${message}`);
-      if (err.response?.status === 401 || err.response?.status === 403)
-        navigate("/");
+      if (err.response?.status === 401) navigate("/");
+      else notifyUser("Failed to load teachers", "error");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => { fetch(); }, []);
+
+  // ── open form ──────────────────────────────────────────────────────────────
+  const openCreate = () => {
+    setForm(EMPTY);
+    setEditingId(null);
+    setShowForm(true);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+  };
+
+  const openEdit = (item) => {
+    setForm({ ...EMPTY, ...item, password: "" });
+    setEditingId(item.id);
+    setShowForm(true);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    notifyUser("Teacher loaded for editing", "info");
+  };
+
+  const closeForm = () => { setShowForm(false); setEditingId(null); setForm(EMPTY); };
+
+  // ── submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("access_token");
+    if (!form.first_name.trim() || !form.last_name.trim() || !form.email.trim()) {
+      notifyUser("First name, last name, and email are required.", "error");
+      return;
+    }
+    setSaving(true);
+    const payload = { ...form };
+    if (!payload.password) delete payload.password; // don't send blank password on edit
     try {
       if (editingId) {
-        const updateTeacher = await axios.put(
-          `/api/admin/${resource}/${editingId}/`,
-          formData,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (updateTeacher.status >= 200 && updateTeacher.status <= 300) {
-          notifyUser(
-            updateTeacher.data.message ||
-              "Teacher Record has been updated succesfully",
-            "info"
-          );
-        }
+        const res = await axios.put(`/api/admin/teachers/${editingId}/`, payload, { headers: authH() });
+        notifyUser(res.data?.message || "Teacher updated successfully", "info");
       } else {
-        const savedTeacherResponse = await axios.post(
-          `/api/admin/${resource}/`,
-          formData,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        if(savedTeacherResponse.status >= 200 && savedTeacherResponse.status <= 300){
-          notifyUser(savedTeacherResponse.data.message || "Teacher record has been saved successfully" , 'success')
-        }
+        const res = await axios.post("/api/admin/teachers/", payload, { headers: authH() });
+        notifyUser(res.data?.message || "Teacher created successfully", "success");
       }
-
-      setFormData({});
-      setEditingId(null);
-      fetchItems();
+      closeForm();
+      fetch();
     } catch (err) {
-      const message = JSON.stringify(err.response?.data || "Unknown error");
-      notifyUser('Failed to save data' + message || 'Failed to save or update teacher details' , 'error')
-      setError(
-        "Failed to save data: " +
-          JSON.stringify(message || "Unknown error")
-      );
+      const detail = err.response?.data
+        ? JSON.stringify(err.response.data)
+        : "Unknown error";
+      notifyUser(`Failed to save: ${detail}`, "error");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleEdit = (item) => {
-    setFormData(item);
-    setEditingId(item.id);
-    notifyUser('User Details has been fetched successfully.' , 'info')
-  };
-
-  const handleDelete = async (id) => {
-    const token = localStorage.getItem("access_token");
-    if (
-      window.confirm(
-        `Are you sure you want to delete this ${resource.slice(0, -1)}?`
-      )
-    ) {
-      try {
-        const teacherDeleteResposne = await axios.delete(
-          `/api/admin/${resource}/${id}/`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setItems(items.filter((item) => item.id !== id));
-        console.log(teacherDeleteResposne)
-        if(teacherDeleteResposne.status >= 200 && teacherDeleteResposne.status <= 300){
-          notifyUser(teacherDeleteResposne.data.message || 'User Record has been deleted successfully','warning')
-        }
-      } catch (err) {
-        setError(
-          "Failed to delete: " + (err.response?.data?.detail || "Unknown error")
-        );
-        notifyUser('Failed to delete : ' + (err.response?.data?.detail || 'Unkown error') , 'error')
-      }
+  // ── delete ─────────────────────────────────────────────────────────────────
+  const confirmDelete = async () => {
+    try {
+      const res = await axios.delete(`/api/admin/teachers/${deleteId}/`, { headers: authH() });
+      notifyUser(res.data?.message || "Teacher deleted", "warning");
+      setTeachers(prev => prev.filter(t => t.id !== deleteId));
+    } catch (err) {
+      notifyUser("Failed to delete: " + (err.response?.data?.detail || "Unknown error"), "error");
+    } finally {
+      setDeleteId(null);
     }
   };
 
-  const fields = [
-    "first_name",
-    "last_name",
-    "phone",
-    "email",
-    "password",
-    "is_admin",
-  ];
-
-  const renderFields = () =>
-    fields.map((key) => (
-      <motion.div
-        key={key}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="mb-4"
-      >
-        <label className="block text-indigo-700 dark:text-indigo-300 font-medium capitalize mb-1">
-          {key.replace("_", " ")}:
-        </label>
-        {key === "is_admin" ? (
-          <motion.input
-            whileHover={{ scale: 1.05 }}
-            type="checkbox"
-            checked={formData[key] || false}
-            onChange={(e) =>
-              setFormData({ ...formData, [key]: e.target.checked })
-            }
-            className="h-5 w-5 text-indigo-600 dark:text-indigo-400 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400"
-          />
-        ) : (
-          <motion.input
-            whileHover={{ scale: 1.02 }}
-            type={key === "password" ? "password" : "text"}
-            value={formData[key] || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, [key]: e.target.value })
-            }
-            className="w-full p-3 border border-indigo-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500 focus:border-indigo-400 dark:focus:border-indigo-500 transition-all duration-200"
-          />
-        )}
-      </motion.div>
-    ));
-
-  const renderTableHeaders = () =>
-    fields.map((key) => (
-      <th
-        key={key}
-        className="p-3 text-left capitalize text-white font-semibold"
-      >
-        {key.replace("_", " ")}
-      </th>
-    ));
-
-  const renderTableRow = (item) =>
-    fields.map((key) => (
-      <td key={key} className="p-3 text-gray-700 dark:text-gray-200">
-        {key === "is_admin" ? (item[key] ? "Yes" : "No") : item[key] || "-"}
-      </td>
-    ));
-
-  if (loading)
+  // ── search filter ──────────────────────────────────────────────────────────
+  const filtered = teachers.filter(t => {
+    const q = search.toLowerCase();
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="p-6 flex items-center justify-center min-h-screen text-indigo-600 dark:text-indigo-300 font-medium"
-      >
-        Loading {resource}...
-      </motion.div>
+      t.first_name?.toLowerCase().includes(q) ||
+      t.last_name?.toLowerCase().includes(q)  ||
+      t.email?.toLowerCase().includes(q)      ||
+      t.phone?.includes(q)
     );
+  });
+
+  // ── field change ───────────────────────────────────────────────────────────
+  const onChange = (key, val) => setForm(f => ({ ...f, [key]: val }));
+
   return (
-    <div className="p-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800 min-h-screen">
-      <Button  onClick={() => navigate('/admin')}>Dashboard</Button>
-            <motion.h2
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-3xl font-extrabold text-transparent text-center bg-clip-text bg-gradient-to-r from-gray-900 to-black dark:from-white dark:to-gray-100 mb-6"
-           >
-              Manage Teachers
-            </motion.h2>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4 md:p-6">
 
-
-      <AnimatePresence>
-        {error && (
-          <motion.p
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="text-red-500 bg-red-100 dark:bg-red-900/30 dark:text-red-300 p-3 rounded-lg mb-6 shadow-md"
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+            Manage Teachers
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">{teachers.length} teacher{teachers.length !== 1 ? "s" : ""} registered</p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold shadow hover:from-indigo-700 hover:to-purple-700 transition"
           >
-            {error}
-          </motion.p>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Teacher
+          </button>
+          <button
+            onClick={() => navigate("/admin")}
+            className="px-4 py-2 rounded-xl border border-indigo-200 text-indigo-700 text-sm font-semibold hover:bg-indigo-50 transition"
+          >
+            ← Dashboard
+          </button>
+        </div>
+      </div>
+
+      {/* ── Slide-in Form ── */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            ref={formRef}
+            key="form"
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.22 }}
+            className="bg-white rounded-2xl shadow-xl border border-indigo-100 p-6 mb-6"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-indigo-700">
+                {editingId ? "✏️ Edit Teacher" : "➕ New Teacher"}
+              </h2>
+              <button onClick={closeForm} className="text-gray-400 hover:text-gray-700 transition p-1 rounded-full hover:bg-gray-100">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} noValidate>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                {FIELDS.map(({ key, label, type, required }) => (
+                  <div key={key} className={type === "checkbox" ? "flex items-center gap-3 sm:col-span-2" : ""}>
+                    {type === "checkbox" ? (
+                      <>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!form[key]}
+                            onChange={e => onChange(key, e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-400 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                        <span className="text-sm font-medium text-gray-700">
+                          {label} {form[key] && <span className="text-indigo-600 font-semibold">(Admin access enabled)</span>}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
+                          {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={type === "password" ? (showPass ? "text" : "password") : type}
+                            value={form[key]}
+                            onChange={e => onChange(key, e.target.value)}
+                            placeholder={key === "password" && editingId ? "Leave blank to keep current" : ""}
+                            required={required}
+                            className="w-full px-3 py-2.5 rounded-xl border border-gray-300 bg-gray-50 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+                          />
+                          {type === "password" && (
+                            <button type="button" tabIndex={-1}
+                              onClick={() => setShowPass(v => !v)}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition">
+                              <EyeIcon off={showPass} />
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button type="button" onClick={closeForm}
+                  className="px-5 py-2 rounded-xl border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition">
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving}
+                  className="px-6 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold shadow hover:from-indigo-700 hover:to-purple-700 transition disabled:opacity-60 flex items-center gap-2">
+                  {saving && <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
+                  {editingId ? "Update Teacher" : "Create Teacher"}
+                </button>
+              </div>
+            </form>
+          </motion.div>
         )}
       </AnimatePresence>
-      <motion.form
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        onSubmit={handleSubmit}
-        className="mb-6 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border border-indigo-100 dark:border-gray-700"
-      >
-        {renderFields()}
-        <div className="flex gap-4">
-          <motion.button
-            whileHover={{ scale: 1.05, rotate: 2 }}
-            whileTap={{ scale: 0.95 }}
-            type="submit"
-            className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-600 dark:to-purple-600 text-white py-2 px-6 rounded-full shadow-md hover:shadow-xl transition-all duration-300"
-          >
-            {editingId ? "Update" : "Create "}
-          </motion.button>
-          {editingId && (
-            <motion.button
-              whileHover={{ scale: 1.05, rotate: 2 }}
-              whileTap={{ scale: 0.95 }}
-              type="button"
-              onClick={() => {
-                setFormData({});
-                setEditingId(null);
-              }}
-              className="bg-gradient-to-r from-gray-500 to-gray-600 dark:from-gray-600 dark:to-gray-700 text-white py-2 px-6 rounded-full shadow-md hover:shadow-xl transition-all duration-300"
-            >
-              Cancel
-            </motion.button>
-          )}
+
+      {/* ── Search ── */}
+      <div className="mb-4">
+        <div className="relative max-w-sm">
+          <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search by name, email or phone…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 pr-4 py-2 rounded-xl border border-gray-300 bg-white text-sm text-gray-900 focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition w-full"
+          />
         </div>
-      </motion.form>
-      <motion.table
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-indigo-100 dark:border-gray-700 overflow-hidden"
-      >
-        <thead>
-          <tr className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700">
-            {renderTableHeaders()}
-            <th className="p-3 text-left text-white font-semibold">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <motion.tr
-              key={item.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="border-t border-indigo-100 dark:border-gray-700 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors duration-200"
-            >
-              {renderTableRow(item)}
-              <td className="p-3">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => handleEdit(item)}
-                  className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium mr-4 transition-colors duration-200"
-                >
-                  Edit
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => handleDelete(item.id)}
-                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 font-medium transition-colors duration-200"
-                >
-                  Delete
-                </motion.button>
-              </td>
-            </motion.tr>
-          ))}
-        </tbody>
-      </motion.table>
-    </div>
-  );
-}
+      </div>
 
-export default TeacherCRUD;
+      {/* ── Table ── */}
+      {loading ? (
+        <div className="flex items-center justify-center py-24 text-indigo-600 gap-3">
+          <svg className="animate-spin w-6 h-6" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          Loading teachers…
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-20 text-gray-400">
+          <div className="text-5xl mb-3">👩‍🏫</div>
+          <p className="text-lg font-medium">{search ? "No teachers match your search" : "No teachers yet"}</p>
+          {!search && <p className="text-sm mt-1">Click <strong>Add Teacher</strong> to get started.</p>}
+        </div>
+      ) : (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
+          className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">#</th>
+                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Name</th>
+                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Email</th>
+                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Phone</th>
+                  <th className="px-4 py-3 text-center font-semibold whitespace-nowrap">Role</th>
+                  <th className="px-4 py-3 text-center font-semibold whitespace-nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((t, idx) => (
+                  <motion.tr key={t.id}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.03 }}
+                    className="hover:bg-indigo-50 transition-colors">
+                    <td className="px-4 py-3 text-gray-400 text-xs">{idx + 1}</td>
+                    <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 text-xs font-extrabold flex items-center justify-center shrink-0">
+                          {(t.first_name?.[0] || "").toUpperCase()}{(t.last_name?.[0] || "").toUpperCase()}
+                        </span>
+                        {t.first_name} {t.last_name}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{t.email || "—"}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{t.phone || "—"}</td>
+                    <td className="px-4 py-3 text-center">
+                      {t.is_admin
+                        ? <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">👑 Admin</span>
+                        : <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">🎓 Teacher</span>
+                      }
+                    </td>
+                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                      <button onClick={() => openEdit(t)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition mr-2">
+                        ✏️ Edit
+                      </button>
+                      <button onClick={() => setDeleteId(t.id)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition">
+                        🗑 Delete
+                      </button>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50 text-xs text-gray-400">
+            Showing {filtered.length} of {teachers.length} teacher{teachers.length !== 1 ? "s" : ""}
+          </div>
+        </motion.div>
+      )}
 
-/*
-
-// src/components/admin/TeacherCRUD.jsx
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-
-function TeacherCRUD() {
-  const [items, setItems] = useState([]);
-  const [error, setError] = useState("");
-  const [formData, setFormData] = useState({});
-  const [editingId, setEditingId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const resource = "teachers";
-
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
-  const fetchItems = async () => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      setError("Please log in first");
-      navigate("/");
-      return;
-    }
-    try {
-      setLoading(true);
-      const response = await axios.get(`/api/admin/${resource}/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setItems(response.data);
-      setError("");
-    } catch (err) {
-      const message = err.response?.status === 404 ? "Resource not found" : err.response?.data?.detail || "Unknown error";
-      setError(`Failed to load ${resource}: ${message}`);
-      if (err.response?.status === 401 || err.response?.status === 403) navigate("/");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const token = localStorage.getItem("access_token");
-    try {
-      if (editingId) {
-        await axios.put(`/api/admin/${resource}/${editingId}/`, formData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } else {
-        await axios.post(`/api/admin/${resource}/`, formData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-      setFormData({});
-      setEditingId(null);
-      fetchItems();
-    } catch (err) {
-      setError("Failed to save data: " + JSON.stringify(err.response?.data || "Unknown error"));
-    }
-  };
-
-  const handleEdit = (item) => {
-    setFormData(item);
-    setEditingId(item.id);
-  };
-
-  const handleDelete = async (id) => {
-    const token = localStorage.getItem("access_token");
-    if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
-      try {
-        await axios.delete(`/api/admin/${resource}/${id}/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setItems(items.filter((item) => item.id !== id));
-      } catch (err) {
-        setError("Failed to delete: " + (err.response?.data?.detail || "Unknown error"));
-      }
-    }
-  };
-
-  const fields = ["first_name", "last_name", "phone", "email", "password", "is_admin"];
-
-  const renderFields = () => fields.map((key) => (
-    <div key={key} className="mb-2">
-      <label className="block text-gray-800 capitalize">{key.replace("_", " ")}:</label>
-      <input
-        type={key === "is_admin" ? "checkbox" : key === "password" ? "password" : "text"}
-        value={key === "is_admin" ? undefined : (formData[key] || "")}
-        checked={key === "is_admin" ? formData[key] : undefined}
-        onChange={(e) => setFormData({ ...formData, [key]: key === "is_admin" ? e.target.checked : e.target.value })}
-        className="w-full p-2 border rounded-md text-gray-800"
-      />
-    </div>
-  ));
-
-  const renderTableHeaders = () => fields.map((key) => (
-    <th key={key} className="p-2 text-left capitalize">{key.replace("_", " ")}</th>
-  ));
-
-  const renderTableRow = (item) => fields.map((key) => (
-    <td key={key} className="p-2 text-gray-800">
-      {key === "is_admin" ? (item[key] ? "Yes" : "No") : item[key] || "-"}
-    </td>
-  ));
-
-  if (loading) return <div className="p-6">Loading {resource}...</div>;
-  return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Manage Teachers</h2>
-      {error && <p className="text-red-600 mb-4">{error}</p>}
-      <form onSubmit={handleSubmit} className="mb-6 bg-white p-4 rounded-lg shadow-md">
-        {renderFields()}
-        <button type="submit" className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">
-          {editingId ? "Update" : "Create"}
-        </button>
-        {editingId && (
-          <button
-            type="button"
-            onClick={() => { setFormData({}); setEditingId(null); }}
-            className="ml-2 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700"
+      {/* ── Delete confirm modal ── */}
+      <AnimatePresence>
+        {deleteId && (
+          <motion.div
+            key="modal"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           >
-            Cancel
-          </button>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center"
+            >
+              <div className="text-4xl mb-3">🗑️</div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Delete Teacher?</h3>
+              <p className="text-sm text-gray-500 mb-5">
+                <strong>{teachers.find(t => t.id === deleteId)?.first_name} {teachers.find(t => t.id === deleteId)?.last_name}</strong> will be permanently removed.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button onClick={() => setDeleteId(null)}
+                  className="px-5 py-2 rounded-xl border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition">
+                  Cancel
+                </button>
+                <button onClick={confirmDelete}
+                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold shadow transition">
+                  Yes, Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
-      </form>
-      <table className="w-full bg-white rounded-lg shadow-md">
-        <thead>
-          <tr className="bg-blue-600 text-white">
-            {renderTableHeaders()}
-            <th className="p-2 text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.id} className="border-t">
-              {renderTableRow(item)}
-              <td className="p-2">
-                <button onClick={() => handleEdit(item)} className="text-blue-600 hover:underline mr-2">Edit</button>
-                <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:underline">Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      </AnimatePresence>
     </div>
   );
 }
 
 export default TeacherCRUD;
-
-*/

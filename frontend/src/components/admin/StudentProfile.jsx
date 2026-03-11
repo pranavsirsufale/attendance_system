@@ -129,6 +129,51 @@ function StudentProfile({ notifyUser }) {
   const selectedSectionObj = sections.find(s => s.id === Number(selectedSection));
   const selectedProgramObj = programs.find(p => p.id === Number(selectedProgram));
 
+  // ── CSV export ────────────────────────────────────────────────────────────
+  const exportCSVFn = () => {
+    const header = ['#', 'Roll No.', 'Name', ...subjects.map(s => `${s.name} (P)`), ...subjects.map(s => `${s.name} (T)`), ...subjects.map(s => `${s.name} (%)`), 'Overall (P)', 'Overall (T)', 'Overall (%)'];
+    const rows = filteredStudents.map((student, idx) => {
+      const totalP = student.attendance.reduce((s, a) => s + a.classes_attended, 0);
+      const totalT = student.attendance.reduce((s, a) => s + a.total_classes, 0);
+      const overallPct = totalT > 0 ? ((totalP / totalT) * 100).toFixed(1) : '';
+      const attended = subjects.map(sub => (student.attendance.find(x => x.subject_id === sub.id)?.classes_attended ?? 0));
+      const total = subjects.map(sub => (student.attendance.find(x => x.subject_id === sub.id)?.total_classes ?? 0));
+      const pcts = subjects.map((sub, i) => total[i] > 0 ? ((attended[i] / total[i]) * 100).toFixed(1) : '');
+      return [idx + 1, student.roll_number, student.name, ...attended, ...total, ...pcts, totalP, totalT, overallPct];
+    });
+    const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance_${selectedProgramObj?.name ?? 'program'}_sem${selectedSemester}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Print ─────────────────────────────────────────────────────────────────
+  const handlePrint = () => {
+    const dateRange = startDate && endDate ? `${startDate} to ${endDate}` : 'Full Semester';
+    const header = ['#', 'Roll No.', 'Name', ...subjects.map(s => s.name), 'Overall'];
+    const rowsHtml = filteredStudents.map((student, idx) => {
+      const totalP = student.attendance.reduce((s, a) => s + a.classes_attended, 0);
+      const totalT = student.attendance.reduce((s, a) => s + a.total_classes, 0);
+      const overallPct = totalT > 0 ? ((totalP / totalT) * 100).toFixed(1) : '—';
+      const cells = subjects.map(sub => {
+        const a = student.attendance.find(x => x.subject_id === sub.id) || { classes_attended: 0, total_classes: 0 };
+        const pct = a.total_classes > 0 ? ((a.classes_attended / a.total_classes) * 100).toFixed(1) : null;
+        const color = pct === null ? '#888' : parseFloat(pct) >= 75 ? '#166534' : parseFloat(pct) >= 60 ? '#854d0e' : '#991b1b';
+        const bg = pct === null ? '#f3f4f6' : parseFloat(pct) >= 75 ? '#dcfce7' : parseFloat(pct) >= 60 ? '#fef9c3' : '#fee2e2';
+        return `<td style="text-align:center;padding:4px 8px;background:${bg};color:${color};font-weight:600">${pct !== null ? `${a.classes_attended}/${a.total_classes}<br><small>${pct}%</small>` : '—'}</td>`;
+      }).join('');
+      return `<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:4px 8px;color:#6b7280">${idx + 1}</td><td style="padding:4px 8px;font-family:monospace;font-weight:700;color:#4338ca">${student.roll_number}</td><td style="padding:4px 8px;font-weight:500">${student.name}</td>${cells}<td style="text-align:center;padding:4px 8px;font-weight:700">${overallPct}${overallPct !== '—' ? '%' : ''}</td></tr>`;
+    }).join('');
+    const headCells = header.map(h => `<th style="padding:8px;background:#4f46e5;color:white;font-size:11px;text-align:center;white-space:nowrap">${h}</th>`).join('');
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>Attendance Report</title><style>body{font-family:sans-serif;font-size:12px;margin:16px}table{border-collapse:collapse;width:100%}@media print{button{display:none}}</style></head><body><div style="text-align:center;margin-bottom:12px"><h2 style="margin:0;color:#3730a3">Manikchand Pahade Law College</h2><p style="margin:4px 0;color:#555">Attendance Report — ${selectedProgramObj?.name} | ${selectedSectionObj?.name} | Semester ${selectedSemester}</p><p style="margin:0;color:#888;font-size:11px">Period: ${dateRange} &nbsp;|&nbsp; Generated: ${new Date().toLocaleString()}</p></div><button onclick="window.print()" style="margin-bottom:10px;padding:6px 16px;background:#4f46e5;color:white;border:none;border-radius:6px;cursor:pointer">🖨 Print</button><table><thead><tr>${headCells}</tr></thead><tbody>${rowsHtml}</tbody></table></body></html>`);
+    win.document.close();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4 md:p-6">
       {/* Header */}
@@ -250,13 +295,31 @@ function StudentProfile({ notifyUser }) {
                 {totalCount} Students
               </span>
             </div>
-            <input
-              type="text"
-              placeholder="Search name or roll number…"
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1); }}
-              className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition w-full sm:w-64"
-            />
+            <div className="flex gap-2 items-center flex-wrap">
+              <input
+                type="text"
+                placeholder="Search name or roll number…"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
+                className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition w-full sm:w-56"
+              />
+              <button
+                onClick={exportCSVFn}
+                title="Export all students to CSV"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold shadow transition whitespace-nowrap"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
+                CSV
+              </button>
+              <button
+                onClick={handlePrint}
+                title="Open printable report"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow transition whitespace-nowrap"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" /></svg>
+                Print
+              </button>
+            </div>
           </div>
 
           {/* Legend */}

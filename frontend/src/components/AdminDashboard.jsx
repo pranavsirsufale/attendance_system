@@ -21,26 +21,27 @@ const SECTIONS = [
   {
     label: "📊 Attendance",
     cards: [
-      { to: "/admin/attendance-stats", cls: "stats-card", icon: "📈", title: "Attendance Stats", desc: "View comprehensive attendance analytics." },
+      { to: "/admin/attendance-stats", cls: "stats-card", icon: "📈", title: "Attendance Stats", desc: "View Teacher-wise comprehensive attendance analytics." },
       { to: "/admin/student-attendance", cls: "student-attendance-card", icon: "✅", title: "Mark Attendance", desc: "Mark or update attendance on behalf of teachers." },
       { to: "/admin/archival-attendance", cls: "archival-attendance-card", icon: "🗂️", title: "Archival Attendance", desc: "Create and view historical attendance snapshots." },
+      { to: "/admin/database-backup", cls: "database-backup", icon: "💾", title: "Database Backup", desc: "Download (law_college) full database backup with all records." },
+      { to: "/admin/student-profile", cls: "student-profiles-card", icon: "🪪", title: "Student Profiles", desc: "View Semester-wise and individual student details and reports." },
     ],
   },
   {
     label: "🎒 Student Operations",
     cards: [
-      { to: "/admin/student-profile", cls: "student-profiles-card", icon: "🪪", title: "Student Profiles", desc: "View individual student details and reports." },
       { to: "/admin/add-builk-student", cls: "add-bulk-students-card", icon: "➕", title: "Add Bulk Students", desc: "Enroll multiple students at once." },
       { to: "/admin/remove-builk-student", cls: "remove-bulk-students-card", icon: "➖", title: "Remove Students", desc: "Mass remove student records." },
       { to: "/admin/pass-students", cls: "promote-students-card", icon: "⬆️", title: "Promote Students", desc: "Advance students to the next semester." },
     ],
   },
-  {
-    label: "⚙️ System",
-    cards: [
-      { to: "/admin/database-backup", cls: "database-backup", icon: "💾", title: "Database Backup", desc: "Download full database backup with all records." },
-    ],
-  },
+  // {
+  //   label: "⚙️ System",
+  //   cards: [
+  //     { to: "/admin/database-backup", cls: "database-backup", icon: "💾", title: "Database Backup", desc: "Download full database backup with all records." },
+  //   ],
+  // },
 ];
 
 const cardVariants = {

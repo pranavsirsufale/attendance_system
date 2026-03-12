@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Button from './utilities/Button';
 import LogoutButton from './utilities/LogOutButton'
 
-function Calendar({admin, notifyUser}) {
+function Calendar({ admin, notifyUser }) {
   const [sessions, setSessions] = useState([]);
   const [timetables, setTimetables] = useState([]);
   const [error, setError] = useState('');
@@ -54,7 +54,7 @@ function Calendar({admin, notifyUser}) {
     const token = localStorage.getItem('access_token');
     if (!token) { setError('Please log in first'); return; }
     try {
-      const url = selectedSection ? `http://localhost:8000/api/calendar/?section_id=${selectedSection}` : 'http://localhost:8000/api/calendar/';
+      const url = selectedSection ? `/api/calendar/?section_id=${selectedSection}` : '/api/calendar/';
       const response = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
       setSessions(response.data);
       setError('');
@@ -68,7 +68,7 @@ function Calendar({admin, notifyUser}) {
     const token = localStorage.getItem('access_token');
     if (!token) { setError('Please log in first'); return; }
     try {
-      const response = await axios.get('http://localhost:8000/api/timetables/', { headers: { Authorization: `Bearer ${token}` } });
+      const response = await axios.get('/api/timetables/', { headers: { Authorization: `Bearer ${token}` } });
       setTimetables(response.data);
     } catch (err) {
       console.error('Failed to fetch timetables:', err);
@@ -81,8 +81,8 @@ function Calendar({admin, notifyUser}) {
     if (!token) { setError('Please log in first'); return; }
     try {
       const [sectionsRes, timeSlotsRes] = await Promise.all([
-        axios.get('http://localhost:8000/api/sections/', { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get('http://localhost:8000/api/time-slots/', { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get('/api/sections/', { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get('/api/time-slots/', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       setSections(sectionsRes.data);
       setTimeSlots(timeSlotsRes.data);
@@ -98,7 +98,7 @@ function Calendar({admin, notifyUser}) {
   // const fetchSubjects = async (sectionId, semester, semester_start_date = timetableData.semester_start_date) => {
   //   const token = localStorage.getItem('access_token');
   //   try {
-  //     const response = await axios.get('http://localhost:8000/api/subjects-for-section/', {
+  //     const response = await axios.get('/api/subjects-for-section/', {
   //       params: { section_id: sectionId, semester, semester_start_date },
   //       headers: { Authorization: `Bearer ${token}` },
   //     });
@@ -112,61 +112,61 @@ function Calendar({admin, notifyUser}) {
   //   }
   // };
 
-// Modify fetchSubjects to accept semester as a parameter
-const fetchSubjects = async (sectionId, semester, semester_start_date = singleSessionData.session_date || timetableData.semester_start_date) => {
-  const token = localStorage.getItem('access_token');
-  try {
-    const response = await axios.get('http://localhost:8000/api/subjects-for-section/', {
-      params: { section_id: sectionId, semester, semester_start_date },
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = Array.isArray(response.data) ? response.data : response.data.data || [];
-    setSubjects(data.filter(subject => subject.semester === parseInt(semester)));
-    setError('');
-  } catch (err) {
-    console.error('Failed to fetch subjects:', err.response?.data || err.message);
-    setError('Failed to load subjects: ' + (err.response?.data?.error || 'Unknown error'));
-    setSubjects([]);
-  }
-};
-
-// Add handler for single session form
-const handleSingleSessionSubmit = async (e) => {
-  e.preventDefault();
-  const token = localStorage.getItem('access_token');
-  try {
-    const data = {
-      section: singleSessionData.section,
-      subject: singleSessionData.subject,
-      day_of_week: singleSessionData.day_of_week,
-      start_time: singleSessionData.start_time,
-      session_date: singleSessionData.session_date,
-    };
-    const response = await axios.post('http://localhost:8000/api/timetables/single-session/', data, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (response.status === 201){
-      notifyUser(`session created successfully, for Semester ${response.data.semester},for the weekday : ${response.data.day_of_week}  and time : ${response.data.start_time}`, 'success')
+  // Modify fetchSubjects to accept semester as a parameter
+  const fetchSubjects = async (sectionId, semester, semester_start_date = singleSessionData.session_date || timetableData.semester_start_date) => {
+    const token = localStorage.getItem('access_token');
+    try {
+      const response = await axios.get('/api/subjects-for-section/', {
+        params: { section_id: sectionId, semester, semester_start_date },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = Array.isArray(response.data) ? response.data : response.data.data || [];
+      setSubjects(data.filter(subject => subject.semester === parseInt(semester)));
+      setError('');
+    } catch (err) {
+      console.error('Failed to fetch subjects:', err.response?.data || err.message);
+      setError('Failed to load subjects: ' + (err.response?.data?.error || 'Unknown error'));
+      setSubjects([]);
     }
-    setShowSingleSessionForm(false);
-    setSingleSessionData({
-      section: '',
-      semester: '',
-      subject: '',
-      day_of_week: 'Sunday',
-      start_time: '08:30:00',
-      session_date: '',
-    });
-    setSubjects([]);
-    fetchSessions();
-    fetchTimetables();
-    setError('');
-  } catch (err) {
-    notifyUser(`Failed to save single session, ${err.response?.data?.detail || err}`, 'error')
-    console.error('Failed to save single session:', err);
-    setError(err.response?.data?.detail || 'Failed to save single session');
-  }
-};
+  };
+
+  // Add handler for single session form
+  const handleSingleSessionSubmit = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('access_token');
+    try {
+      const data = {
+        section: singleSessionData.section,
+        subject: singleSessionData.subject,
+        day_of_week: singleSessionData.day_of_week,
+        start_time: singleSessionData.start_time,
+        session_date: singleSessionData.session_date,
+      };
+      const response = await axios.post('/api/timetables/single-session/', data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 201) {
+        notifyUser(`session created successfully, for Semester ${response.data.semester},for the weekday : ${response.data.day_of_week}  and time : ${response.data.start_time}`, 'success')
+      }
+      setShowSingleSessionForm(false);
+      setSingleSessionData({
+        section: '',
+        semester: '',
+        subject: '',
+        day_of_week: 'Sunday',
+        start_time: '08:30:00',
+        session_date: '',
+      });
+      setSubjects([]);
+      fetchSessions();
+      fetchTimetables();
+      setError('');
+    } catch (err) {
+      notifyUser(`Failed to save single session, ${err.response?.data?.detail || err}`, 'error')
+      console.error('Failed to save single session:', err);
+      setError(err.response?.data?.detail || 'Failed to save single session');
+    }
+  };
 
   const handleSectionSemesterChange = async (e) => {
     const [sectionId, semester] = e.target.value.split('-');
@@ -175,7 +175,7 @@ const handleSingleSessionSubmit = async (e) => {
     if (sectionId && semester) {
       try {
         const token = localStorage.getItem('access_token');
-        const timetableRes = await axios.get(`http://localhost:8000/api/timetables/?section=${sectionId}`, {
+        const timetableRes = await axios.get(`/api/timetables/?section=${sectionId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const existingTimetable = timetableRes.data[0];
@@ -219,7 +219,7 @@ const handleSingleSessionSubmit = async (e) => {
         semester_end_date: timetableData.semester_end_date || '2025-08-31',
       };
       if (editTimetableId) {
-        await axios.put(`http://localhost:8000/api/timetables/${editTimetableId}/`, {
+        await axios.put(`/api/timetables/${editTimetableId}/`, {
           section: data.section,
           subject: data.daily_schedules[0].subject,
           day_of_week: data.daily_schedules[0].day_of_week,
@@ -228,7 +228,7 @@ const handleSingleSessionSubmit = async (e) => {
           semester_end_date: data.semester_end_date,
         }, { headers: { Authorization: `Bearer ${token}` } });
       } else {
-        await axios.post('http://localhost:8000/api/timetables/', data, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.post('/api/timetables/', data, { headers: { Authorization: `Bearer ${token}` } });
       }
       setShowTimetableForm(false);
       setEditTimetableId(null);
@@ -249,11 +249,35 @@ const handleSingleSessionSubmit = async (e) => {
     }
   };
 
+  const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const DEFAULT_SCHEDULES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => ({
+    day_of_week: day, subject: '', start_time: '08:30:00',
+  }));
+
+  // Quick-fill: apply one subject + one time to every row
+  const applyQuickFill = (subjectId, time) => {
+    setTimetableData(prev => ({
+      ...prev,
+      daily_schedules: prev.daily_schedules.map(s => ({
+        ...s,
+        ...(subjectId ? { subject: subjectId } : {}),
+        ...(time ? { start_time: time } : {}),
+      })),
+    }));
+  };
+
   const addSchedule = () => {
     setTimetableData({
       ...timetableData,
       daily_schedules: [...timetableData.daily_schedules, { day_of_week: 'Monday', subject: '', start_time: '08:30:00' }],
     });
+  };
+
+  const removeSchedule = (index) => {
+    setTimetableData(prev => ({
+      ...prev,
+      daily_schedules: prev.daily_schedules.filter((_, i) => i !== index),
+    }));
   };
 
   const updateSchedule = (index, field, value) => {
@@ -283,8 +307,8 @@ const handleSingleSessionSubmit = async (e) => {
     const token = localStorage.getItem('access_token');
     if (window.confirm('Are you sure you want to delete this timetable?')) {
       try {
-        const response = await axios.delete(`http://localhost:8000/api/timetables/${timetableId}/`, { headers: { Authorization: `Bearer ${token}` } });
-        if (response.status === 204){
+        const response = await axios.delete(`/api/timetables/${timetableId}/`, { headers: { Authorization: `Bearer ${token}` } });
+        if (response.status === 204) {
           notifyUser("timetable/session deleted successfully.", 'warning')
         }
         fetchTimetables();
@@ -331,18 +355,19 @@ const handleSingleSessionSubmit = async (e) => {
 
 
 
-         <Button
-        whileHover={{ scale: 1.05 }}
+        <Button
+          whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => {
             setEditTimetableId(null);
             setTimetableData({
               section: '',
               semester: '',
-              daily_schedules: [{ day_of_week: 'Monday', subject: '', start_time: '08:30:00' }],
+              daily_schedules: DEFAULT_SCHEDULES,
               semester_start_date: '',
               semester_end_date: '',
             });
+            setSubjects([]);
             setShowTimetableForm(true);
           }}
 
@@ -350,41 +375,41 @@ const handleSingleSessionSubmit = async (e) => {
           Create TimeTable
         </Button>
 
-      <Button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => {
-          setShowSingleSessionForm(true);
-          setShowTimetableForm(false);
-          setSingleSessionData({
-            section: '',
-            semester: '',
-            subject: '',
-            day_of_week: 'Sunday',
-            start_time: '08:30:00',
-            session_date: '',
-          });
-        }}
-      >
-        Create Single Session
-      </Button>
+        <Button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            setShowSingleSessionForm(true);
+            setShowTimetableForm(false);
+            setSingleSessionData({
+              section: '',
+              semester: '',
+              subject: '',
+              day_of_week: 'Sunday',
+              start_time: '08:30:00',
+              session_date: '',
+            });
+          }}
+        >
+          Create Single Session
+        </Button>
         <Link
           to="/attendance-stats"
-          // className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-200 flex items-center gap-2"
+        // className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-200 flex items-center gap-2"
         >
-        <Button
-          // to="/attendance-stats"
+          <Button
+            // to="/attendance-stats"
 
-        whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          View Statistics
-        </Button>
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            View Statistics
+          </Button>
           {/* View Attendance Statistics */}
         </Link>
 
         <Button
-        onClick={() => navigate('/calendar')}
+          onClick={() => navigate('/calendar')}
         >
           Calendar
         </Button>
@@ -464,7 +489,7 @@ const handleSingleSessionSubmit = async (e) => {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleDeleteTimetable(timetable.id)}>
                   Delete
-                  </LogoutButton>
+                </LogoutButton>
               </div>
             </motion.div>
           ))}
@@ -561,58 +586,95 @@ const handleSingleSessionSubmit = async (e) => {
                   </motion.select>
                 </div>
 
+                {/* ── Quick Fill ─────────────────────────────────────────── */}
+                {subjects.length > 0 && (
+                  <div className="mb-5 p-4 bg-indigo-50 border border-indigo-200 rounded-2xl">
+                    <p className="text-sm font-bold text-indigo-700 mb-3">
+                      ⚡ Quick Fill — apply same subject &amp; time to all days
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <select
+                        defaultValue=""
+                        onChange={e => applyQuickFill(e.target.value, '')}
+                        className="flex-1 p-2.5 border border-indigo-200 rounded-xl bg-white text-gray-800 text-sm shadow-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                      >
+                        <option value="">— Pick subject for all days —</option>
+                        {subjects.map(s => (
+                          <option key={s.id} value={s.id}>{s.name} (Sem {s.semester})</option>
+                        ))}
+                      </select>
+                      <select
+                        defaultValue=""
+                        onChange={e => applyQuickFill('', e.target.value)}
+                        className="sm:w-40 p-2.5 border border-indigo-200 rounded-xl bg-white text-gray-800 text-sm shadow-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                      >
+                        <option value="">— Time for all —</option>
+                        {timeSlots.map(slot => (
+                          <option key={slot} value={slot}>{slot}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
 
                 {timetableData.daily_schedules.map((schedule, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    // className="mb-6 flex flex-col sm:flex-row gap-4 max-w-5xl"
-                    className="mb-6 flex flex-col sm:flex-row gap-4 w-full"
+                    className="mb-3 flex flex-col sm:flex-row gap-3 w-full items-center"
                   >
+                    {/* day badge */}
+                    <span className="hidden sm:flex w-24 shrink-0 items-center justify-center text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg h-11">
+                      {schedule.day_of_week.slice(0, 3).toUpperCase()}
+                    </span>
                     <motion.select
-                      whileHover={{ scale: 1.02 }}
+                      whileHover={{ scale: 1.01 }}
                       value={schedule.day_of_week}
                       onChange={(e) => updateSchedule(index, 'day_of_week', e.target.value)}
-                      // className="p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-                      className="w-full sm:w-1/4 p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                      className="w-full sm:w-1/5 p-2.5 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 text-sm"
                     >
-                      {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                      {WEEKDAYS.map((day) => (
                         <option key={day} value={day}>{day}</option>
                       ))}
                     </motion.select>
                     <motion.select
-                      whileHover={{ scale: 1.02 }}
+                      whileHover={{ scale: 1.01 }}
                       value={schedule.subject}
                       onChange={(e) => updateSchedule(index, 'subject', e.target.value)}
-                      // className="p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-                      className='w-full sm:w-1/2 p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 whitespace-normal break-words'
-
+                      className="w-full sm:flex-1 p-2.5 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 text-sm"
                       required
                     >
-                      <option value="">Select Subject</option>
+                      <option value="">— Select Subject —</option>
                       {subjects.map((subject) => (
-                        <option key={subject.id} value={subject.id} className='wordwrap' >
-                          {subject.name} (Semester: {subject.semester})
+                        <option key={subject.id} value={subject.id}>
+                          {subject.name} (Sem {subject.semester})
                         </option>
                       ))}
                     </motion.select>
                     <motion.select
-                      whileHover={{ scale: 1.02 }}
+                      whileHover={{ scale: 1.01 }}
                       value={schedule.start_time}
                       onChange={(e) => updateSchedule(index, 'start_time', e.target.value)}
-                      // className="p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-                      className="w-full sm:w-1/4 p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                      className="w-full sm:w-1/5 p-2.5 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 text-sm"
                       required
                     >
-                      <option value="">Select Time</option>
+                      <option value="">— Time —</option>
                       {timeSlots.map((slot) => (
                         <option key={slot} value={slot}>{slot}</option>
                       ))}
                     </motion.select>
-
-
-
+                    {/* remove row */}
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => removeSchedule(index)}
+                      className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition"
+                      title="Remove this day"
+                    >
+                      ✕
+                    </motion.button>
                   </motion.div>
                 ))}
                 <motion.button
@@ -660,130 +722,130 @@ const handleSingleSessionSubmit = async (e) => {
         )}
       </AnimatePresence>
 
-  <AnimatePresence>
-    {showSingleSessionForm && (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-      >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white p-8 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
-        >
-          <h3 className="text-2xl font-bold mb-6 text-indigo-800">Create Single Session</h3>
-          <form onSubmit={handleSingleSessionSubmit}>
-            <div className="mb-6">
-              <label className="block text-lg font-medium text-indigo-800 mb-2">Session Date:</label>
-              <motion.input
-                whileHover={{ scale: 1.02 }}
-                type="date"
-                value={singleSessionData.session_date}
-                onChange={(e) => setSingleSessionData({ ...singleSessionData, session_date: e.target.value })}
-                className="w-full p-3 border border-indigo-200 rounded-xl text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-                required
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block text-lg font-medium text-indigo-800 mb-2">Section and Semester:</label>
-              <motion.select
-                whileHover={{ scale: 1.02 }}
-                value={singleSessionData.section && singleSessionData.semester ? `${singleSessionData.section}-${singleSessionData.semester}` : ''}
-                onChange={(e) => {
-                  const [sectionId, semester] = e.target.value.split('-');
-                  setSingleSessionData({ ...singleSessionData, section: sectionId, semester });
-                  if (sectionId && semester) fetchSubjects(sectionId, semester);
-                }}
-                className="w-full p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-                required
-              >
-                <option value="">Select Section and Semester</option>
-                {sections.flatMap((section) =>
-                  section.available_semesters.map((semester) => (
-                    <option key={`${section.id}-${semester}`} value={`${section.id}-${semester}`}>
-                      {section.name} (Year: {section.year}, Semester: {semester}, Program: {section.program})
-                    </option>
-                  ))
-                )}
-              </motion.select>
-            </div>
-            <div className="mb-6 flex flex-col sm:flex-row gap-4 w-full">
-              <motion.select
-                whileHover={{ scale: 1.02 }}
-                value={singleSessionData.day_of_week}
-                onChange={(e) => setSingleSessionData({ ...singleSessionData, day_of_week: e.target.value })}
-                className="w-full sm:w-1/4 p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-                required
-              >
-                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
-                  <option key={day} value={day}>{day}</option>
-                ))}
-              </motion.select>
-              <motion.select
-                whileHover={{ scale: 1.02 }}
-                value={singleSessionData.subject}
-                onChange={(e) => setSingleSessionData({ ...singleSessionData, subject: e.target.value })}
-                className="w-full sm:w-1/2 p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 whitespace-normal break-words"
-                required
-              >
-                <option value="">Select Subject</option>
-                {subjects.map((subject) => (
-                  <option key={subject.id} value={subject.id} className="wordwrap">
-                    {subject.name} (Semester: {subject.semester})
-                  </option>
-                ))}
-              </motion.select>
-              <motion.select
-                whileHover={{ scale: 1.02 }}
-                value={singleSessionData.start_time}
-                onChange={(e) => setSingleSessionData({ ...singleSessionData, start_time: e.target.value })}
-                className="w-full sm:w-1/4 p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-                required
-              >
-                <option value="">Select Time</option>
-                {timeSlots.map((slot) => (
-                  <option key={slot} value={slot}>{slot}</option>
-                ))}
-              </motion.select>
-            </div>
-            <div className="flex flex-col sm:flex-row justify-end gap-4">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                type="button"
-                onClick={() => {
-                  setShowSingleSessionForm(false);
-                  setSingleSessionData({
-                    section: '',
-                    semester: '',
-                    subject: '',
-                    day_of_week: 'Monday',
-                    start_time: '08:30:00',
-                    session_date: '',
-                  });
-                  setError('');
-                }}
-                className="w-full sm:w-auto bg-gray-500 text-white py-2 px-6 rounded-full hover:bg-gray-600 shadow-md transition-colors duration-200"
-              >
-                Cancel
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                type="submit"
-                className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-6 rounded-full hover:from-indigo-700 hover:to-purple-700 shadow-md transition-all duration-200"
-              >
-                Save Single Session
-              </motion.button>
-            </div>
-          </form>
-        </motion.div>
-      </motion.div>
-    )}
-  </AnimatePresence>
+      <AnimatePresence>
+        {showSingleSessionForm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white p-8 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <h3 className="text-2xl font-bold mb-6 text-indigo-800">Create Single Session</h3>
+              <form onSubmit={handleSingleSessionSubmit}>
+                <div className="mb-6">
+                  <label className="block text-lg font-medium text-indigo-800 mb-2">Session Date:</label>
+                  <motion.input
+                    whileHover={{ scale: 1.02 }}
+                    type="date"
+                    value={singleSessionData.session_date}
+                    onChange={(e) => setSingleSessionData({ ...singleSessionData, session_date: e.target.value })}
+                    className="w-full p-3 border border-indigo-200 rounded-xl text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                    required
+                  />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-lg font-medium text-indigo-800 mb-2">Section and Semester:</label>
+                  <motion.select
+                    whileHover={{ scale: 1.02 }}
+                    value={singleSessionData.section && singleSessionData.semester ? `${singleSessionData.section}-${singleSessionData.semester}` : ''}
+                    onChange={(e) => {
+                      const [sectionId, semester] = e.target.value.split('-');
+                      setSingleSessionData({ ...singleSessionData, section: sectionId, semester });
+                      if (sectionId && semester) fetchSubjects(sectionId, semester);
+                    }}
+                    className="w-full p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                    required
+                  >
+                    <option value="">Select Section and Semester</option>
+                    {sections.flatMap((section) =>
+                      section.available_semesters.map((semester) => (
+                        <option key={`${section.id}-${semester}`} value={`${section.id}-${semester}`}>
+                          {section.name} (Year: {section.year}, Semester: {semester}, Program: {section.program})
+                        </option>
+                      ))
+                    )}
+                  </motion.select>
+                </div>
+                <div className="mb-6 flex flex-col sm:flex-row gap-4 w-full">
+                  <motion.select
+                    whileHover={{ scale: 1.02 }}
+                    value={singleSessionData.day_of_week}
+                    onChange={(e) => setSingleSessionData({ ...singleSessionData, day_of_week: e.target.value })}
+                    className="w-full sm:w-1/4 p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                    required
+                  >
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                      <option key={day} value={day}>{day}</option>
+                    ))}
+                  </motion.select>
+                  <motion.select
+                    whileHover={{ scale: 1.02 }}
+                    value={singleSessionData.subject}
+                    onChange={(e) => setSingleSessionData({ ...singleSessionData, subject: e.target.value })}
+                    className="w-full sm:w-1/2 p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 whitespace-normal break-words"
+                    required
+                  >
+                    <option value="">Select Subject</option>
+                    {subjects.map((subject) => (
+                      <option key={subject.id} value={subject.id} className="wordwrap">
+                        {subject.name} (Semester: {subject.semester})
+                      </option>
+                    ))}
+                  </motion.select>
+                  <motion.select
+                    whileHover={{ scale: 1.02 }}
+                    value={singleSessionData.start_time}
+                    onChange={(e) => setSingleSessionData({ ...singleSessionData, start_time: e.target.value })}
+                    className="w-full sm:w-1/4 p-3 border border-indigo-200 rounded-xl bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                    required
+                  >
+                    <option value="">Select Time</option>
+                    {timeSlots.map((slot) => (
+                      <option key={slot} value={slot}>{slot}</option>
+                    ))}
+                  </motion.select>
+                </div>
+                <div className="flex flex-col sm:flex-row justify-end gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    type="button"
+                    onClick={() => {
+                      setShowSingleSessionForm(false);
+                      setSingleSessionData({
+                        section: '',
+                        semester: '',
+                        subject: '',
+                        day_of_week: 'Monday',
+                        start_time: '08:30:00',
+                        session_date: '',
+                      });
+                      setError('');
+                    }}
+                    className="w-full sm:w-auto bg-gray-500 text-white py-2 px-6 rounded-full hover:bg-gray-600 shadow-md transition-colors duration-200"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    type="submit"
+                    className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-6 rounded-full hover:from-indigo-700 hover:to-purple-700 shadow-md transition-all duration-200"
+                  >
+                    Save Single Session
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {sessions.length > 0 ? (
         <motion.ul
@@ -796,48 +858,47 @@ const handleSingleSessionSubmit = async (e) => {
 
 
             <motion.li
-  key={session.id}
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  whileHover={{ y: -5 }}
-  className="bg-gradient-to-br from-indigo-200 via-indigo-100 to-white rounded-3xl shadow-2xl hover:shadow-indigo-300 transition-all duration-300 p-6 border border-indigo-300/50"
->
-  <div className="mb-4">
-    <h3 className="text-2xl font-bold text-indigo-700 drop-shadow-sm">{session.timetable.subject.name}</h3>
-    <p className="text-sm text-indigo-500">{session.timetable.section.name} • Year {session.timetable.section.year} • Semester {session.timetable.semester}</p>
-  </div>
+              key={session.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -5 }}
+              className="bg-gradient-to-br from-indigo-200 via-indigo-100 to-white rounded-3xl shadow-2xl hover:shadow-indigo-300 transition-all duration-300 p-6 border border-indigo-300/50"
+            >
+              <div className="mb-4">
+                <h3 className="text-2xl font-bold text-indigo-700 drop-shadow-sm">{session.timetable.subject.name}</h3>
+                <p className="text-sm text-indigo-500">{session.timetable.section.name} • Year {session.timetable.section.year} • Semester {session.timetable.semester}</p>
+              </div>
 
-  <div className="space-y-2 text-indigo-700 text-sm">
-    <p><span className="font-semibold">📅 Date:</span> {session.date}</p>
-    <p><span className="font-semibold">📆 Day:</span> {session.timetable.day_of_week}</p>
-    <p><span className="font-semibold">⏰ Time:</span> {session.timetable.start_time}</p>
-    <p><span className="font-semibold">🎓 Program:</span> {session.timetable.section.program}</p>
-    <p><span className="font-semibold">🗓️ Period:</span> {session.timetable.semester_start_date} → {session.timetable.semester_end_date}</p>
-    <p>
-      <span className="font-semibold">📌 Status:</span>
-      <span className={`ml-1 font-bold ${session.status === 'Scheduled' ? 'text-yellow-600' : 'text-green-600'}`}>
-        {session.status}
-      </span>
-    </p>
-  </div>
+              <div className="space-y-2 text-indigo-700 text-sm">
+                <p><span className="font-semibold">📅 Date:</span> {session.date}</p>
+                <p><span className="font-semibold">📆 Day:</span> {session.timetable.day_of_week}</p>
+                <p><span className="font-semibold">⏰ Time:</span> {session.timetable.start_time}</p>
+                <p><span className="font-semibold">🎓 Program:</span> {session.timetable.section.program}</p>
+                <p><span className="font-semibold">🗓️ Period:</span> {session.timetable.semester_start_date} → {session.timetable.semester_end_date}</p>
+                <p>
+                  <span className="font-semibold">📌 Status:</span>
+                  <span className={`ml-1 font-bold ${session.status === 'Scheduled' ? 'text-yellow-600' : 'text-green-600'}`}>
+                    {session.status}
+                  </span>
+                </p>
+              </div>
 
-  <motion.div
-    className="mt-5"
-    whileHover={{ scale: 1.05 }}
-    whileTap={{ scale: 0.95 }}
-  >
-    <Link
-      to={`/attendance/${session.id}`}
-      className={`inline-block w-full text-center px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-md ${
-        session.status === 'Scheduled'
-          ? 'bg-yellow-400 text-white hover:bg-yellow-500'
-          : 'bg-green-500 text-white hover:bg-green-600'
-      }`}
-    >
-      {session.status === 'Scheduled' ? '📋 Mark Attendance' : '✏️ Update Attendance'}
-    </Link>
-  </motion.div>
-</motion.li>
+              <motion.div
+                className="mt-5"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Link
+                  to={`/attendance/${session.id}`}
+                  className={`inline-block w-full text-center px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-md ${session.status === 'Scheduled'
+                      ? 'bg-yellow-400 text-white hover:bg-yellow-500'
+                      : 'bg-green-500 text-white hover:bg-green-600'
+                    }`}
+                >
+                  {session.status === 'Scheduled' ? '📋 Mark Attendance' : '✏️ Update Attendance'}
+                </Link>
+              </motion.div>
+            </motion.li>
 
           ))}
         </motion.ul>

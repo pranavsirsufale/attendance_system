@@ -32,7 +32,7 @@
 //         return;
 //       }
 //       try {
-//         const response = await axios.get('http://localhost:8000/api/programs/', {
+//         const response = await axios.get('/api/programs/', {
 //           headers: { Authorization: `Bearer ${token}` },
 //         });
 //         console.log(response.data);
@@ -47,7 +47,7 @@
 //     const fetchSections = async (programId) => {
 //       const token = localStorage.getItem('access_token');
 //       try {
-//         const response = await axios.get(`http://localhost:8000/api/sections-for-program/?program_id=${programId}`, {
+//         const response = await axios.get(`/api/sections-for-program/?program_id=${programId}`, {
 //           headers: { Authorization: `Bearer ${token}` },
 //         });
 //         console.log(response.data);
@@ -73,7 +73,7 @@
 //     setLoading(true);
 //     const token = localStorage.getItem('access_token');
 //     try {
-//       const response = await axios.get(`http://localhost:8000/api/students/`, {
+//       const response = await axios.get(`/api/students/`, {
 //         params: {
 //           program_id: selectedProgram,
 //           section_id: selectedSection,

@@ -32,7 +32,7 @@ function AttendanceForm({ notifyUser, onClose = () => {} }) {
       }
       try {
         const response = await axios.get(
-          `http://localhost:8000/api/mark-attendance/${sessionId}/`,
+          `/api/mark-attendance/${sessionId}/`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -84,7 +84,7 @@ function AttendanceForm({ notifyUser, onClose = () => {} }) {
 
     try {
       const response = await axios.post(
-        `http://localhost:8000/api/mark-attendance/${sessionId}/`,
+        `/api/mark-attendance/${sessionId}/`,
         { attendance: attendanceData },
         { headers: { Authorization: `Bearer ${token}` } }
       );

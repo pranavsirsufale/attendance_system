@@ -27,7 +27,7 @@ function AdminStudents() {
     }
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:8000/api/admin/${resource}/`, {
+      const response = await axios.get(`/api/admin/${resource}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setItems(response.data);
@@ -45,7 +45,7 @@ function AdminStudents() {
   const fetchSections = async () => {
     const token = localStorage.getItem("access_token");
     try {
-      const response = await axios.get("http://localhost:8000/api/admin/sections/", {
+      const response = await axios.get("/api/admin/sections/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSections(response.data);
@@ -75,11 +75,11 @@ function AdminStudents() {
     };
     try {
       if (editingId) {
-        await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, submissionData, {
+        await axios.put(`/api/admin/${resource}/${editingId}/`, submissionData, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, submissionData, {
+        await axios.post(`/api/admin/${resource}/`, submissionData, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
@@ -102,7 +102,7 @@ function AdminStudents() {
     const token = localStorage.getItem("access_token");
     if (window.confirm("Are you sure you want to delete this student?")) {
       try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        await axios.delete(`/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setItems(items.filter((item) => item.id !== id));

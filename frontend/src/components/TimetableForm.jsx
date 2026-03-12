@@ -30,7 +30,7 @@ function TimetableForm({ onClose }) {
 
     const fetchSections = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/sections/', {
+        const response = await axios.get('/api/sections/', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setSections(response.data);
@@ -41,7 +41,7 @@ function TimetableForm({ onClose }) {
 
     const fetchTeachers = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/teachers/', {
+        const response = await axios.get('/api/teachers/', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setTeachers(response.data);
@@ -60,7 +60,7 @@ function TimetableForm({ onClose }) {
       const fetchSemesters = async () => {
         const token = localStorage.getItem('access_token');
         try {
-          const response = await axios.get(`http://localhost:8000/api/semesters-for-section/?section_id=${section}`, {
+          const response = await axios.get(`/api/semesters-for-section/?section_id=${section}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           setSemesters(response.data.semesters);
@@ -80,7 +80,7 @@ function TimetableForm({ onClose }) {
         console.log(`Fetching subjects: section=${section}, semester=${semester}`);
         try {
           const response = await axios.get(
-            `http://localhost:8000/api/subjects-for-section/?section_id=${section}&semester=${semester}`,
+            `/api/subjects-for-section/?section_id=${section}&semester=${semester}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           console.log('Subjects response:', response.data);
@@ -154,7 +154,7 @@ function TimetableForm({ onClose }) {
 
     console.log('Submitting payload:', JSON.stringify(payload, null, 2));
     try {
-      const response = await axios.post('http://localhost:8000/api/timetables/', payload, {
+      const response = await axios.post('/api/timetables/', payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log('Response:', response.data);
@@ -357,7 +357,7 @@ function TimetableForm({ onClose }) {
 
     const fetchSections = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/sections/', {
+        const response = await axios.get('/api/sections/', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setSections(response.data);
@@ -368,7 +368,7 @@ function TimetableForm({ onClose }) {
 
     const fetchTeachers = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/teachers/', {
+        const response = await axios.get('/api/teachers/', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setTeachers(response.data);
@@ -389,7 +389,7 @@ function TimetableForm({ onClose }) {
         const selectedSection = sections.find((sec) => sec.id === parseInt(section));
         if (selectedSection) {
           try {
-            const response = await axios.get('http://localhost:8000/api/subjects/', {
+            const response = await axios.get('/api/subjects/', {
               headers: { Authorization: `Bearer ${token}` },
             });
             const semesterSubjects = response.data.filter((sub) => sub.semester === selectedSection.year);
@@ -458,7 +458,7 @@ function TimetableForm({ onClose }) {
 
     console.log('Submitting payload:', JSON.stringify(payload, null, 2));
     try {
-      const response = await axios.post('http://localhost:8000/api/timetables/', payload, {
+      const response = await axios.post('/api/timetables/', payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log('Response:', response.data);

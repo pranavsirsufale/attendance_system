@@ -38,6 +38,7 @@ urlpatterns = [
     path('admin/attendance-export/',views.AdminAttendanceExportView.as_view(),name='admin-attendance-export-csv'),
     path('time-slots/', views.get_time_slots, name='get-time-slots'),
     path('admin/attendance-stats/', views.AdminAttendanceStatsView.as_view(), name='admin-attendance-stats'),
+    path('admin/semester-attendance/', views.AdminSemesterAttendanceView.as_view(), name='admin-semester-attendance'),
     path('teacher-attendance-stats/', views.TeacherAttendanceStatsView.as_view(), name='teacher_attendance_stats'),
 
     # path('semesters-for-section/' , views.SemestersForSectionView.as_view() , name = 'semester-for-section'),

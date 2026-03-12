@@ -114,7 +114,7 @@ WSGI_APPLICATION = "programme_attendance.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME" : 'law-college',
+        "NAME" : 'law_college',
         'USER': 'root',
         'PASSWORD' : 'Rohan83@',
         'HOST' : 'localhost',

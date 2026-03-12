@@ -42,7 +42,7 @@ function PassStudents({ notifyUser }) {
       return;
     }
     try {
-      const response = await axios.get('http://localhost:8000/api/programs/', {
+      const response = await axios.get('/api/programs/', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPrograms(response.data);
@@ -57,7 +57,7 @@ function PassStudents({ notifyUser }) {
   const fetchSections = async (programId) => {
     const token = localStorage.getItem('access_token');
     try {
-      const response = await axios.get(`http://localhost:8000/api/sections-for-program/?program_id=${programId}`, {
+      const response = await axios.get(`/api/sections-for-program/?program_id=${programId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSections(response.data);
@@ -72,7 +72,7 @@ function PassStudents({ notifyUser }) {
   const fetchTargetSections = async (programId) => {
     const token = localStorage.getItem('access_token');
     try {
-      const response = await axios.get(`http://localhost:8000/api/sections-for-program/?program_id=${programId}`, {
+      const response = await axios.get(`/api/sections-for-program/?program_id=${programId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTargetSections(response.data);
@@ -105,7 +105,7 @@ function PassStudents({ notifyUser }) {
     setLoading(true);
     const token = localStorage.getItem('access_token');
     try {
-      const response = await axios.get(`http://localhost:8000/api/students/`, {
+      const response = await axios.get(`/api/students/`, {
         params: {
           program_id: selectedProgram,
           section_id: selectedSection,
@@ -150,7 +150,7 @@ function PassStudents({ notifyUser }) {
       }));
 
       console.log('Sending promotion payload:', updatedStudents);
-      const response = await axios.post('http://localhost:8000/api/students/pass/', updatedStudents, {
+      const response = await axios.post('/api/students/pass/', updatedStudents, {
         headers: { Authorization: `Bearer ${token}` },
       });
       notifyUser(`Successfully passed ${response.data.updated} students`, 'success');

@@ -8,7 +8,7 @@
 
 @echo off
 REM Start Django backend (minimized)
-start /min "" cmd /k "att\Scripts\activate && cd programme_attendance && python.exe manage.py runserver"
+start /min "" cmd /k "programme_attendance\.sys\Scripts\activate && cd programme_attendance && python.exe manage.py runserver"
 
 REM Start React frontend (minimized)
 start /min "" cmd /c "cd frontend && npm run dev"

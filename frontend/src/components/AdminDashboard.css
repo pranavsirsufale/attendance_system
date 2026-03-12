@@ -13,10 +13,12 @@
   justify-content: space-between;
   min-height: 200px;
 }
+
 .styled-card:hover {
   transform: translate(-5px, -5px);
   box-shadow: 17px 17px 0 #000;
 }
+
 .styled-card .card__title {
   font-size: 28px;
   font-weight: 900;
@@ -28,6 +30,7 @@
   overflow: hidden;
   text-align: center;
 }
+
 .styled-card .card__title::after {
   content: "";
   position: absolute;
@@ -39,9 +42,11 @@
   transform: translateX(-100%);
   transition: transform 0.3s;
 }
+
 .styled-card:hover .card__title::after {
   transform: translateX(0);
 }
+
 .styled-card .card__content {
   font-size: 16px;
   line-height: 1.4;
@@ -50,6 +55,7 @@
   text-align: center;
   flex-grow: 1;
 }
+
 .styled-card .card__form {
   display: flex;
   flex-direction: column;
@@ -57,6 +63,7 @@
   align-items: center;
   width: 100%;
 }
+
 .styled-card .card__form input {
   padding: 10px;
   border: 3px solid #000;
@@ -65,12 +72,14 @@
   transition: transform 0.3s;
   width: calc(100% - 26px);
 }
+
 .styled-card .card__form input:focus {
   outline: none;
   transform: scale(1.05);
   background-color: #000;
   color: #ffffff;
 }
+
 .styled-card .card__button {
   border: 3px solid #000;
   background: #000;
@@ -86,6 +95,7 @@
   width: 80%;
   text-align: center;
 }
+
 .styled-card .card__button::before {
   content: "View";
   position: absolute;
@@ -101,21 +111,113 @@
   transform: translateY(100%);
   transition: transform 0.3s;
 }
+
 .styled-card .card__button:hover::before {
   transform: translateY(0);
 }
+
 .styled-card .card__button:active {
   transform: scale(0.95);
 }
 
-.styled-card.teachers-card .card__button::before { content: "Teachers"; }
-.styled-card.students-card .card__button::before { content: "Students"; }
-.styled-card.programs-card .card__button::before { content: "Programs"; }
-.styled-card.subjects-card .card__button::before { content: "Subjects"; }
-.styled-card.timetables-card .card__button::before { content: "Timetables"; }
-.styled-card.sessions-card .card__button::before { content: "Sessions"; }
-.styled-card.stats-card .card__button::before { content: "Stats"; }
-.styled-card.add-bulk-students-card .card__button::before { content: "Add Bulk"; }
-.styled-card.remove-bulk-students-card .card__button::before { content: "Remove Bulk"; }
-.styled-card.promote-students-card .card__button::before { content: "Promote"; }
-.styled-card.student-profiles-card .card__button::before { content: "Profiles"; }
+/* icon above title */
+.styled-card .card__icon {
+  font-size: 32px;
+  display: block;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+/* per-card hover accent colour */
+.styled-card.teachers-card .card__button::before {
+  content: "Teachers";
+  background-color: #a78bfa;
+}
+
+.styled-card.students-card .card__button::before {
+  content: "Students";
+  background-color: #34d399;
+}
+
+.styled-card.programs-card .card__button::before {
+  content: "Programs";
+  background-color: #60a5fa;
+}
+
+.styled-card.subjects-card .card__button::before {
+  content: "Subjects";
+  background-color: #f9a8d4;
+}
+
+.styled-card.sessions-card .card__button::before {
+  content: "Sessions";
+  background-color: #fcd34d;
+  color: #000;
+}
+
+.styled-card.stats-card .card__button::before {
+  content: "Analytics";
+  background-color: #38bdf8;
+}
+
+.styled-card.student-attendance-card .card__button::before {
+  content: "Attendance";
+  background-color: #4ade80;
+}
+
+.styled-card.archival-attendance-card .card__button::before {
+  content: "Archives";
+  background-color: #c084fc;
+}
+
+.styled-card.student-profiles-card .card__button::before {
+  content: "Profiles";
+  background-color: #fb923c;
+}
+
+.styled-card.add-bulk-students-card .card__button::before {
+  content: "Add Bulk";
+  background-color: #6ee7b7;
+}
+
+.styled-card.remove-bulk-students-card .card__button::before {
+  content: "Remove";
+  background-color: #fca5a5;
+}
+
+.styled-card.promote-students-card .card__button::before {
+  content: "Promote";
+  background-color: #7dd3fc;
+}
+
+.styled-card.database-backup .card__button::before {
+  content: "Backup";
+  background-color: #d1d5db;
+  color: #000;
+}
+
+/* section separator accent on left border */
+.styled-card.teachers-card,
+.styled-card.students-card,
+.styled-card.programs-card,
+.styled-card.subjects-card,
+.styled-card.sessions-card {
+  border-left: 6px solid #6366f1;
+}
+
+.styled-card.stats-card,
+.styled-card.student-attendance-card,
+.styled-card.archival-attendance-card {
+  border-left: 6px solid #8b5cf6;
+}
+
+.styled-card.student-profiles-card,
+.styled-card.add-bulk-students-card,
+.styled-card.remove-bulk-students-card,
+.styled-card.promote-students-card {
+  border-left: 6px solid #10b981;
+}
+
+.styled-card.database-backup {
+  border-left: 6px solid #9ca3af;
+}

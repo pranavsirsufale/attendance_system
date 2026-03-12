@@ -1,389 +1,7 @@
-// import React, { useState, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import axios from 'axios';
-// import {
-//   Grid, Box, FormControl, InputLabel, Select, MenuItem, Typography, Table, TableBody, TableCell, TableHead,
-//   TableRow, TablePagination, Paper, FormHelperText, CircularProgress, TextField,
-// } from '@mui/material';
-// import { ToastContainer, toast } from 'react-toastify';
-// import 'react-toastify/dist/ReactToastify.css';
-// import { motion, AnimatePresence } from 'framer-motion';
-// import Button from '../utilities/Button';
-
-// function StudentProfile({ notifyUser }) {
-//   const [programs, setPrograms] = useState([]);
-//   const [sections, setSections] = useState([]);
-//   const [semesters, setSemesters] = useState([]);
-//   const [subjects, setSubjects] = useState([]);
-//   const [selectedProgram, setSelectedProgram] = useState('');
-//   const [selectedSection, setSelectedSection] = useState('');
-//   const [selectedSemester, setSelectedSemester] = useState('');
-//   const [startDate, setStartDate] = useState('');
-//   const [endDate, setEndDate] = useState('');
-//   const [students, setStudents] = useState([]);
-//   const [page, setPage] = useState(0);
-//   const [totalCount, setTotalCount] = useState(0);
-//   const [loading, setLoading] = useState(false);
-//   const [error, setError] = useState('');
-//   const rowsPerPage = 20;
-//   const navigate = useNavigate();
-
-//   if (error && error !== '') {
-//     notifyUser(error, 'error');
-//     setError('');
-//   }
-
-//   // Fetch programs
-//   const fetchPrograms = async () => {
-//     const token = localStorage.getItem('access_token');
-//     if (!token) {
-//       setError('Please log in first');
-//       notifyUser('Please log in first', 'warning');
-//       return;
-//     }
-//     try {
-//       const response = await axios.get('http://localhost:8000/api/programs/', {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       console.log(response)
-//       setPrograms(response.data);
-//     } catch (err) {
-//       setError('Failed to load programs');
-//       notifyUser('Failed to load programs', 'error');
-//     }
-//   };
-
-//   // Fetch sections
-//   const fetchSections = async (programId) => {
-//     const token = localStorage.getItem('access_token');
-//     try {
-//       const response = await axios.get(`http://localhost:8000/api/sections-for-program/?program_id=${programId}`, {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       setSections(response.data);
-//       console.log(response)
-//     } catch (err) {
-//       setError('Failed to load sections');
-//       notifyUser('Failed to load sections', 'error');
-//     }
-//   };
-
-//   // Fetch semesters
-//   const fetchSemesters = async (sectionId) => {
-//     const token = localStorage.getItem('access_token');
-//     try {
-//       const response = await axios.get(`http://localhost:8000/api/semesters-for-section/?section_id=${sectionId}`, {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       if (response.status == 200) {
-//         setSemesters(response.data.semesters);
-//         console.log(response)
-//       }
-//     } catch (err) {
-//       setError('Failed to load semesters');
-//       notifyUser('Failed to load semesters', 'error');
-//     }
-//   };
-
-//   // Fetch students and subjects
-//   const fetchStudentAttendance = async (newPage = 0) => {
-//     if (!selectedProgram || !selectedSection || !selectedSemester) return;
-//     setLoading(true);
-//     const token = localStorage.getItem('access_token');
-//     try {
-//       const params = {
-//         program_id: selectedProgram,
-//         section_id: selectedSection,
-//         semester: selectedSemester,
-//         page: newPage + 1,
-//         page_size: rowsPerPage,
-//       };
-//       if (startDate && endDate) {
-//         params.start_date = startDate;
-//         params.end_date = endDate;
-//       }
-//       const response = await axios.get(`http://localhost:8000/api/student-attendance/`, {
-//         params,
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       console.log(response)
-//       if (response.status == 200){
-//         const data = response.data;
-//         if (data.count > 0 ){
-//           setSubjects(data.results.subjects);
-//           setStudents(data.results.students);
-//           setTotalCount(data.count);
-//           setPage(newPage);
-//         } else notifyUser('No records found for the selected semester.', 'warning');
-//         }
-//     } catch (err) {
-//       setError(err.message || 'Failed to load student attendance');
-//       notifyUser('Failed to load student attendance', 'error');
-//       setStudents([]);
-//       setSubjects([]);
-//       setTotalCount(0);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // Handle page change
-//   const handleChangePage = (event, newPage) => {
-//     fetchStudentAttendance(newPage);
-//   };
-
-//   // Handle row click
-//   const handleRowClick = (studentId) => {
-//     navigate(`/admin/student/${studentId}`);
-//   };
-
-//   // Validate date range
-//   const validateDateRange = () => {
-//     if (startDate && endDate) {
-//       const start = new Date(startDate);
-//       const end = new Date(endDate);
-//       if (start > end) {
-//         setError('Start date must be before end date');
-//         notifyUser('Start date must be before end date', 'error');
-//         return false;
-//       }
-//     }
-//     return true;
-//   };
-
-//   useEffect(() => {
-//     fetchPrograms();
-//   }, []);
-
-//   useEffect(() => {
-//     setSelectedSection('');
-//     setSelectedSemester('');
-//     setSections([]);
-//     setSemesters([]);
-//     setStudents([]);
-//     setSubjects([]);
-//     setStartDate('');
-//     setEndDate('');
-//     setPage(0);
-//     setTotalCount(0);
-//     if (selectedProgram) {
-//       fetchSections(selectedProgram);
-//     }
-//   }, [selectedProgram]);
-
-//   useEffect(() => {
-//     setSelectedSemester('');
-//     setSemesters([]);
-//     setStudents([]);
-//     setSubjects([]);
-//     setStartDate('');
-//     setEndDate('');
-//     setPage(0);
-//     setTotalCount(0);
-//     if (selectedSection) {
-//       fetchSemesters(selectedSection);
-//     }
-//   }, [selectedSection]);
-
-//   useEffect(() => {
-//     setStudents([]);
-//     setSubjects([]);
-//     setStartDate('');
-//     setEndDate('');
-//     setPage(0);
-//     setTotalCount(0);
-//     if (selectedProgram && selectedSection && selectedSemester && validateDateRange()) {
-//       fetchStudentAttendance(0);
-//     }
-//   }, [selectedProgram, selectedSection, selectedSemester, startDate, endDate]);
-
-//   return (
-//     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
-//       <Typography textAlign="center" variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
-//         <Button onClick={() => navigate('/admin')}>Dashboard</Button>
-//         Student Profiles
-//       </Typography>
-//       <AnimatePresence>
-//         {error && (
-//           <motion.div
-//             initial={{ opacity: 0, x: -20 }}
-//             animate={{ opacity: 1, x: 0 }}
-//             exit={{ opacity: 0, x: -20 }}
-//             style={{ backgroundColor: '#fee2e2', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}
-//           >
-//             <Typography color="error">{error}</Typography>
-//           </motion.div>
-//         )}
-//       </AnimatePresence>
-//       <Paper elevation={3} sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-//         <Typography variant="h6" sx={{ mb: 2 }}>
-//           Select Students
-//         </Typography>
-//         <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-//           Select a program, section, semester, and optional date range to view student profiles with subject-wise attendance.
-//         </Typography>
-//         <Grid container spacing={2} sx={{ mb: 3 }}>
-//           <Grid>
-//             <FormControl fullWidth sx={{ minWidth: 120 }}>
-//               <InputLabel id="program-label">Program</InputLabel>
-//               <Select
-//                 labelId="program-label"
-//                 value={selectedProgram}
-//                 onChange={(e) => setSelectedProgram(e.target.value)}
-//                 label="Program"
-//               >
-//                 <MenuItem value="">Select Program</MenuItem>
-//                 {programs.map((program) => (
-//                   <MenuItem key={program.id} value={program.id}>
-//                     {program.name}
-//                   </MenuItem>
-//                 ))}
-//               </Select>
-//               <FormHelperText>Select a program to filter sections</FormHelperText>
-//             </FormControl>
-//           </Grid>
-//           <Grid>
-//             <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedProgram}>
-//               <InputLabel id="section-label">Section</InputLabel>
-//               <Select
-//                 labelId="section-label"
-//                 value={selectedSection}
-//                 onChange={(e) => setSelectedSection(e.target.value)}
-//                 label="Section"
-//               >
-//                 <MenuItem value="">Select Section</MenuItem>
-//                 {sections.map((section) => (
-//                   <MenuItem key={section.id} value={section.id}>
-//                     {section.name} (Year {section.year})
-//                   </MenuItem>
-//                 ))}
-//               </Select>
-//               <FormHelperText>Choose a section for the program</FormHelperText>
-//             </FormControl>
-//           </Grid>
-//           <Grid>
-//             <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedSection}>
-//               <InputLabel id="semester-label">Semester</InputLabel>
-//               <Select
-//                 labelId="semester-label"
-//                 value={selectedSemester}
-//                 onChange={(e) => setSelectedSemester(e.target.value)}
-//                 label="Semester"
-//               >
-//                 <MenuItem value="">Select Semester</MenuItem>
-//                 {semesters.map((sem) => (
-//                   <MenuItem key={sem} value={sem}>
-//                     Semester {sem}
-//                   </MenuItem>
-//                 ))}
-//               </Select>
-//               <FormHelperText>Select semester based on year</FormHelperText>
-//             </FormControl>
-//           </Grid>
-//           <Grid>
-//             <TextField
-//               fullWidth
-//               label="Start Date"
-//               type="date"
-//               value={startDate}
-//               onChange={(e) => setStartDate(e.target.value)}
-//               InputLabelProps={{ shrink: true }}
-//               helperText="Optional: Select start date"
-//             />
-//           </Grid>
-//           <Grid>
-//             <TextField
-//               fullWidth
-//               label="End Date"
-//               type="date"
-//               value={endDate}
-//               onChange={(e) => setEndDate(e.target.value)}
-//               InputLabelProps={{ shrink: true }}
-//               helperText="Optional: Select end date"
-//             />
-//           </Grid>
-//         </Grid>
-//         {loading ? (
-//           <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-//             <CircularProgress />
-//           </Box>
-//         ) : students.length > 0 && subjects.length > 0 ? (
-//           <>
-//             <Table sx={{ mb: 3, minWidth: 650, overflowX: 'auto' }}>
-//               <TableHead>
-//                 <TableRow sx={{ background: 'linear-gradient(to right, #3f51b5, #9c27b0)' }}>
-//                   <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>ID</TableCell>
-//                   <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Roll Number</TableCell>
-//                   <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Name</TableCell>
-//                   {subjects.map((subject) => (
-//                     <TableCell key={subject.id} sx={{ color: '#fff', fontWeight: 'bold' }}>
-//                       {subject.name} (Attended/Total)
-//                     </TableCell>
-//                   ))}
-//                 </TableRow>
-//               </TableHead>
-//               <TableBody>
-//                 {students.map((student) => (
-//                   <TableRow
-//                     key={student.id}
-//                     onClick={() => handleRowClick(student.id)}
-//                     sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
-//                   >
-//                     <TableCell>{student.id}</TableCell>
-//                     <TableCell>{student.roll_number}</TableCell>
-//                     <TableCell>{student.name}</TableCell>
-//                     {subjects.map((subject) => {
-//                       const attendance = student.attendance.find(
-//                         (att) => att.subject_id === subject.id
-//                       ) || { classes_attended: 0, total_classes: 0 };
-//                       return (
-//                         <TableCell key={subject.id}>
-//                           {attendance.classes_attended}/{attendance.total_classes}
-//                         </TableCell>
-//                       );
-//                     })}
-//                   </TableRow>
-//                 ))}
-//               </TableBody>
-//             </Table>
-//             <TablePagination
-//               component="div"
-//               count={totalCount}
-//               page={page}
-//               onPageChange={handleChangePage}
-//               rowsPerPage={rowsPerPage}
-//               rowsPerPageOptions={[rowsPerPage]}
-//             />
-//           </>
-//         ) : (
-//           <Typography color="textSecondary">
-//             {subjects.length === 0
-//               ? 'No subjects found for the selected program, section, and semester.'
-//               : 'No students found for the selected program, section, and semester.'}
-//           </Typography>
-//         )}
-//       </Paper>
-//       <ToastContainer />
-//     </Box>
-//   );
-// }
-
-// export default StudentProfile;
-
-
-
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import {
-  Grid, Box, FormControl, InputLabel, Select, MenuItem, Typography, Table, TableBody, TableCell, TableHead,
-  TableRow, TablePagination, Paper, FormHelperText, CircularProgress, TextField, Button as MuiButton
-} from '@mui/material';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import { motion, AnimatePresence } from 'framer-motion';
-import Button from '../utilities/Button';
 
 function StudentProfile({ notifyUser }) {
   const [programs, setPrograms] = useState([]);
@@ -396,368 +14,432 @@ function StudentProfile({ notifyUser }) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [students, setStudents] = useState([]);
-  // const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const rowsPerPage = 20;
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 30;
   const navigate = useNavigate();
 
-  if (error && error !== '') {
-    notifyUser(error, 'error');
-    setError('');
-  }
-
-  // Fetch programs
   const fetchPrograms = async () => {
     const token = localStorage.getItem('access_token');
-    if (!token) {
-      setError('Please log in first');
-      notifyUser('Please log in first', 'warning');
-      return;
-    }
+    if (!token) { navigate('/'); return; }
     try {
-      const response = await axios.get('http://localhost:8000/api/programs/', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setPrograms(response.data);
-    } catch (err) {
-      setError('Failed to load programs');
-      notifyUser('Failed to load programs', 'error');
-    }
+      const res = await axios.get('/api/programs/', { headers: { Authorization: `Bearer ${token}` } });
+      setPrograms(res.data);
+    } catch { notifyUser('Failed to load programs', 'error'); }
   };
 
-  // Fetch sections
   const fetchSections = async (programId) => {
     const token = localStorage.getItem('access_token');
     try {
-      const response = await axios.get(`http://localhost:8000/api/sections-for-program/?program_id=${programId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSections(response.data);
-    } catch (err) {
-      setError('Failed to load sections');
-      notifyUser('Failed to load sections', 'error');
-    }
+      const res = await axios.get(`/api/sections-for-program/?program_id=${programId}`, { headers: { Authorization: `Bearer ${token}` } });
+      setSections(res.data);
+    } catch { notifyUser('Failed to load sections', 'error'); }
   };
 
-  // Fetch semesters
   const fetchSemesters = async (sectionId) => {
     const token = localStorage.getItem('access_token');
     try {
-      const response = await axios.get(`http://localhost:8000/api/semesters-for-section/?section_id=${sectionId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.status === 200) {
-        setSemesters(response.data.semesters);
-      }
-    } catch (err) {
-      setError('Failed to load semesters');
-      notifyUser('Failed to load semesters', 'error');
-    }
+      const res = await axios.get(`/api/semesters-for-section/?section_id=${sectionId}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.status === 200) setSemesters(res.data.semesters);
+    } catch { notifyUser('Failed to load semesters', 'error'); }
   };
 
-  // Fetch students and subjects
-  const fetchStudentAttendance = async (newPage = 0) => {
+  const fetchStudentAttendance = async () => {
     if (!selectedProgram || !selectedSection || !selectedSemester) return;
-    if (!validateDateRange()) return;
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      notifyUser('Start date must be before end date', 'error');
+      return;
+    }
     setLoading(true);
+    setStudents([]);
+    setSubjects([]);
     const token = localStorage.getItem('access_token');
     try {
-      const params = {
-        program_id: selectedProgram,
-        section_id: selectedSection,
-        semester: selectedSemester,
-        page: newPage + 1,
-        page_size: rowsPerPage,
-      };
-      if (startDate && endDate) {
-        params.start_date = startDate;
-        params.end_date = endDate;
-      }
-      const response = await axios.get(`http://localhost:8000/api/student-attendance/`, {
-        params,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.status === 200) {
-        const data = response.data;
-        if (data.count > 0) {
-          setSubjects(data.results.subjects);
-          setStudents(data.results.students);
-          setTotalCount(data.count);
-          if (startDate && endDate) {
-          notifyUser(`Successfully retreived ${data.count} records, from ${startDate} to ${endDate}`, 'success')
-          }else {
-            notifyUser(`Successfully retreived ${data.count} records`, 'success')
-          }
-          // setPage(newPage);
+      const params = { program_id: selectedProgram, section_id: selectedSection, semester: selectedSemester };
+      if (startDate && endDate) { params.start_date = startDate; params.end_date = endDate; }
+      const res = await axios.get('/api/student-attendance/', { params, headers: { Authorization: `Bearer ${token}` } });
+      if (res.status === 200) {
+        const studentList = res.data.results?.students || [];
+        const subjectList = res.data.results?.subjects || [];
+        setSubjects(subjectList);
+        setStudents(studentList);
+        setTotalCount(res.data.count || studentList.length);
+        setPage(1);
+        if (studentList.length === 0) {
+          notifyUser('No students found for this selection', 'warning');
         } else {
-          notifyUser('No records found for the selected criteria.', 'warning');
-          setSubjects([]);
-          setStudents([]);
-          setTotalCount(0);
+          notifyUser(`Loaded ${studentList.length} students`, 'success');
         }
       }
     } catch (err) {
-      setError(err.message || 'Failed to load student attendance');
-      notifyUser('Failed to load student attendance', 'error');
+      const msg = err.response?.data?.error || 'Failed to load attendance';
+      notifyUser(msg, 'error');
       setStudents([]);
       setSubjects([]);
-      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
 
-
-  const handleChangePage = (event, newPage) => {
-    fetchStudentAttendance(newPage);
-  };
-
-  const handleRowClick = (studentId) => {
-    navigate(`/admin/student/${studentId}`);
-  };
-
-  const validateDateRange = () => {
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      if (start > end) {
-        setError('Start date must be before end date');
-        notifyUser('Start date must be before end date', 'error');
-        return false;
-      }
-    }
-    return true;
-  };
-
-  // Handle apply date range
-  const handleApplyDateRange = () => {
-    if (selectedProgram && selectedSection && selectedSemester && validateDateRange()) {
-      fetchStudentAttendance(0);
-    }
-  };
+  useEffect(() => { fetchPrograms(); }, []);
 
   useEffect(() => {
-    fetchPrograms();
-  }, []);
-
-  useEffect(() => {
-    setSelectedSection('');
-    setSelectedSemester('');
-    setSections([]);
-    setSemesters([]);
-    setStudents([]);
-    setSubjects([]);
-    // setPage(0);
-    setTotalCount(0);
-    if (selectedProgram) {
-      fetchSections(selectedProgram);
-    }
+    setSelectedSection(''); setSections([]);
+    setSelectedSemester(''); setSemesters([]);
+    setStudents([]); setSubjects([]);
+    if (selectedProgram) fetchSections(selectedProgram);
   }, [selectedProgram]);
 
   useEffect(() => {
-    setSelectedSemester('');
-    setSemesters([]);
-    setStudents([]);
-    setSubjects([]);
-    // setPage(0);
-    setTotalCount(0);
-    if (selectedSection) {
-      fetchSemesters(selectedSection);
-    }
+    setSelectedSemester(''); setSemesters([]);
+    setStudents([]); setSubjects([]);
+    if (selectedSection) fetchSemesters(selectedSection);
   }, [selectedSection]);
 
   useEffect(() => {
-    setStudents([]);
-    setSubjects([]);
-    // setPage(0);
-    setTotalCount(0);
-    if (selectedProgram && selectedSection && selectedSemester && validateDateRange()) {
-      fetchStudentAttendance(0);
-    }
-  }, [selectedProgram, selectedSection, selectedSemester]);
+    setStudents([]); setSubjects([]);
+    if (selectedProgram && selectedSection && selectedSemester) fetchStudentAttendance();
+  }, [selectedSemester]);
+
+  const filteredStudents = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return students;
+    return students.filter(s =>
+      s.name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q)
+    );
+  }, [students, search]);
+
+  const totalPages = Math.ceil(filteredStudents.length / rowsPerPage);
+  const pagedStudents = filteredStudents.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+
+  const getAttPct = (att, subjId) => {
+    const a = att.find(x => x.subject_id === subjId) || { classes_attended: 0, total_classes: 0 };
+    return { ...a, pct: a.total_classes > 0 ? ((a.classes_attended / a.total_classes) * 100).toFixed(1) : null };
+  };
+
+  const pctColor = (pct) => {
+    if (pct === null) return 'bg-gray-100 text-gray-500';
+    if (pct >= 75) return 'bg-green-100 text-green-800';
+    if (pct >= 60) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-700';
+  };
+
+  const selectedSectionObj = sections.find(s => s.id === Number(selectedSection));
+  const selectedProgramObj = programs.find(p => p.id === Number(selectedProgram));
+
+  // ── CSV export ────────────────────────────────────────────────────────────
+  const exportCSVFn = () => {
+    const header = ['#', 'Roll No.', 'Name', ...subjects.map(s => `${s.name} (P)`), ...subjects.map(s => `${s.name} (T)`), ...subjects.map(s => `${s.name} (%)`), 'Overall (P)', 'Overall (T)', 'Overall (%)'];
+    const rows = filteredStudents.map((student, idx) => {
+      const totalP = student.attendance.reduce((s, a) => s + a.classes_attended, 0);
+      const totalT = student.attendance.reduce((s, a) => s + a.total_classes, 0);
+      const overallPct = totalT > 0 ? ((totalP / totalT) * 100).toFixed(1) : '';
+      const attended = subjects.map(sub => (student.attendance.find(x => x.subject_id === sub.id)?.classes_attended ?? 0));
+      const total = subjects.map(sub => (student.attendance.find(x => x.subject_id === sub.id)?.total_classes ?? 0));
+      const pcts = subjects.map((sub, i) => total[i] > 0 ? ((attended[i] / total[i]) * 100).toFixed(1) : '');
+      return [idx + 1, student.roll_number, student.name, ...attended, ...total, ...pcts, totalP, totalT, overallPct];
+    });
+    const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance_${selectedProgramObj?.name ?? 'program'}_sem${selectedSemester}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Print ─────────────────────────────────────────────────────────────────
+  const handlePrint = () => {
+    const dateRange = startDate && endDate ? `${startDate} to ${endDate}` : 'Full Semester';
+    const header = ['#', 'Roll No.', 'Name', ...subjects.map(s => s.name), 'Overall'];
+    const rowsHtml = filteredStudents.map((student, idx) => {
+      const totalP = student.attendance.reduce((s, a) => s + a.classes_attended, 0);
+      const totalT = student.attendance.reduce((s, a) => s + a.total_classes, 0);
+      const overallPct = totalT > 0 ? ((totalP / totalT) * 100).toFixed(1) : '—';
+      const cells = subjects.map(sub => {
+        const a = student.attendance.find(x => x.subject_id === sub.id) || { classes_attended: 0, total_classes: 0 };
+        const pct = a.total_classes > 0 ? ((a.classes_attended / a.total_classes) * 100).toFixed(1) : null;
+        const color = pct === null ? '#888' : parseFloat(pct) >= 75 ? '#166534' : parseFloat(pct) >= 60 ? '#854d0e' : '#991b1b';
+        const bg = pct === null ? '#f3f4f6' : parseFloat(pct) >= 75 ? '#dcfce7' : parseFloat(pct) >= 60 ? '#fef9c3' : '#fee2e2';
+        return `<td style="text-align:center;padding:4px 8px;background:${bg};color:${color};font-weight:600">${pct !== null ? `${a.classes_attended}/${a.total_classes}<br><small>${pct}%</small>` : '—'}</td>`;
+      }).join('');
+      return `<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:4px 8px;color:#6b7280">${idx + 1}</td><td style="padding:4px 8px;font-family:monospace;font-weight:700;color:#4338ca">${student.roll_number}</td><td style="padding:4px 8px;font-weight:500">${student.name}</td>${cells}<td style="text-align:center;padding:4px 8px;font-weight:700">${overallPct}${overallPct !== '—' ? '%' : ''}</td></tr>`;
+    }).join('');
+    const headCells = header.map(h => `<th style="padding:8px;background:#4f46e5;color:white;font-size:11px;text-align:center;white-space:nowrap">${h}</th>`).join('');
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>Attendance Report</title><style>body{font-family:sans-serif;font-size:12px;margin:16px}table{border-collapse:collapse;width:100%}@media print{button{display:none}}</style></head><body><div style="text-align:center;margin-bottom:12px"><h2 style="margin:0;color:#3730a3">Manikchand Pahade Law College</h2><p style="margin:4px 0;color:#555">Attendance Report — ${selectedProgramObj?.name} | ${selectedSectionObj?.name} | Semester ${selectedSemester}</p><p style="margin:0;color:#888;font-size:11px">Period: ${dateRange} &nbsp;|&nbsp; Generated: ${new Date().toLocaleString()}</p></div><button onclick="window.print()" style="margin-bottom:10px;padding:6px 16px;background:#4f46e5;color:white;border:none;border-radius:6px;cursor:pointer">🖨 Print</button><table><thead><tr>${headCells}</tr></thead><tbody>${rowsHtml}</tbody></table></body></html>`);
+    win.document.close();
+  };
 
   return (
-    <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
-      <Typography textAlign="center" variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
-        <Button onClick={() => navigate('/admin')}>Dashboard</Button>
-        Student Profiles
-      </Typography>
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            style={{ backgroundColor: '#fee2e2', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4 md:p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+            Student Profiles
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">View subject-wise attendance by semester</p>
+        </div>
+        <button
+          onClick={() => navigate('/admin')}
+          className="px-4 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-sm font-semibold hover:bg-indigo-50 transition"
+        >
+          ← Dashboard
+        </button>
+      </div>
+
+      {/* Filters Card */}
+      <div className="bg-white rounded-2xl shadow-lg border border-indigo-100 p-5 mb-6">
+        <h2 className="text-base font-semibold text-indigo-700 mb-4">Select Students</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Program</label>
+            <select
+              value={selectedProgram}
+              onChange={e => setSelectedProgram(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+            >
+              <option value="">— Select Program —</option>
+              {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Section</label>
+            <select
+              value={selectedSection}
+              onChange={e => setSelectedSection(e.target.value)}
+              disabled={!selectedProgram}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">— Select Section —</option>
+              {sections.map(s => <option key={s.id} value={s.id}>{s.name} (Year {s.year})</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Semester</label>
+            <select
+              value={selectedSemester}
+              onChange={e => setSelectedSemester(e.target.value)}
+              disabled={!selectedSection}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">— Select Semester —</option>
+              {semesters.map(sem => <option key={sem} value={sem}>Semester {sem}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
+              Start Date <span className="font-normal normal-case text-gray-400">(optional)</span>
+            </label>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
+              End Date <span className="font-normal normal-case text-gray-400">(optional)</span>
+            </label>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition" />
+          </div>
+          <button
+            onClick={fetchStudentAttendance}
+            disabled={!selectedProgram || !selectedSection || !selectedSemester || loading}
+            className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold shadow hover:from-indigo-700 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Typography color="error">{error}</Typography>
+            {loading ? 'Loading...' : 'Apply / Refresh'}
+          </button>
+        </div>
+      </div>
+
+      {/* Loading */}
+      <AnimatePresence>
+        {loading && (
+          <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="flex items-center justify-center py-20">
+            <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+            <span className="ml-3 text-indigo-600 font-medium">Loading attendance data…</span>
           </motion.div>
         )}
       </AnimatePresence>
-      <Paper elevation={3} sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Select Students
-        </Typography>
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-          Select a program, section, semester, and optional date range to view student profiles with subject-wise attendance.
-        </Typography>
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid>
-            <FormControl fullWidth sx={{ minWidth: 120 }}>
-              <InputLabel id="program-label">Program</InputLabel>
-              <Select
-                labelId="program-label"
-                value={selectedProgram}
-                onChange={(e) => setSelectedProgram(e.target.value)}
-                label="Program"
+
+      {/* Results */}
+      {!loading && students.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          {/* Info bar + search */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-semibold">
+                {selectedProgramObj?.name}
+              </span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">
+                {selectedSectionObj ? `${selectedSectionObj.name} — Year ${selectedSectionObj.year}` : ''}
+              </span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-pink-100 text-pink-800 text-xs font-semibold">
+                Semester {selectedSemester}
+              </span>
+              {startDate && endDate && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold">
+                  {startDate} → {endDate}
+                </span>
+              )}
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold">
+                {totalCount} Students
+              </span>
+            </div>
+            <div className="flex gap-2 items-center flex-wrap">
+              <input
+                type="text"
+                placeholder="Search name or roll number…"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
+                className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition w-full sm:w-56"
+              />
+              <button
+                onClick={exportCSVFn}
+                title="Export all students to CSV"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold shadow transition whitespace-nowrap"
               >
-                <MenuItem value="">Select Program</MenuItem>
-                {programs.map((program) => (
-                  <MenuItem key={program.id} value={program.id}>
-                    {program.name}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>Select a program to filter sections</FormHelperText>
-            </FormControl>
-          </Grid>
-          <Grid>
-            <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedProgram}>
-              <InputLabel id="section-label">Section</InputLabel>
-              <Select
-                labelId="section-label"
-                value={selectedSection}
-                onChange={(e) => setSelectedSection(e.target.value)}
-                label="Section"
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
+                CSV
+              </button>
+              <button
+                onClick={handlePrint}
+                title="Open printable report"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow transition whitespace-nowrap"
               >
-                <MenuItem value="">Select Section</MenuItem>
-                {sections.map((section) => (
-                  <MenuItem key={section.id} value={section.id}>
-                    {section.name} (Year {section.year})
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>Choose a section for the program</FormHelperText>
-            </FormControl>
-          </Grid>
-          <Grid>
-            <FormControl fullWidth sx={{ minWidth: 120 }} disabled={!selectedSection}>
-              <InputLabel id="semester-label">Semester</InputLabel>
-              <Select
-                labelId="semester-label"
-                value={selectedSemester}
-                onChange={(e) => setSelectedSemester(e.target.value)}
-                label="Semester"
-              >
-                <MenuItem value="">Select Semester</MenuItem>
-                {semesters.map((sem) => (
-                  <MenuItem key={sem} value={sem}>
-                    Semester {sem}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>Select semester based on year</FormHelperText>
-            </FormControl>
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="Start Date"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              helperText="Optional: Select start date"
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="End Date"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              helperText="Optional: Select end date"
-            />
-          </Grid>
-          <Grid>
-            <MuiButton
-              variant="contained"
-              onClick={handleApplyDateRange}
-              disabled={!selectedProgram || !selectedSection || !selectedSemester}
-              sx={{ mt: 1 }}
-            >
-              Apply Date Range
-            </MuiButton>
-          </Grid>
-        </Grid>
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : students.length > 0 && subjects.length > 0 ? (
-          <>
-            <Table sx={{ mb: 3, minWidth: 650, overflowX: 'auto' }}>
-              <TableHead>
-                <TableRow sx={{ background: 'linear-gradient(to right, #3f51b5, #9c27b0)' }}>
-                  <TableCell sx={{ color: '#fff', fontWeight: 'bold'}}>Sr</TableCell>
-                  <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>ID</TableCell>
-                  <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Roll Number</TableCell>
-                  <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Name</TableCell>
-                  {subjects.map((subject) => (
-                    <TableCell key={subject.id} sx={{ color: '#fff', fontWeight: 'bold' }}>
-                      {subject.name} (Attended/Total)
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {students.map((student, index) => (
-                  <TableRow
-                    key={student.id}
-                    onClick={() => handleRowClick(student.id)}
-                    sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
-                  >
-                    <TableCell>{index+1}</TableCell>
-                    <TableCell>{student.id}</TableCell>
-                    <TableCell>{student.roll_number}</TableCell>
-                    <TableCell>{student.name}</TableCell>
-                    {subjects.map((subject) => {
-                      const attendance = student.attendance.find(
-                        (att) => att.subject_id === subject.id
-                      ) || { classes_attended: 0, total_classes: 0 };
-                      return (
-                        <TableCell key={subject.id}>
-                          {attendance.classes_attended}/{attendance.total_classes}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableBody>
-              </Table>
-            {/* <TableRow
-              component="div"
-              totalCount
-              page={page}
-              onPageChange={handleChangePage}
-              rowsPerPage={rowsPerPage}
-              rowsPerPageOptions={[rowsPerPage]}
-              /> */}
-          </>
-        ) : (
-          <Typography color="textSecondary">
-            {subjects.length === 0
-              ? 'No subjects found for the selected program, section, and semester.'
-              : 'No students found for the selected program, section, and semester.'}
-          </Typography>
-        )}
-      </Paper>
-      <ToastContainer />
-    </Box>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" /></svg>
+                Print
+              </button>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="flex gap-3 mb-3 flex-wrap">
+            <span className="text-xs text-gray-500">Attendance %:</span>
+            <span className="inline-flex items-center gap-1 text-xs"><span className="w-3 h-3 rounded-full bg-green-400 inline-block"></span>≥75% Good</span>
+            <span className="inline-flex items-center gap-1 text-xs"><span className="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span>60–74% Average</span>
+            <span className="inline-flex items-center gap-1 text-xs"><span className="w-3 h-3 rounded-full bg-red-400 inline-block"></span>&lt;60% Low</span>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                    <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">#</th>
+                    <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Roll No.</th>
+                    <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Name</th>
+                    {subjects.map(sub => (
+                      <th key={sub.id} className="px-3 py-3 text-center font-semibold whitespace-nowrap">
+                        <div className="text-xs leading-tight">{sub.name}</div>
+                        <div className="text-xs font-normal opacity-80">(P / T — %)</div>
+                      </th>
+                    ))}
+                    <th className="px-4 py-3 text-center font-semibold whitespace-nowrap">Overall</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {pagedStudents.map((student, idx) => {
+                    const totalP = student.attendance.reduce((s, a) => s + a.classes_attended, 0);
+                    const totalT = student.attendance.reduce((s, a) => s + a.total_classes, 0);
+                    const overallPct = totalT > 0 ? ((totalP / totalT) * 100).toFixed(1) : null;
+                    return (
+                      <tr
+                        key={student.id}
+                        onClick={() => navigate(`/admin/student/${student.id}`)}
+                        className="hover:bg-indigo-50 cursor-pointer transition-colors"
+                      >
+                        <td className="px-4 py-3 text-gray-400 text-xs">{(page - 1) * rowsPerPage + idx + 1}</td>
+                        <td className="px-4 py-3 font-mono font-semibold text-indigo-700 whitespace-nowrap">{student.roll_number}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{student.name}</td>
+                        {subjects.map(sub => {
+                          const { classes_attended, total_classes, pct } = getAttPct(student.attendance, sub.id);
+                          return (
+                            <td key={sub.id} className="px-3 py-3 text-center whitespace-nowrap">
+                              {total_classes === 0 ? (
+                                <span className="text-gray-400 text-xs">—</span>
+                              ) : (
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <span className="text-xs text-gray-500">{classes_attended}/{total_classes}</span>
+                                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${pctColor(parseFloat(pct))}`}>
+                                    {pct}%
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 py-3 text-center">
+                          {overallPct === null ? (
+                            <span className="text-gray-400 text-xs">—</span>
+                          ) : (
+                            <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${pctColor(parseFloat(overallPct))}`}>
+                              {overallPct}%
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+                <span className="text-xs text-gray-500">
+                  Showing {(page - 1) * rowsPerPage + 1}–{Math.min(page * rowsPerPage, filteredStudents.length)} of {filteredStudents.length}
+                </span>
+                <div className="flex gap-1">
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                    className="px-3 py-1.5 rounded-lg text-xs border border-gray-300 disabled:opacity-40 hover:bg-indigo-50 transition">Prev</button>
+                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                    const pg = totalPages <= 7 ? i + 1 : (page <= 4 ? i + 1 : page + i - 3);
+                    if (pg < 1 || pg > totalPages) return null;
+                    return (
+                      <button key={pg} onClick={() => setPage(pg)}
+                        className={`px-3 py-1.5 rounded-lg text-xs border transition ${pg === page ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300 hover:bg-indigo-50'}`}>
+                        {pg}
+                      </button>
+                    );
+                  })}
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                    className="px-3 py-1.5 rounded-lg text-xs border border-gray-300 disabled:opacity-40 hover:bg-indigo-50 transition">Next</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Empty states */}
+      {!loading && students.length === 0 && selectedSemester && (
+        <div className="text-center py-16 text-gray-400">
+          <div className="text-5xl mb-3">📋</div>
+          <p className="text-lg font-medium">No students found</p>
+          <p className="text-sm mt-1">Try a different program, section, or semester.</p>
+        </div>
+      )}
+
+      {!loading && !selectedSemester && (
+        <div className="text-center py-16 text-gray-400">
+          <div className="text-5xl mb-3">🎓</div>
+          <p className="text-lg font-medium">Select a program, section, and semester above</p>
+          <p className="text-sm mt-1">Student attendance will appear here.</p>
+        </div>
+      )}
+    </div>
   );
 }
 

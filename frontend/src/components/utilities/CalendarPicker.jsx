@@ -6,7 +6,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from './Button';
 
-const CalendarPicker = ({isAdmin,notifyUser}) => {
+const CalendarPicker = ({ isAdmin, notifyUser }) => {
   const [events, setEvents] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [dateSessions, setDateSessions] = useState([]);
@@ -41,7 +41,7 @@ const CalendarPicker = ({isAdmin,notifyUser}) => {
 
   const fetchSections = async (token) => {
     try {
-      const response = await fetch('http://localhost:8000/api/sections/', {
+      const response = await fetch('/api/sections/', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
@@ -64,7 +64,7 @@ const CalendarPicker = ({isAdmin,notifyUser}) => {
     setError('');
     try {
       const month = start.toISOString().slice(0, 7);
-      let url = `http://localhost:8000/api/scheduled-dates/?month=${month}`;
+      let url = `/api/scheduled-dates/?month=${month}`;
       if (selectedSection) url += `&section_id=${selectedSection}`;
       if (queryTeacher) url += `&teacher=${queryTeacher}`;
       if (querySubject) url += `&subject_name=${encodeURIComponent(querySubject)}`;
@@ -107,7 +107,7 @@ const CalendarPicker = ({isAdmin,notifyUser}) => {
     setLoading(true);
     setError('');
     try {
-      let url = `http://localhost:8000/api/sessions-by-date/?date=${dateStr}`;
+      let url = `/api/sessions-by-date/?date=${dateStr}`;
       if (selectedSection) url += `&section_id=${selectedSection}`;
       if (queryTeacher) url += `&teacher=${queryTeacher}`;
       if (querySubject) url += `&subject_name=${encodeURIComponent(querySubject)}`;
@@ -171,22 +171,22 @@ const CalendarPicker = ({isAdmin,notifyUser}) => {
         className="text-center mb-8"
       >
 
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-4xl font-extrabold mb-6 text-indigo-800"
-      >
-        Session Calendar
-      </motion.h2>
-      <div>
+        <motion.h2
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-4xl font-extrabold mb-6 text-indigo-800"
+        >
+          Session Calendar
+        </motion.h2>
+        <div>
 
-        <Button onClick={viewAllSessions}>View All Sessions</Button>
+          <Button onClick={viewAllSessions}>View All Sessions</Button>
 
-        { isAdmin && <Button onClick={()=>navigate('/admin')} > Admin DashBoard </Button>}
-      </div>
+          {isAdmin && <Button onClick={() => navigate('/admin')} > Admin DashBoard </Button>}
+        </div>
 
-</motion.div>
+      </motion.div>
 
       <AnimatePresence>
         {error && (
@@ -305,11 +305,10 @@ const CalendarPicker = ({isAdmin,notifyUser}) => {
                   >
                     <Link
                       to={`/attendance/${session.id}`}
-                      className={`inline-block w-full text-center px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-md ${
-                        session.status === 'Scheduled'
-                          ? 'bg-yellow-400 text-white hover:bg-yellow-500'
-                          : 'bg-green-500 text-white hover:bg-green-600'
-                      }`}
+                      className={`inline-block w-full text-center px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-md ${session.status === 'Scheduled'
+                        ? 'bg-yellow-400 text-white hover:bg-yellow-500'
+                        : 'bg-green-500 text-white hover:bg-green-600'
+                        }`}
                     >
                       {session.status === 'Scheduled' ? '📋 Mark Attendance' : '✏️ Update Attendance'}
                     </Link>

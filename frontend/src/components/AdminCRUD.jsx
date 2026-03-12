@@ -28,7 +28,7 @@ function AdminCRUD({ resource }) {
     }
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:8000/api/admin/${resource}/`, {
+      const response = await axios.get(`/api/admin/${resource}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setItems(response.data);
@@ -56,12 +56,12 @@ function AdminCRUD({ resource }) {
     try {
       if (editingId) {
         await axios.put(
-          `http://localhost:8000/api/admin/${resource}/${editingId}/`,
+          `/api/admin/${resource}/${editingId}/`,
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, formData, {
+        await axios.post(`/api/admin/${resource}/`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
@@ -86,7 +86,7 @@ function AdminCRUD({ resource }) {
     const token = localStorage.getItem("access_token");
     if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
       try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        await axios.delete(`/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setItems(items.filter((item) => item.id !== id));
@@ -256,7 +256,7 @@ function AdminCRUD({ resource }) {
     }
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:8000/api/admin/${resource}/`, {
+      const response = await axios.get(`/api/admin/${resource}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setItems(response.data);
@@ -278,7 +278,7 @@ function AdminCRUD({ resource }) {
   const fetchSections = async () => {
     const token = localStorage.getItem("access_token");
     try {
-      const response = await axios.get("http://localhost:8000/api/admin/sections/", {
+      const response = await axios.get("/api/admin/sections/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSections(response.data);
@@ -308,12 +308,12 @@ function AdminCRUD({ resource }) {
       }
       if (editingId) {
         await axios.put(
-          `http://localhost:8000/api/admin/${resource}/${editingId}/`,
+          `/api/admin/${resource}/${editingId}/`,
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
+        await axios.post(`/api/admin/${resource}/`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
@@ -336,7 +336,7 @@ function AdminCRUD({ resource }) {
     const token = localStorage.getItem("access_token");
     if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
       try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
+        await axios.delete(`/api/admin/${resource}/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setItems(items.filter((item) => item.id !== id));

@@ -1,439 +1,434 @@
-
-
-// src/components/admin/SubjectCRUD.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import Button from "../utilities/Button";
 
-function SubjectCRUD({notifyUser}) {
+const EMPTY = { name: "", semester: "", is_law_subject: false };
+
+const tok = () => localStorage.getItem("access_token");
+const authH = () => ({ Authorization: `Bearer ${tok()}` });
+
+function SubjectCRUD({ notifyUser }) {
   const [items, setItems] = useState([]);
-  const [error, setError] = useState("");
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filterSem, setFilterSem] = useState("");
   const navigate = useNavigate();
-  const resource = "subjects";
 
   useEffect(() => {
+    if (!tok()) { navigate("/"); return; }
     fetchItems();
   }, []);
 
-  const fetchItems = async () => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      setError("Please log in first");
-      navigate("/");
-      return;
-    }
-    try {
-      setLoading(true);
-      const response = await axios.get(`http://localhost:8000/api/admin/${resource}/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setItems(response.data);
-      if(response.status >= 200 && response.status <= 300){
-        notifyUser(`${response.data.length} records found` , 'info')
-      }
-      setError("");
-    } catch (err) {
-      const message = err.response?.status === 404 ? "Resource not found" : err.response?.data?.detail || "Unknown error";
-      setError(`Failed to load ${resource}: ${message}`);
+  /* ── helpers ─────────────────────────────────────── */
+  const closeForm = () => { setShowForm(false); setEditingId(null); setFormData(EMPTY); };
 
-      notifyUser(`Failed to load ${resource}: ${message}`,'error')
-      if (err.response?.status === 401 || err.response?.status === 403) navigate("/");
-    } finally {
-      setLoading(false);
-    }
+  const uniqueSemesters = [...new Set(items.map(s => s.semester))].sort((a, b) => a - b);
+
+  const filtered = items.filter(s => {
+    const matchSearch = s.name.toLowerCase().includes(search.toLowerCase());
+    const matchSem = filterSem === "" || String(s.semester) === filterSem;
+    return matchSearch && matchSem;
+  });
+
+  const teacherName = (t) => {
+    if (!t) return "—";
+    if (typeof t === "object") return `${t.first_name ?? ""} ${t.last_name ?? ""}`.trim() || "—";
+    return String(t);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const token = localStorage.getItem("access_token");
+  /* ── fetch ───────────────────────────────────────── */
+  const fetchItems = async () => {
+    try {
+      setLoading(true);
+      const r = await axios.get("/api/admin/subjects/", { headers: authH() });
+      setItems(r.data);
+    } catch (e) {
+      if (e.response?.status === 401 || e.response?.status === 403) navigate("/");
+      notifyUser?.(`Failed to load subjects: ${e.response?.data?.detail || e.message}`, "error");
+    } finally { setLoading(false); }
+  };
+
+  /* ── save ────────────────────────────────────────── */
+  const handleSubmit = async () => {
+    if (!formData.name.trim() || formData.semester === "") {
+      notifyUser?.("Name and Semester are required", "error");
+      return;
+    }
+    setSaving(true);
     try {
       const payload = {
-        ...formData,
-        is_law_subject: formData.is_law_subject === "true" || formData.is_law_subject === true,
+        name: formData.name.trim(),
         semester: parseInt(formData.semester),
+        is_law_subject: Boolean(formData.is_law_subject),
       };
       if (editingId) {
-        const response = await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if(response.status >= 200 && response.status <= 300){
-          notifyUser('Record has been updated successfully ' , 'info')
-        }
+        await axios.put(`/api/admin/subjects/${editingId}/`, payload, { headers: authH() });
+        notifyUser?.("Subject updated", "success");
       } else {
-        const response = await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if(response.status >= 200 && response.status <= 300){
-          notifyUser('Record has been saved successfully ' , 'success')
-        }
+        await axios.post("/api/admin/subjects/", payload, { headers: authH() });
+        notifyUser?.("Subject created", "success");
       }
-      setFormData({});
-      setEditingId(null);
-      fetchItems();
-    } catch (err) {
-      setError("Failed to save data: " + JSON.stringify(err.response?.data || "Unknown error"));
-    }
+      closeForm();
+      await fetchItems();
+    } catch (e) {
+      notifyUser?.(
+        `Failed to ${editingId ? "update" : "create"}: ${JSON.stringify(e.response?.data || e.message)}`,
+        "error"
+      );
+    } finally { setSaving(false); }
   };
 
   const handleEdit = (item) => {
-    setFormData(item);
+    setFormData({
+      name: item.name,
+      semester: String(item.semester),
+      is_law_subject: item.is_law_subject,
+    });
     setEditingId(item.id);
-    notifyUser('Record has been fetched successfully ✅' , 'info')
+    setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
-    const token = localStorage.getItem("access_token");
-    if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
-      try {
-        const response = await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setItems(items.filter((item) => item.id !== id));
-
-        if(response.status >= 200 && response.status <= 300){
-          notifyUser('Record has removed successfully ' , 'warning')
-        }
-
-      } catch (err) {
-        setError("Failed to delete: " + (err.response?.data?.detail || "Unknown error"));
-        notifyUser("Failed to delete: " + (err.response?.data?.detail || "Unknown error"),'error');
-      }
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`/api/admin/subjects/${deleteId}/`, { headers: authH() });
+      notifyUser?.("Subject deleted", "warning");
+      setItems(prev => prev.filter(s => s.id !== deleteId));
+      setDeleteId(null);
+    } catch (e) {
+      notifyUser?.(`Delete failed: ${e.response?.data?.detail || e.message}`, "error");
+      setDeleteId(null);
     }
   };
 
-  const fields = ["name", "is_law_subject", "semester", "teacher"];
-
-  const renderFields = () => fields.map((key) => (
-    <motion.div
-      key={key}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="mb-4"
-    >
-      <label className="block text-indigo-700 dark:text-indigo-300 font-medium capitalize mb-1">
-        {key.replace("_", " ")}:
-      </label>
-      {key === "is_law_subject" ? (
-        <motion.select
-          whileHover={{ scale: 1.02 }}
-          value={formData[key] || ""}
-          onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-          className="w-full p-3 border border-indigo-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500 focus:border-indigo-400 dark:focus:border-indigo-500 transition-all duration-200"
-        >
-          <option value="">Select</option>
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </motion.select>
-      ) : (
-        <motion.input
-          whileHover={{ scale: 1.02 }}
-          type="text"
-          value={formData[key] || ""}
-          onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-          className="w-full p-3 border border-indigo-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500 focus:border-indigo-400 dark:focus:border-indigo-500 transition-all duration-200"
-        />
-      )}
-    </motion.div>
-  ));
-
-  const renderTableHeaders = () => fields.map((key) => (
-    <th key={key} className="p-3 text-left capitalize text-white font-semibold">
-      {key.replace("_", " ")}
-    </th>
-  ));
-
-  const renderTableRow = (item) => fields.map((key) => (
-    <td key={key} className="p-3 text-gray-700 dark:text-gray-200">
-      {key === "is_law_subject" ? (item[key] ? "Yes" : "No") : item[key] || "-"}
-    </td>
-  ));
-
+  /* ── loading ─────────────────────────────────────── */
   if (loading) return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="p-6 flex items-center justify-center min-h-screen text-indigo-600 dark:text-indigo-300 font-medium"
-    >
-      Loading {resource}...
-    </motion.div>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+        className="w-10 h-10 border-4 border-indigo-400 border-t-transparent rounded-full"
+      />
+    </div>
   );
+
+  /* ── render ──────────────────────────────────────── */
   return (
-    <div className="p-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800 min-h-screen">
-      <Button  onClick={() => navigate('/admin')}>Dashboard</Button>
-            <motion.h2
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-3xl font-extrabold text-transparent text-center bg-clip-text bg-gradient-to-r from-gray-900 to-black dark:from-white dark:to-gray-100 mb-6"
-           >
-              Manage Subjects
-            </motion.h2>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800 p-6">
+
+      {/* ── Page header ── */}
+      <div className="flex items-center justify-between mb-8">
+        <button
+          onClick={() => navigate("/admin")}
+          className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 font-medium transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Dashboard
+        </button>
+
+        <motion.h1
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-3xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
+        >
+          Subjects
+        </motion.h1>
+
+        <button
+          onClick={() => { setFormData(EMPTY); setEditingId(null); setShowForm(true); }}
+          className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg active:scale-95 transition-all"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Subject
+        </button>
+      </div>
+
+      {/* ── Search + filter bar ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row gap-3 mb-6"
+      >
+        {/* search */}
+        <div className="relative flex-1">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search subjects…"
+            className="w-full pl-10 pr-4 py-3 border border-indigo-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-indigo-400 transition-all"
+          />
+        </div>
+        {/* semester filter */}
+        <select
+          value={filterSem}
+          onChange={e => setFilterSem(e.target.value)}
+          className="sm:w-44 p-3 border border-indigo-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-indigo-400 transition-all"
+        >
+          <option value="">All Semesters</option>
+          {uniqueSemesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
+        </select>
+        <span className="hidden sm:flex items-center px-3 text-sm font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+          {filtered.length} subject{filtered.length !== 1 ? "s" : ""}
+        </span>
+      </motion.div>
+
+      {/* ── Table ── */}
+      {filtered.length === 0 ? (
+        <div className="text-center py-24 text-gray-400 dark:text-gray-500">
+          <svg className="w-14 h-14 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+          <p className="text-sm">No subjects found</p>
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-indigo-100 dark:border-gray-700 overflow-hidden"
+        >
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm">
+                <th className="p-4 text-left font-semibold">Name</th>
+                <th className="p-4 text-left font-semibold">Semester</th>
+                <th className="p-4 text-left font-semibold">Law Subject</th>
+                <th className="p-4 text-left font-semibold">Teacher</th>
+                <th className="p-4 text-center font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((item, i) => (
+                <motion.tr
+                  key={item.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  className="border-t border-indigo-50 dark:border-gray-700 hover:bg-indigo-50/50 dark:hover:bg-gray-700/40 transition-colors"
+                >
+                  {/* Name */}
+                  <td className="p-4 font-medium text-gray-800 dark:text-gray-200 text-sm">{item.name}</td>
+
+                  {/* Semester badge */}
+                  <td className="p-4">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
+                      Sem {item.semester}
+                    </span>
+                  </td>
+
+                  {/* Law subject badge */}
+                  <td className="p-4">
+                    {item.is_law_subject ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                        Law
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                        General
+                      </span>
+                    )}
+                  </td>
+
+                  {/* Teacher */}
+                  <td className="p-4 text-sm text-gray-500 dark:text-gray-400">{teacherName(item.teacher)}</td>
+
+                  {/* Actions */}
+                  <td className="p-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => handleEdit(item)}
+                        className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/40 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setDeleteId(item.id)}
+                        className="text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/40 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </motion.div>
+      )}
+
+      {/* ── Slide-in form panel ── */}
       <AnimatePresence>
-        {error && (
-          <motion.p
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="text-red-500 bg-red-100 dark:bg-red-900/30 dark:text-red-300 p-3 rounded-lg mb-6 shadow-md"
-          >
-            {error}
-          </motion.p>
+        {showForm && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={closeForm}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            />
+            <motion.div
+              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed top-0 right-0 h-full w-full max-w-md bg-white dark:bg-gray-900 shadow-2xl z-50 flex flex-col"
+            >
+              {/* header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  {editingId ? "Edit Subject" : "New Subject"}
+                </h2>
+                <button
+                  onClick={closeForm}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+
+                {/* Name */}
+                <div>
+                  <label className="block text-xs font-semibold text-white dark:text-gray-400 uppercase tracking-wide mb-1">
+                    Subject Name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={e => setFormData(f => ({ ...f, name: e.target.value }))}
+                    placeholder="e.g. Constitutional Law"
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200  text-sm focus:ring-2 focus:ring-indigo-400 transition-all"
+                  />
+                </div>
+
+                {/* Semester */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                    Semester <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={formData.semester}
+                    onChange={e => setFormData(f => ({ ...f, semester: e.target.value }))}
+                    placeholder="e.g. 1"
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-400 transition-all"
+                  />
+                </div>
+
+                {/* Is Law Subject toggle */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                    Subject Type
+                  </label>
+                  <label className="relative flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Law Subject</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Mark if this is a law-specific subject</p>
+                    </div>
+                    <div className="relative ml-4 flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={!!formData.is_law_subject}
+                        onChange={e => setFormData(f => ({ ...f, is_law_subject: e.target.checked }))}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5 transition-colors" />
+                    </div>
+                  </label>
+                </div>
+
+              </div>
+
+              {/* footer */}
+              <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
+                <button
+                  onClick={closeForm}
+                  className="flex-1 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={saving}
+                  className="flex-1 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {saving && (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
+                      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                    />
+                  )}
+                  {editingId ? "Update Subject" : "Add Subject"}
+                </button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
-      <motion.form
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        onSubmit={handleSubmit}
-        className="mb-6 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border border-indigo-100 dark:border-gray-700"
-      >
-        {renderFields()}
-        <div className="flex gap-4">
-          <motion.button
-            whileHover={{ scale: 1.05, rotate: 2 }}
-            whileTap={{ scale: 0.95 }}
-            type="submit"
-            className="bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-600 dark:to-purple-600 text-white py-2 px-6 rounded-full shadow-md hover:shadow-xl transition-all duration-300"
+
+      {/* ── Delete confirmation modal ── */}
+      <AnimatePresence>
+        {deleteId && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           >
-            {editingId ? "Update" : "Create"}
-          </motion.button>
-          {editingId && (
-            <motion.button
-              whileHover={{ scale: 1.05, rotate: 2 }}
-              whileTap={{ scale: 0.95 }}
-              type="button"
-              onClick={() => { setFormData({}); setEditingId(null); }}
-              className="bg-gradient-to-r from-gray-500 to-gray-600 dark:from-gray-600 dark:to-gray-700 text-white py-2 px-6 rounded-full shadow-md hover:shadow-xl transition-all duration-300"
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl max-w-sm w-full border border-red-100 dark:border-red-900/40"
             >
-              Cancel
-            </motion.button>
-          )}
-        </div>
-      </motion.form>
-      <motion.table
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-indigo-100 dark:border-gray-700 overflow-hidden"
-      >
-        <thead>
-          <tr className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700">
-            {renderTableHeaders()}
-            <th className="p-3 text-left text-white font-semibold">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <motion.tr
-              key={item.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="border-t border-indigo-100 dark:border-gray-700 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors duration-200"
-            >
-              {renderTableRow(item)}
-              <td className="p-3">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => handleEdit(item)}
-                  className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium mr-4 transition-colors duration-200"
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-center text-gray-900 dark:text-gray-100 mb-1">Delete Subject?</h3>
+              <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-6">
+                {(() => { const s = items.find(i => i.id === deleteId); return s ? `"${s.name}"` : "This subject"; })()}
+                {" "}will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteId(null)}
+                  className="flex-1 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
                 >
-                  Edit
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => handleDelete(item.id)}
-                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 font-medium transition-colors duration-200"
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition-all"
                 >
                   Delete
-                </motion.button>
-              </td>
-            </motion.tr>
-          ))}
-        </tbody>
-      </motion.table>
-    </div>
-  );
-}
-
-export default SubjectCRUD;
-
-
-/*
-// src/components/admin/SubjectCRUD.jsx
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-
-function SubjectCRUD() {
-  const [items, setItems] = useState([]);
-  const [error, setError] = useState("");
-  const [formData, setFormData] = useState({});
-  const [editingId, setEditingId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const resource = "subjects";
-
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
-  const fetchItems = async () => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      setError("Please log in first");
-      navigate("/");
-      return;
-    }
-    try {
-      setLoading(true);
-      const response = await axios.get(`http://localhost:8000/api/admin/${resource}/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setItems(response.data);
-      setError("");
-    } catch (err) {
-      const message = err.response?.status === 404 ? "Resource not found" : err.response?.data?.detail || "Unknown error";
-      setError(`Failed to load ${resource}: ${message}`);
-      if (err.response?.status === 401 || err.response?.status === 403) navigate("/");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const token = localStorage.getItem("access_token");
-    try {
-      const payload = {
-        ...formData,
-        is_law_subject: formData.is_law_subject === "true" || formData.is_law_subject === true,
-        semester: parseInt(formData.semester),
-      };
-      if (editingId) {
-        await axios.put(`http://localhost:8000/api/admin/${resource}/${editingId}/`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } else {
-        await axios.post(`http://localhost:8000/api/admin/${resource}/`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-      setFormData({});
-      setEditingId(null);
-      fetchItems();
-    } catch (err) {
-      setError("Failed to save data: " + JSON.stringify(err.response?.data || "Unknown error"));
-    }
-  };
-
-  const handleEdit = (item) => {
-    setFormData(item);
-    setEditingId(item.id);
-  };
-
-  const handleDelete = async (id) => {
-    const token = localStorage.getItem("access_token");
-    if (window.confirm(`Are you sure you want to delete this ${resource.slice(0, -1)}?`)) {
-      try {
-        await axios.delete(`http://localhost:8000/api/admin/${resource}/${id}/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setItems(items.filter((item) => item.id !== id));
-      } catch (err) {
-        setError("Failed to delete: " + (err.response?.data?.detail || "Unknown error"));
-      }
-    }
-  };
-
-  const fields = ["name", "is_law_subject", "semester", "teacher"];
-
-  const renderFields = () => fields.map((key) => (
-    <div key={key} className="mb-2">
-      <label className="block text-gray-800 capitalize">{key.replace("_", " ")}:</label>
-      {key === "is_law_subject" ? (
-        <select
-          value={formData[key] || ""}
-          onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-          className="w-full p-2 border rounded-md text-gray-800"
-        >
-          <option value="">Select</option>
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </select>
-      ) : (
-        <input
-          type="text"
-          value={formData[key] || ""}
-          onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-          className="w-full p-2 border rounded-md text-gray-800"
-        />
-      )}
-    </div>
-  ));
-
-  const renderTableHeaders = () => fields.map((key) => (
-    <th key={key} className="p-2 text-left capitalize">{key.replace("_", " ")}</th>
-  ));
-
-  const renderTableRow = (item) => fields.map((key) => (
-    <td key={key} className="p-2 text-gray-800">
-      {key === "is_law_subject" ? (item[key] ? "Yes" : "No") : item[key] || "-"}
-    </td>
-  ));
-
-  if (loading) return <div className="p-6">Loading {resource}...</div>;
-  return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Manage Subjects</h2>
-      {error && <p className="text-red-600 mb-4">{error}</p>}
-      <form onSubmit={handleSubmit} className="mb-6 bg-white p-4 rounded-lg shadow-md">
-        {renderFields()}
-        <button type="submit" className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">
-          {editingId ? "Update" : "Create"}
-        </button>
-        {editingId && (
-          <button
-            type="button"
-            onClick={() => { setFormData({}); setEditingId(null); }}
-            className="ml-2 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700"
-          >
-            Cancel
-          </button>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
-      </form>
-      <table className="w-full bg-white rounded-lg shadow-md">
-        <thead>
-          <tr className="bg-blue-600 text-white">
-            {renderTableHeaders()}
-            <th className="p-2 text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.id} className="border-t">
-              {renderTableRow(item)}
-              <td className="p-2">
-                <button onClick={() => handleEdit(item)} className="text-blue-600 hover:underline mr-2">Edit</button>
-                <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:underline">Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      </AnimatePresence>
+
     </div>
   );
 }
 
 export default SubjectCRUD;
-
-*/
-

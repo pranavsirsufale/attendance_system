@@ -23,7 +23,7 @@ function AdminStudentAttendance({ notifyUser }) {
       return;
     }
     try {
-      const res = await axios.get('http://localhost:8000/api/teachers/', {
+      const res = await axios.get('/api/teachers/', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTeachers(res.data || []);

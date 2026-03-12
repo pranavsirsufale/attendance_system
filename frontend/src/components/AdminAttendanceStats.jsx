@@ -1,751 +1,701 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import {Button as btn} from './utilities/Button';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button, TextField, Select, MenuItem, FormControl, InputLabel, Box, Typography, Table, TableBody, TableCell, TableHead, TableRow, Card, CardContent, Grid } from '@mui/material';
+import {
+  Button, TextField, Select, MenuItem, FormControl, InputLabel, Box, Typography,
+  Table, TableBody, TableCell, TableHead, TableRow, Card, CardContent, Grid,
+  Chip, Divider, CircularProgress, InputAdornment, Paper, Tooltip,
+  IconButton, Collapse, Badge,
+} from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import DownloadIcon from '@mui/icons-material/Download';
+import ClearIcon from '@mui/icons-material/Clear';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import PersonIcon from '@mui/icons-material/Person';
+import SchoolIcon from '@mui/icons-material/School';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
+
+const pctColor = (pct) => {
+  if (pct >= 75) return '#2e7d32';
+  if (pct >= 50) return '#ed6c02';
+  return '#d32f2f';
+};
+
+// ─── sub-components ───────────────────────────────────────────────────────────
+
+function SectionHeader({ icon, title, count }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+      {icon}
+      <Typography variant="h6" fontWeight={700}>{title}</Typography>
+      {count !== undefined && <Chip label={count} size="small" color="primary" />}
+    </Box>
+  );
+}
+
+function SelectableCard({ children, selected, onClick, minWidth = 240 }) {
+  return (
+    <Card
+      onClick={onClick}
+      sx={{
+        cursor: 'pointer',
+        minWidth,
+        border: selected ? '2px solid' : '1px solid',
+        borderColor: selected ? 'primary.main' : 'divider',
+        bgcolor: selected ? 'primary.50' : 'background.paper',
+        transition: 'all .15s ease',
+        '&:hover': { boxShadow: 3, borderColor: 'primary.light' },
+      }}
+    >
+      <CardContent sx={{ pb: '12px !important' }}>{children}</CardContent>
+    </Card>
+  );
+}
+
+function PaginationBar({ onPrev, onNext, hasPrev, hasNext, page, total }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+      <Button size="small" variant="outlined" onClick={onPrev} disabled={!hasPrev} startIcon={<ArrowBackIcon />}>
+        Prev
+      </Button>
+      <Typography variant="body2" color="text.secondary">
+        Page {page}{total ? ` · ${total} total` : ''}
+      </Typography>
+      <Button size="small" variant="outlined" onClick={onNext} disabled={!hasNext}>
+        Next
+      </Button>
+    </Box>
+  );
+}
+
+// ─── main component ───────────────────────────────────────────────────────────
+
 function AdminAttendanceStats({ notifyUser }) {
-  const [teacherSubjects, setTeacherSubjects] = useState([]);
-  const [teacherStats, setTeacherStats] = useState([]);
-  const [studentStats, setStudentStats] = useState([]);
-  const [period, setPeriod] = useState('semester');
-  const [section, setSection] = useState('');
-  const [subject, setSubject] = useState('');
-  const [program, setProgram] = useState('');
-  const [year, setYear] = useState('');
-  const [semester, setSemester] = useState('');
-  const [date, setDate] = useState('');
-  const [error, setError] = useState('');
-  const [teacherStartDate, setTeacherStartDate] = useState('');
-  const [teacherEndDate, setTeacherEndDate] = useState('');
-  const [studentStartDate, setStudentStartDate] = useState('');
-  const [studentEndDate, setStudentEndDate] = useState('');
-  const [teacherPage, setTeacherPage] = useState(1);
-  const [studentPage, setStudentPage] = useState(1);
-  const [teacherNextPage, setTeacherNextPage] = useState(null);
-  const [teacherPrevPage, setTeacherPrevPage] = useState(null);
-  const [studentNextPage, setStudentNextPage] = useState(null);
-  const [studentPrevPage, setStudentPrevPage] = useState(null);
-  const [teacherTotalCount, setTeacherTotalCount] = useState(0);
-  const [studentTotalCount, setStudentTotalCount] = useState(0);
-  const [teachers, setTeachers] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [selectedTeacher, setSelectedTeacher] = useState(null);
-  const [selectedTeacherName, setSelectedTeacherName] = useState(null);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [selectedSubject, setSelectedSubject] = useState(null);
   const navigate = useNavigate();
 
-  const fetchTeachers = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setError('Please log in first');
-      notifyUser('Please log in first', 'warning');
-      return;
-    }
+  // ── filters ──
+  const [period, setPeriod] = useState('semester');
+  const [semester, setSemester] = useState('');
+  const [date, setDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [showFilters, setShowFilters] = useState(true);
+  const [error, setError] = useState('');
 
+  // ── teachers ──
+  const [teachers, setTeachers] = useState([]);
+  const [teacherSearch, setTeacherSearch] = useState('');
+  const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
+
+  // ── subjects ──
+  const [teacherSubjects, setTeacherSubjects] = useState([]);
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+
+  // ── teacher stats ──
+  const [teacherStats, setTeacherStats] = useState([]);
+  const [teacherPage, setTeacherPage] = useState(1);
+  const [teacherNextPage, setTeacherNextPage] = useState(null);
+  const [teacherPrevPage, setTeacherPrevPage] = useState(null);
+  const [teacherTotalCount, setTeacherTotalCount] = useState(0);
+  const [teacherDateRange, setTeacherDateRange] = useState({ start: '', end: '' });
+  const [loadingTeacherStats, setLoadingTeacherStats] = useState(false);
+
+  // ── students ──
+  const [students, setStudents] = useState([]);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [studentPage, setStudentPage] = useState(1);
+  const [studentNextPage, setStudentNextPage] = useState(null);
+  const [studentPrevPage, setStudentPrevPage] = useState(null);
+  const [studentTotalCount, setStudentTotalCount] = useState(0);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+
+  // ── student stats ──
+  const [studentStats, setStudentStats] = useState(null);
+  const [studentDateRange, setStudentDateRange] = useState({ start: '', end: '' });
+  const [loadingStudentStats, setLoadingStudentStats] = useState(false);
+  // ─── fetch helpers ─────────────────────────────────────────────────────────
+
+  const notify = useCallback((msg, type = 'info') => {
+    if (notifyUser) notifyUser(msg, type);
+    else toast[type]?.(msg) ?? toast(msg);
+  }, [notifyUser]);
+
+  const checkAuth = () => {
+    if (!localStorage.getItem('access_token')) {
+      notify('Please log in first', 'warning');
+      return false;
+    }
+    return true;
+  };
+
+  const dateParams = useCallback(() => {
+    let p = '';
+    if (period === 'daily' && date) p += `&date=${date}`;
+    if (period === 'custom' && startDate) p += `&date=${startDate}&end_date=${endDate}`;
+    return p;
+  }, [period, date, startDate, endDate]);
+
+  const fetchTeachers = useCallback(async () => {
+    if (!checkAuth()) return;
+    setLoadingTeachers(true);
     try {
-      const response = await axios.get('/api/teachers/', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setTeachers(response.data);
-      setError('');
+      const { data } = await axios.get('/api/teachers/', { headers: authHeader() });
+      setTeachers(data);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load teachers');
-      notifyUser('Failed to load teachers', 'error');
+      notify('Failed to load teachers', 'error');
+    } finally {
+      setLoadingTeachers(false);
     }
-  };
+  }, []);
 
-  const fetchStudents = async (page = 1) => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setError('Please log in first');
-      notifyUser('Please log in first', 'warning');
-      return;
-    }
-
+  const fetchStudents = useCallback(async (page = 1) => {
+    if (!checkAuth()) return;
+    setLoadingStudents(true);
     try {
-      const response = await axios.get(`/api/students/?page=${page}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const studentsData = response.data.results?.students || [];
-      const totalCount = response.data.results?.total_count || 0;
-      setStudents(studentsData);
-      setStudentTotalCount(totalCount);
-      setStudentNextPage(response.data.next);
-      setStudentPrevPage(response.data.previous);
-      setError('');
-      notifyUser(
-        studentsData.length > 0
-          ? `Loaded ${studentsData.length} of ${totalCount} students`
-          : `No students found (Total: ${totalCount}).`,
-        studentsData.length > 0 ? 'info' : 'warning'
-      );
+      const { data } = await axios.get(`/api/students/?page=${page}`, { headers: authHeader() });
+      const list = data.results?.students || [];
+      const total = data.results?.total_count || 0;
+      setStudents(list);
+      setStudentTotalCount(total);
+      setStudentNextPage(data.next);
+      setStudentPrevPage(data.previous);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load students');
-      notifyUser('Failed to load students', 'error');
+      notify('Failed to load students', 'error');
+    } finally {
+      setLoadingStudents(false);
     }
-  };
+  }, []);
 
-  const fetchTeacherSubjects = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setError('Please log in first');
-      notifyUser('Please log in first', 'warning');
-      return;
-    }
-
-    if (!selectedTeacher) return;
-
+  const fetchTeacherSubjects = useCallback(async (teacherId) => {
+    if (!checkAuth() || !teacherId) return;
+    setLoadingSubjects(true);
     try {
-      const response = await axios.get(`/api/teacher-subjects/?teacher=${selectedTeacher}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setTeacherSubjects(response.data.subjects);
-      setError('');
-      notifyUser(
-        `Loaded ${response.data.subjects.length} subjects for teacher`,
-        'info'
-      );
+      const { data } = await axios.get(`/api/teacher-subjects/?teacher=${teacherId}`, { headers: authHeader() });
+      setTeacherSubjects(data.subjects || []);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load subjects');
-      notifyUser('Failed to load subjects', 'error');
+      notify('Failed to load subjects', 'error');
+    } finally {
+      setLoadingSubjects(false);
     }
-  };
+  }, []);
 
-  const fetchTeacherStats = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setError('Please log in first');
-      notifyUser('Please log in first', 'warning');
-      return;
-    }
-
-    if (!selectedSubject) return;
-
+  const fetchTeacherStats = useCallback(async () => {
+    if (!checkAuth() || !selectedSubject) return;
+    setLoadingTeacherStats(true);
     let url = `/api/admin/attendance-stats/?period=${period}&page=${teacherPage}&subject_name=${encodeURIComponent(selectedSubject)}`;
-    if (section) url += `&section=${section}`;
-    if (subject) url += `&subject=${subject}`;
     if (selectedTeacher) url += `&teacher=${selectedTeacher}`;
-    if (program) url += `&program=${program}`;
-    if (year) url += `&year=${year}`;
     if (semester) url += `&semester=${semester}`;
-    // if (period === 'daily' && date) {
-    //   url += `&date=${date}`;
-    //   const selectedDate = new Date(date);
-    //   const nextDay = new Date(selectedDate);
-    //   nextDay.setDate(selectedDate.getDate() + 1);
-    //   const computedEndDate = nextDay.toISOString().split('T')[0];
-    //   url += `&end_date=${computedEndDate}`;
-    // }
-    if (period === 'daily' && date) {
-      url += `&date=${date}`;
-      // const selectedDate = new Date(date);
-      // const nextDay = new Date(selectedDate);
-      // nextDay.setDate(selectedDate.getDate() + 1);
-      // const computedEndDate = nextDay.toISOString().split('T')[0];
-      // url += `&end_date=${computedEndDate}`;
-    } if (period === 'custom' && teacherStartDate) {
-      url += `&date=${teacherStartDate}&end_date=${teacherEndDate}`;
-      // const selectedDate = new Date(studentStartDate);
-      // const nextDay = new Date(selectedDate);
-      // nextDay.setDate(selectedDate.getDate() + 1);
-      // const computedEndDate = nextDay.toISOString().split('T')[0];
-      // setDate((currentDate)=> (studentStartDate))
-      // url += `&end_date=${teacherEndDate}`;
-    }
-
+    url += dateParams();
     try {
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setTeacherStats(response.data.results.stats);
-      setSelectedTeacherName(response.data.results.stats.recorded_by_name)
-      setTeacherStartDate(response.data.results.start_date);
-      setTeacherEndDate(response.data.results.end_date);
-      setTeacherNextPage(response.data.next);
-      setTeacherPrevPage(response.data.previous);
-      setTeacherTotalCount(response.data.count);
+      const { data } = await axios.get(url, { headers: authHeader() });
+      const results = data.results;
+      setTeacherStats(results.stats || []);
+      setTeacherDateRange({ start: results.start_date, end: results.end_date });
+      setTeacherNextPage(data.next);
+      setTeacherPrevPage(data.previous);
+      setTeacherTotalCount(data.count || 0);
       setError('');
-      notifyUser(
-        `Loaded ${response.data.results.stats.length} records for ${selectedSubject} (${period} period: ${response.data.results.start_date} - ${response.data.results.end_date})  `,
-        'info'
-      );
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load attendance stats');
-      notifyUser('Failed to load attendance stats', 'error');
+      notify('Failed to load attendance stats', 'error');
+    } finally {
+      setLoadingTeacherStats(false);
     }
-  };
+  }, [selectedSubject, selectedTeacher, period, teacherPage, semester, dateParams]);
 
-  const fetchStudentStats = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setError('Please log in first');
-      notifyUser('Please log in first', 'warning');
-      return;
-    }
-
-    const selectedStudentData = students.find(student => student.id === selectedStudent);
-    if (!selectedStudentData) return;
-
-    let url = `/api/attendance-stats/${selectedStudentData.roll_number}/?period=${period}&page=${studentPage}`;
-    if (section) url += `&section=${section}`;
-    if (subject) url += `&subject=${subject}`;
-    if (program) url += `&program=${program}`;
-    if (year) url += `&year=${year}`;
+  const fetchStudentStats = useCallback(async () => {
+    if (!checkAuth() || !selectedStudent) return;
+    const student = students.find((s) => s.id === selectedStudent);
+    if (!student) return;
+    setLoadingStudentStats(true);
+    let url = `/api/attendance-stats/${student.roll_number}/?period=${period}&page=1`;
     if (semester) url += `&semester=${semester}`;
-    if (period === 'daily' && date) {
-      url += `&date=${date}`;
-      // const selectedDate = new Date(date);
-      // const nextDay = new Date(selectedDate);
-      // nextDay.setDate(selectedDate.getDate() + 1);
-      // const computedEndDate = nextDay.toISOString().split('T')[0];
-      // url += `&end_date=${computedEndDate}`;
-    } if (period === 'custom' && teacherStartDate) {
-      url += `&date=${teacherStartDate}&end_date=${teacherEndDate}`;
-      // const selectedDate = new Date(studentStartDate);
-      // const nextDay = new Date(selectedDate);
-      // nextDay.setDate(selectedDate.getDate() + 1);
-      // const computedEndDate = nextDay.toISOString().split('T')[0];
-      // setDate((currentDate)=> (studentStartDate))
-      // url += `&end_date=${teacherEndDate}`;
-    }
-
+    url += dateParams();
     try {
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setStudentStats([response.data]);
-      setStudentStartDate(response.data.start_date);
-      setStudentEndDate(response.data.end_date);
-      setStudentNextPage(null);
-      setStudentPrevPage(null);
-      setStudentTotalCount(1);
+      const { data } = await axios.get(url, { headers: authHeader() });
+      setStudentStats(data);
+      setStudentDateRange({ start: data.start_date, end: data.end_date });
       setError('');
-      notifyUser(
-        `Attendance stats for ${selectedStudentData.first_name} ${selectedStudentData.last_name} loaded`,
-        'info'
-      );
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load student attendance stats');
-      notifyUser('Failed to load student attendance stats', 'error');
+      setError(err.response?.data?.error || 'Failed to load student stats');
+      notify('Failed to load student stats', 'error');
+    } finally {
+      setLoadingStudentStats(false);
+    }
+  }, [selectedStudent, students, period, semester, dateParams]);
+
+  // ─── export helpers ────────────────────────────────────────────────────────
+
+  const handleTeacherExport = async () => {
+    if (!checkAuth()) return;
+    let url = `/api/admin/attendance-export/?`;
+    if (selectedSubject) url += `&subject_name=${encodeURIComponent(selectedSubject.replace(/\s*\(sem\s*-\s*[IVX]+\)\s*$/i, ''))}`;
+    if (selectedTeacher) url += `&teacher=${selectedTeacher}`;
+    if (semester) url += `&semester=${semester}`;
+    if (period === 'daily' && date) url += `&date=${date}`;
+    if (period === 'custom' && startDate) url += `&date=${startDate}&end_date=${endDate}`;
+    try {
+      const response = await axios.get(url, { headers: authHeader(), responseType: 'blob' });
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `attendance_${selectedSubject}_teacher${selectedTeacher}.csv`;
+      link.click();
+      notify('Exported teacher attendance report', 'success');
+    } catch (err) {
+      notify(`Export failed: ${err.message}`, 'error');
     }
   };
 
-  useEffect(() => {
-    fetchTeachers();
-    fetchStudents(studentPage);
-  }, [studentPage]);
+  const handleStudentExport = async () => {
+    const student = students.find((s) => s.id === selectedStudent);
+    if (!student || !checkAuth()) return;
+    let url = `/api/attendance-stats/${student.roll_number}/export/?period=${period}`;
+    if (semester) url += `&semester=${semester}`;
+    if (period === 'daily' && date) url += `&date=${date}`;
+    if (period === 'custom' && startDate) url += `&date=${startDate}&end_date=${endDate}`;
+    try {
+      const response = await axios.get(url, { headers: authHeader(), responseType: 'blob' });
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `attendance_${student.roll_number}.csv`;
+      link.click();
+      notify('Exported student attendance report', 'success');
+    } catch (err) {
+      notify(`Export failed: ${err.message}`, 'error');
+    }
+  };
+
+  // ─── effects ───────────────────────────────────────────────────────────────
+
+  useEffect(() => { fetchTeachers(); }, [fetchTeachers]);
+  useEffect(() => { fetchStudents(studentPage); }, [studentPage]);
 
   useEffect(() => {
     if (selectedTeacher) {
-      fetchTeacherSubjects();
+      fetchTeacherSubjects(selectedTeacher);
     } else {
       setTeacherSubjects([]);
-      setTeacherStats([]);
-      // setTeacherStartDate('');
-      // setTeacherEndDate('');
-      setTeacherTotalCount(0);
-      setTeacherNextPage(null);
-      setTeacherPrevPage(null);
       setSelectedSubject(null);
+      setTeacherStats([]);
     }
   }, [selectedTeacher]);
 
   useEffect(() => {
-    if (selectedSubject) {
-      fetchTeacherStats();
-    } else {
-      setTeacherStats([]);
-      // setTeacherStartDate('');
-      // setTeacherEndDate('');
-      setTeacherTotalCount(0);
-      setTeacherNextPage(null);
-      setTeacherPrevPage(null);
-    }
-  }, [period, section, subject, selectedTeacher, selectedSubject, program, year, semester, date, teacherPage]);
+    if (selectedSubject) fetchTeacherStats();
+    else setTeacherStats([]);
+  }, [selectedSubject, period, semester, date, startDate, endDate, teacherPage]);
 
   useEffect(() => {
-    if (selectedStudent) {
-      fetchStudentStats();
-    } else {
-      setStudentStats([]);
-      setStudentStartDate('');
-      setStudentEndDate('');
-      setStudentTotalCount(0);
-      setStudentNextPage(null);
-      setStudentPrevPage(null);
-    }
-  }, [period, section, subject, selectedStudent, program, year, semester, date, studentPage]);
+    if (selectedStudent) fetchStudentStats();
+    else setStudentStats(null);
+  }, [selectedStudent, period, semester, date, startDate, endDate]);
 
+  // ─── derived ───────────────────────────────────────────────────────────────
 
-  const handleTeacherNextPage = () => {
-    if (teacherNextPage) setTeacherPage(teacherPage + 1);
-  };
+  const filteredTeachers = teachers.filter((t) =>
+    `${t.first_name} ${t.last_name} ${t.email}`.toLowerCase().includes(teacherSearch.toLowerCase())
+  );
 
-  const handleTeacherPrevPage = () => {
-    if (teacherPrevPage) setTeacherPage(teacherPage - 1);
-  };
+  const filteredStudents = students.filter((s) =>
+    `${s.first_name} ${s.last_name} ${s.roll_number} ${s.email}`.toLowerCase().includes(studentSearch.toLowerCase())
+  );
 
-  const handleStudentNextPage = () => {
-    if (studentNextPage) setStudentPage(studentPage + 1);
-  };
+  const activeFilterCount = [semester, date, startDate].filter(Boolean).length;
 
-  const handleStudentPrevPage = () => {
-    if (studentPrevPage) setStudentPage(studentPage - 1);
-  };
-
-  const handleTeacherSelect = (teacherId) => {
-    setSelectedTeacher(teacherId);
-    setTeacherPage(1);
-    setSelectedSubject(null);
-  };
-
-  const handleStudentSelect = (studentId) => {
-    setSelectedStudent(studentId);
-    setStudentPage(1);
-  };
-
-  const handleSubjectSelect = (subject) => {
-    setSelectedSubject(subject);
-    setTeacherPage(1);
-  };
-
-
-  const handleTeacherExport = async (format) => {
-    const token = localStorage.getItem('access_token');
-    let url = `/api/admin/attendance-export/?`;
-    if (section) url += `§section=${section}`;
-    if (selectedSubject) {
-      // Remove semester suffix
-      const cleanSubject = selectedSubject.replace(/\s*\(sem\s*-\s*[IVX]+\)\s*$/, '');
-      url += `&subject_name=${encodeURIComponent(cleanSubject)}`;
-    }
-    if (selectedTeacher) url += `&teacher=${selectedTeacher}`;
-    if (program) url += `&program=${program}`;
-    if (year) url += `&year=${year}`;
-    if (semester) url += `&semester=${semester}`;
-    if (period === 'daily' && date) url += `&date=${date}`;
-    if (period === 'custom' && teacherStartDate) {
-      url += `&date=${teacherStartDate}&end_date=${teacherEndDate}`;
-      // url += ``;
-    }
-
-    try {
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob',
-      });
-      const blob = new Blob([response.data], { type: response.headers['content-type'] });
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `attendance_report_${selectedSubject}_${selectedTeacher}.${format}`;
-      link.click();
-      notifyUser(`Exported attendance report as ${format}`, 'success');
-    } catch (err) {
-      notifyUser(`Failed to export report, ${err}`, 'error');
-      console.error(err);
-    }
-  };
+  // ─── render ────────────────────────────────────────────────────────────────
 
   return (
-    <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
+    <Box sx={{ p: { xs: 2, md: 3 }, bgcolor: '#f5f7fa', minHeight: '100vh' }}>
+      <ToastContainer position="top-right" autoClose={3000} />
 
+      {/* ── top bar ── */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+        <Tooltip title="Back to Dashboard">
+          <IconButton onClick={() => navigate('/admin')} size="small" sx={{ bgcolor: 'white', boxShadow: 1 }}>
+            <ArrowBackIcon />
+          </IconButton>
+        </Tooltip>
+        <Typography variant="h5" fontWeight={700} sx={{ flexGrow: 1 }}>
+          Attendance Dashboard
+        </Typography>
+      </Box>
 
-      <Button onClick={() => navigate('/admin')}>Dashboard</Button>
-      <Typography textAlign={"center"} variant="h4" sx={{ mb: 5, color: 'primary.main' }}>
-        Admin Attendance Dashboard
-      </Typography>
-      {/* <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
-        Admin Attendance Dashboard
-      </Typography> */}
-
-
+      {/* ── error banner ── */}
       <AnimatePresence>
         {error && (
-          <motion.p
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            style={{ color: 'red', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
           >
-            {error}
-          </motion.p>
+            <Paper sx={{ p: 2, mb: 2, bgcolor: '#fff3cd', border: '1px solid #ffc107', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography color="warning.dark">{error}</Typography>
+              <IconButton size="small" onClick={() => setError('')}><ClearIcon fontSize="small" /></IconButton>
+            </Paper>
+          </motion.div>
         )}
       </AnimatePresence>
 
-      <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+      {/* ── filter panel ── */}
+      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={1}>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+          onClick={() => setShowFilters((v) => !v)}
+        >
+          <FilterListIcon sx={{ mr: 1, color: 'primary.main' }} />
+          <Typography variant="subtitle1" fontWeight={600} sx={{ flexGrow: 1 }}>Filters</Typography>
+          <Badge badgeContent={activeFilterCount} color="primary" sx={{ mr: 1 }} />
+          {showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </Box>
 
-        <FormControl >
-          <InputLabel>Period</InputLabel>
-          <Select value={period} onChange={(e) => { setPeriod(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); setTeacherStartDate(''); setTeacherEndDate(''); }}>
-            <MenuItem value="all">All</MenuItem>
-            <MenuItem value="daily">Daily</MenuItem>
-            <MenuItem value="weekly">Weekly</MenuItem>
-            <MenuItem value="monthly">Monthly</MenuItem>
-            <MenuItem value="semester">Semester</MenuItem>
-            <MenuItem value="custom">Custom Range</MenuItem>
-          </Select>
-        </FormControl>
-
-        {/* <TextField
-          label="Section ID"
-          type="number"
-          value={section}
-          onChange={(e) => { setSection(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
-
-        />
-        <TextField
-          label="Subject ID"
-          type="number"
-          value={subject}
-          onChange={(e) => { setSubject(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
-
-        /> */}
-        {/* <FormControl >
-          <InputLabel>Program</InputLabel>
-          <Select value={program} onChange={(e) => { setProgram(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}>
-            <MenuItem value="">All</MenuItem>
-            <MenuItem value="1">BALLB 5 Yr</MenuItem>
-            <MenuItem value="2">LLB 3 Yr</MenuItem>
-          </Select>
-        </FormControl>
-        <TextField
-          label="Year"
-          type="number"
-          value={year}
-          onChange={(e) => { setYear(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
-
-        /> */}
-        <TextField
-          label="Semester"
-          type="number"
-          value={semester}
-          onChange={(e) => { setSemester(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
-
-        />
-        {period === 'daily' && (
-          <TextField
-            label="Date"
-            type="date"
-            value={date}
-            onChange={(e) => { setDate(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
-            InputLabelProps={{ shrink: true }}
-
-          />
-        )}
-        {period === 'custom' && (<>
-          <TextField
-            label="Start Date"
-            type="date"
-            value={teacherStartDate}
-            onChange={(e) => { setTeacherStartDate(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
-            InputLabelProps={{ shrink: true }}
-
-          />
-          <TextField
-            label="End Date"
-            type="date"
-            value={teacherEndDate}
-            onChange={(e) => { setTeacherEndDate(e.target.value); setTeacherPage(1); setStudentPage(1); setSelectedSubject(null); }}
-            InputLabelProps={{ shrink: true }}
-
-          />
-        </>
-        )}
-      </Box>
-
-      <Box >
-        <Typography variant="h6" >Select Teacher (Total Teachers: {teachers.length})</Typography>
-        <Grid container spacing={2}>
-          {teachers.map((teacher) => (
-            <Grid key={teacher.id}>
-              <Card
-                sx={{
-                  cursor: 'pointer',
-                  minWidth: '300px',
-                  minHeight: '130px',
-                  bgcolor: selectedTeacher === teacher.id ? 'primary.light' : 'white',
-                  '&:hover': { bgcolor: 'grey.100' },
-                }}
-                onClick={() => handleTeacherSelect(teacher.id)}
+        <Collapse in={showFilters}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel>Period</InputLabel>
+              <Select
+                value={period}
+                label="Period"
+                onChange={(e) => { setPeriod(e.target.value); setDate(''); setStartDate(''); setEndDate(''); setTeacherPage(1); }}
               >
-                <CardContent>
-                  <Typography variant="h6">{`${teacher.first_name} ${teacher.last_name}`}</Typography>
-                  <Typography color="textSecondary">{teacher.email}</Typography>
-                  <Typography color="textSecondary">{teacher.phone}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-        {selectedTeacher && (
-          <Button
-            variant="outlined"
-            onClick={() => handleTeacherSelect(null)}
-            sx={{ mt: 2 }}
-          >
-            Clear Teacher Filter
-          </Button>
-        )}
-      </Box>
+                <MenuItem value="all">All Time</MenuItem>
+                <MenuItem value="daily">Daily</MenuItem>
+                <MenuItem value="weekly">This Week</MenuItem>
+                <MenuItem value="monthly">This Month</MenuItem>
+                <MenuItem value="semester">By Semester</MenuItem>
+                <MenuItem value="custom">Custom Range</MenuItem>
+              </Select>
+            </FormControl>
 
-      {teacherSubjects.length > 0 && (
-        <>
-          <Typography variant="subtitle1" >
-            Period: {teacherStartDate || 'N/A'} to {teacherEndDate || 'N/A'} | Total Records: {teacherTotalCount}
-          </Typography>
-          <Box >
-            <Typography variant="h6" >
-              Subjects Taught ({teacherSubjects.length})
-            </Typography>
-            <Grid container spacing={2}>
-              {teacherSubjects.map((subject) => (
-                <Grid key={subject}>
-                  <Card
-                    sx={{
-                      cursor: 'pointer',
-                      minWidth: '300px',
-                      minHeight: '100px',
-                      bgcolor: selectedSubject === subject ? 'primary.light' : 'white',
-                      '&:hover': { bgcolor: 'grey.100' },
-                    }}
-                    onClick={() => handleSubjectSelect(subject)}
-                  >
-                    <CardContent>
-                      <Typography variant="h6">{subject}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-            {selectedSubject && (
+            <TextField
+              size="small"
+              label="Semester"
+              type="number"
+              value={semester}
+              onChange={(e) => setSemester(e.target.value)}
+              sx={{ width: 120 }}
+              inputProps={{ min: 1, max: 10 }}
+            />
+
+            {period === 'daily' && (
+              <TextField
+                size="small"
+                label="Date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            )}
+
+            {period === 'custom' && (
+              <>
+                <TextField
+                  size="small"
+                  label="From"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  size="small"
+                  label="To"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </>
+            )}
+
+            {activeFilterCount > 0 && (
               <Button
-                variant="outlined"
-                onClick={() => setSelectedSubject(null)}
-                sx={{ mt: 2 }}
+                size="small"
+                variant="text"
+                color="inherit"
+                startIcon={<ClearIcon />}
+                onClick={() => { setSemester(''); setDate(''); setStartDate(''); setEndDate(''); }}
               >
-                Clear Subject Filter
+                Clear
               </Button>
             )}
           </Box>
-        </>
-      )}
+        </Collapse>
+      </Paper>
 
-      {selectedSubject && teacherStats.length > 0 && (
-        <Box >
-          <Typography variant="h6" >
-            Subject: {selectedSubject}
+      {/* ══════════════════════════ TEACHER SECTION ══════════════════════════ */}
+      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={1}>
+        <SectionHeader icon={<PersonIcon color="primary" />} title="Select Teacher" count={teachers.length} />
 
-          </Typography>
-          <Button
-            variant="contained"
-            onClick={() => handleTeacherExport('csv')}
-            sx={{ mr: 2 }}
-          >
-            Export as CSV
-          </Button>
+        <TextField
+          size="small"
+          placeholder="Search teachers…"
+          value={teacherSearch}
+          onChange={(e) => setTeacherSearch(e.target.value)}
+          sx={{ mb: 2, width: { xs: '100%', sm: 320 } }}
+          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+        />
 
-
-
-          <Box sx={{ overflowX: 'auto' }}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ background: 'linear-gradient(to right, #3f51b5, #9c27b0)' }}>
-                  <TableCell sx={{ color: '#fff' }}>Student Name</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Student ID</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Roll Number</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Program</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Semester</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Total Sessions</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Present</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Absent</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Attendance %</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Recorded By</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {teacherStats.map((stat, index) => (
-                  <motion.tr
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <TableCell>{stat.name}</TableCell>
-                    <TableCell>{stat.student_id}</TableCell>
-                    <TableCell>{stat.roll_number}</TableCell>
-                    <TableCell>{stat.program}</TableCell>
-                    <TableCell>{stat.semester}</TableCell>
-                    <TableCell>{stat.total_sessions}</TableCell>
-                    <TableCell>{stat.present}</TableCell>
-                    <TableCell>{stat.absent}</TableCell>
-                    <TableCell>{stat.attendance_percentage.toFixed(2)}%</TableCell>
-                    <TableCell>{stat.recorded_by_name}</TableCell>
-                  </motion.tr>
-                ))}
-              </TableBody>
-            </Table>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-              <Button
-                variant="contained"
-                onClick={handleTeacherPrevPage}
-                disabled={!teacherPrevPage}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleTeacherNextPage}
-                disabled={!teacherNextPage}
-              >
-                Next
-              </Button>
-            </Box>
-          </Box>
-        </Box>
-      )}
-
-      <Box sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h6" >
-          Select Student (Total Students: {studentTotalCount})
-        </Typography>
-        {students.length > 0 ? (
-          <Grid container spacing={2}>
-            {students.map((student) => (
-              <Grid key={student.id}>
-                <Card
-                  sx={{
-                    cursor: 'pointer',
-                    minWidth: '300px',
-                    minHeight: '130px',
-                    bgcolor: selectedStudent === student.id ? 'primary.light' : 'white',
-                    '&:hover': { bgcolor: 'grey.100' },
-                  }}
-                  onClick={() => handleStudentSelect(student.id)}
+        {loadingTeachers ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+        ) : (
+          <Grid container spacing={1.5}>
+            {filteredTeachers.map((teacher) => (
+              <Grid key={teacher.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <SelectableCard
+                  selected={selectedTeacher === teacher.id}
+                  onClick={() => setSelectedTeacher(selectedTeacher === teacher.id ? null : teacher.id)}
                 >
-                  <CardContent>
-                    <Typography variant="h6">{`${student.first_name} ${student.last_name}`}</Typography>
-                    <Typography color="textSecondary">{student.roll_number}</Typography>
-                    <Typography color="textSecondary">{student.email}</Typography>
-                  </CardContent>
-                </Card>
+                  <Typography fontWeight={600}>{teacher.first_name} {teacher.last_name}</Typography>
+                  <Typography variant="body2" color="text.secondary" noWrap>{teacher.email}</Typography>
+                  {teacher.phone && <Typography variant="body2" color="text.secondary">{teacher.phone}</Typography>}
+                </SelectableCard>
               </Grid>
             ))}
+            {filteredTeachers.length === 0 && (
+              <Grid size={12}>
+                <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>No teachers match your search.</Typography>
+              </Grid>
+            )}
           </Grid>
-        ) : (
-          <Typography color="textSecondary">
-            No students available.
-          </Typography>
         )}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-          <Button
-            variant="contained"
-            onClick={handleStudentPrevPage}
-            disabled={!studentPrevPage}
-          >
-            Load Previous
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleStudentNextPage}
-            disabled={!studentNextPage}
-          >
-            Load More
-          </Button>
-        </Box>
-        {selectedStudent && (
-          <Button
-            variant="outlined"
-            onClick={() => handleStudentSelect(null)}
-            sx={{ mt: 2 }}
-          >
-            Clear Student Filter
-          </Button>
-        )}
-      </Box>
 
-      {studentStats.length > 0 && (
-        <>
-          <Typography variant="subtitle1" >
-            Period: {studentStartDate} to {studentEndDate} | Showing {studentStats.length} of {studentTotalCount} records
-          </Typography>
-          <Box >
-            <Button
-              variant="contained"
-              onClick={() => handleStudentExport('csv')}
-              sx={{ mr: 2 }}
-            >
-              Export as CSV
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => handleStudentExport('excel')}
-            >
-              Export as Excel
-            </Button>
-          </Box>
-          <Box sx={{ overflowX: 'auto' }}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ background: 'linear-gradient(to right, #3f51b5, #9c27b0)' }}>
-                  <TableCell sx={{ color: '#fff' }}>Student Name</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Student ID</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Roll Number</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Program</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Semester</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Total Sessions</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Present</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Absent</TableCell>
-                  <TableCell sx={{ color: '#fff' }}>Attendance %</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {studentStats.map((stat, index) => (
-                  <motion.tr
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <TableCell>{stat.name}</TableCell>
-                    <TableCell>{stat.student_id}</TableCell>
-                    <TableCell>{stat.roll_number}</TableCell>
-                    <TableCell>{stat.program}</TableCell>
-                    <TableCell>{stat.semester}</TableCell>
-                    <TableCell>{stat.total_sessions}</TableCell>
-                    <TableCell>{stat.present}</TableCell>
-                    <TableCell>{stat.absent}</TableCell>
-                    <TableCell>{stat.attendance_percentage}%</TableCell>
-                  </motion.tr>
+        {/* ── subject chips ── */}
+        <AnimatePresence>
+          {selectedTeacher && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                Subjects taught
+                {loadingSubjects && <CircularProgress size={14} sx={{ ml: 1 }} />}
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {teacherSubjects.map((sub) => (
+                  <Chip
+                    key={sub}
+                    label={sub}
+                    onClick={() => setSelectedSubject(selectedSubject === sub ? null : sub)}
+                    color={selectedSubject === sub ? 'primary' : 'default'}
+                    variant={selectedSubject === sub ? 'filled' : 'outlined'}
+                    sx={{ cursor: 'pointer' }}
+                  />
                 ))}
-              </TableBody>
-            </Table>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-              <Button
-                variant="contained"
-                onClick={handleStudentPrevPage}
-                disabled={!studentPrevPage}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleStudentNextPage}
-                disabled={!studentNextPage}
-              >
-                Next
-              </Button>
-            </Box>
-          </Box>
-        </>
-      )}
+                {!loadingSubjects && teacherSubjects.length === 0 && (
+                  <Typography variant="body2" color="text.secondary">No subjects found for this teacher.</Typography>
+                )}
+              </Box>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Paper>
 
-      <ToastContainer />
+      {/* ── teacher stats table ── */}
+      <AnimatePresence>
+        {selectedSubject && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}>
+            <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={1}>
+              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ flexGrow: 1 }}>{selectedSubject}</Typography>
+                {teacherDateRange.start && (
+                  <Chip size="small" label={`${teacherDateRange.start} → ${teacherDateRange.end}`} variant="outlined" />
+                )}
+                <Chip size="small" label={`${teacherTotalCount} records`} color="primary" />
+                <Tooltip title="Export CSV">
+                  <span>
+                    <IconButton size="small" onClick={handleTeacherExport} disabled={teacherStats.length === 0}>
+                      <DownloadIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
+
+              {loadingTeacherStats ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+              ) : teacherStats.length === 0 ? (
+                <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>No records found for the selected filters.</Typography>
+              ) : (
+                <>
+                  <Box sx={{ overflowX: 'auto' }}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: 'primary.main' }}>
+                          {['Student', 'Roll No.', 'Program', 'Sem', 'Total', 'Present', 'Absent', 'Attendance %', 'Recorded By'].map((h) => (
+                            <TableCell key={h} sx={{ color: '#fff', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {teacherStats.map((stat, idx) => (
+                          <motion.tr key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.02 }}>
+                            <TableCell>{stat.name}</TableCell>
+                            <TableCell>{stat.roll_number}</TableCell>
+                            <TableCell>{stat.program}</TableCell>
+                            <TableCell>{stat.semester}</TableCell>
+                            <TableCell>{stat.total_sessions}</TableCell>
+                            <TableCell sx={{ color: 'success.main', fontWeight: 600 }}>{stat.present}</TableCell>
+                            <TableCell sx={{ color: 'error.main', fontWeight: 600 }}>{stat.absent}</TableCell>
+                            <TableCell>
+                              <Chip
+                                size="small"
+                                label={`${Number(stat.attendance_percentage).toFixed(1)}%`}
+                                sx={{ bgcolor: pctColor(stat.attendance_percentage), color: '#fff', fontWeight: 700 }}
+                              />
+                            </TableCell>
+                            <TableCell>{stat.recorded_by_name}</TableCell>
+                          </motion.tr>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
+                  <PaginationBar
+                    onPrev={() => setTeacherPage((p) => p - 1)}
+                    onNext={() => setTeacherPage((p) => p + 1)}
+                    hasPrev={!!teacherPrevPage}
+                    hasNext={!!teacherNextPage}
+                    page={teacherPage}
+                    total={teacherTotalCount}
+                  />
+                </>
+              )}
+            </Paper>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══════════════════════════ STUDENT SECTION ══════════════════════════ */}
+      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={1}>
+        <SectionHeader icon={<SchoolIcon color="secondary" />} title="Select Student" count={studentTotalCount} />
+
+        <TextField
+          size="small"
+          placeholder="Search by name, roll number, email…"
+          value={studentSearch}
+          onChange={(e) => setStudentSearch(e.target.value)}
+          sx={{ mb: 2, width: { xs: '100%', sm: 380 } }}
+          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+        />
+
+        {loadingStudents ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+        ) : (
+          <>
+            <Grid container spacing={1.5}>
+              {filteredStudents.map((student) => (
+                <Grid key={student.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                  <SelectableCard
+                    selected={selectedStudent === student.id}
+                    onClick={() => setSelectedStudent(selectedStudent === student.id ? null : student.id)}
+                  >
+                    <Typography fontWeight={600}>{student.first_name} {student.last_name}</Typography>
+                    <Typography variant="body2" color="text.secondary">{student.roll_number}</Typography>
+                    <Typography variant="body2" color="text.secondary" noWrap>{student.email}</Typography>
+                  </SelectableCard>
+                </Grid>
+              ))}
+              {filteredStudents.length === 0 && (
+                <Grid size={12}>
+                  <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>No students match your search.</Typography>
+                </Grid>
+              )}
+            </Grid>
+            <PaginationBar
+              onPrev={() => setStudentPage((p) => p - 1)}
+              onNext={() => setStudentPage((p) => p + 1)}
+              hasPrev={!!studentPrevPage}
+              hasNext={!!studentNextPage}
+              page={studentPage}
+              total={studentTotalCount}
+            />
+          </>
+        )}
+      </Paper>
+
+      {/* ── student stats ── */}
+      <AnimatePresence>
+        {selectedStudent && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}>
+            <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={1}>
+              {(() => {
+                const student = students.find((s) => s.id === selectedStudent);
+                return (
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                      <Typography variant="subtitle1" fontWeight={700} sx={{ flexGrow: 1 }}>
+                        {student ? `${student.first_name} ${student.last_name}` : 'Student Stats'}
+                      </Typography>
+                      {studentDateRange.start && (
+                        <Chip size="small" label={`${studentDateRange.start} → ${studentDateRange.end}`} variant="outlined" />
+                      )}
+                      <Tooltip title="Export CSV">
+                        <span>
+                          <IconButton size="small" onClick={handleStudentExport} disabled={!studentStats}>
+                            <DownloadIcon />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Box>
+
+                    {loadingStudentStats ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+                    ) : !studentStats ? (
+                      <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>No stats available.</Typography>
+                    ) : (
+                      <Box sx={{ overflowX: 'auto' }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow sx={{ bgcolor: 'secondary.main' }}>
+                              {['Subject', 'Program', 'Sem', 'Total', 'Present', 'Absent', 'Attendance %'].map((h) => (
+                                <TableCell key={h} sx={{ color: '#fff', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</TableCell>
+                              ))}
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {(Array.isArray(studentStats) ? studentStats : [studentStats]).map((stat, idx) => (
+                              <motion.tr key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.03 }}>
+                                <TableCell>{stat.subject_name || stat.name || '—'}</TableCell>
+                                <TableCell>{stat.program}</TableCell>
+                                <TableCell>{stat.semester}</TableCell>
+                                <TableCell>{stat.total_sessions}</TableCell>
+                                <TableCell sx={{ color: 'success.main', fontWeight: 600 }}>{stat.present}</TableCell>
+                                <TableCell sx={{ color: 'error.main', fontWeight: 600 }}>{stat.absent}</TableCell>
+                                <TableCell>
+                                  <Chip
+                                    size="small"
+                                    label={`${Number(stat.attendance_percentage).toFixed(1)}%`}
+                                    sx={{ bgcolor: pctColor(stat.attendance_percentage), color: '#fff', fontWeight: 700 }}
+                                  />
+                                </TableCell>
+                              </motion.tr>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </Box>
+                    )}
+                  </>
+                );
+              })()}
+            </Paper>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Box>
   );
 }
+
 export default AdminAttendanceStats;

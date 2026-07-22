@@ -616,13 +616,6 @@ class TimetableViewSet(viewsets.ModelViewSet):
 
 was working the first previous
 
-
-
-
-
-
-
-
 class TimetableViewSet(viewsets.ModelViewSet):
     queryset = Timetable.objects.all()
     permission_classes = [IsAuthenticated]
@@ -2881,3 +2874,58 @@ class AdminSemesterAttendanceView(APIView):
             logger.error(f"Error in AdminSemesterAttendanceView: {str(e)}", exc_info=True)
             return Response({"error": str(e)}, status=500)
 
+
+# class TimetableDisplayView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+#         program = request.query_params.get("program")
+#         year = request.query_params.get("year")
+#         section = request.query_params.get("section")
+#         semester = request.query_params.get("semester")
+
+#         timetable = (
+#             Timetable.objects
+#             .select_related("section", "section__program", "teacher", "subject")
+#             .filter(
+#                 section__program_id=program,
+#                 section__year=year,
+#                 section_id=section,
+#                 subject__semester=semester
+#             )
+#             .order_by("day_of_week", "start_time")
+#         )
+
+#         serializer = TimetableSerializer(timetable, many=True)
+
+#         return Response(serializer.data)
+
+
+from .models import Timetable
+from .serializers import TimetableSerializer
+
+
+class TimetableDisplayView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        timetable = (
+            Timetable.objects
+            .select_related(
+                "section",
+                "section__program",
+                "teacher",
+                "subject",
+            )
+            .order_by(
+                "section__program__name",
+                "section__year",
+                "section__name",
+                "day_of_week",
+                "start_time",
+            )
+        )
+
+        serializer = TimetableSerializer(timetable, many=True)
+
+        return Response(serializer.data)

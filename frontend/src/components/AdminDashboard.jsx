@@ -16,6 +16,8 @@ const SECTIONS = [
       { to: "/admin/programs", cls: "programs-card", icon: "🏛️", title: "Programs", desc: "Create and update academic programs." },
       { to: "/admin/subjects", cls: "subjects-card", icon: "📚", title: "Subjects", desc: "Assign and organise course subjects." },
       { to: "/admin/sessions", cls: "sessions-card", icon: "🗓️", title: "Sessions", desc: "Create and edit attendance sessions." },
+      {to: "/admin/timetable-display", cls: "timetable-display-card", icon: "📅",  title: "Semester Timetable",  desc: "View semester-wise timetable by Program, Year and Section."
+    },
     ],
   },
   {

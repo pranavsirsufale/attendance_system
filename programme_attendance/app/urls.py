@@ -68,7 +68,7 @@ urlpatterns = [
     path('admin/archival-attendance/delete/', views.ArchivalAttendanceDeleteView.as_view(), name='admin-archival-delete'),
     path('admin/archival-attendance/stats/', views.ArchivalAttendanceStatsView.as_view(), name='admin-archival-stats'),
     path('admin/archival-attendance/', views.ArchivalAttendanceView.as_view(), name='admin-archival-attendance'),
-    
+    path("admin/timetable-display/",views.TimetableDisplayView.as_view(), name="admin-timetable-display"),
     path('', include(router.urls)),
 ]
 

@@ -3,265 +3,278 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
-function TimetableDisplay() {
+export default function TimetableDisplay() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [timetable, setTimetable] = useState([]);
   const [error, setError] = useState("");
 
-  const getHeaders = () => {
-    const token = localStorage.getItem("access_token");
+  const TIME_SLOTS = [
+    { value: "08:30", label: "08:30–09:30" },
+    { value: "09:30", label: "09:30–10:30" },
+    { value: "10:30", label: "10:30–11:30" },
+    { value: "12:00", label: "12:00–01:00" },
+    { value: "01:00", label: "01:00–02:00" },
+  ];
 
-    if (!token) {
-      navigate("/");
-      return null;
-    }
-
-    return {
-      Authorization: `Bearer ${token}`,
-    };
-  };
-
-  const loadTimetable = async () => {
-    try {
-      const headers = getHeaders();
-      if (!headers) return;
-
-      setLoading(true);
-
-      const res = await axios.get(
-        "/api/admin/timetable-display/",
-        {
-          headers,
-        }
-      );
-
-      setTimetable(res.data);
-    } catch (err) {
-      console.error(err);
-      setError("Unable to load timetable.");
-    } finally {
-      setLoading(false);
-    }
+  const ROMAN = {
+    1: "I",
+    2: "II",
+    3: "III",
+    4: "IV",
+    5: "V",
   };
 
   useEffect(() => {
     loadTimetable();
   }, []);
 
-  const timeSlots = useMemo(() => {
-    return [
-      ...new Set(
-        timetable.map((item) => item.start_time.substring(0, 5))
-      ),
-    ].sort();
-  }, [timetable]);
+  async function loadTimetable() {
+    try {
+      const token = localStorage.getItem("access_token");
 
-  const sectionRows = useMemo(() => {
+      const { data } = await axios.get(
+        "/api/admin/timetable-display/",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setTimetable(data);
+    } catch (err) {
+      console.error(err);
+      setError("Unable to load timetable.");
+    } finally {
+      setLoading(false);
+    }
+  }  const sections = useMemo(() => {
     return [
       ...new Map(
-        timetable.map((item) => [item.section.id, item.section])
+        timetable
+          .filter((t) => isCurrentSemester(t))
+          .map((t) => [t.section.id, t.section])
       ).values(),
     ];
   }, [timetable]);
 
-  const getLecture = (sectionId, time) => {
-    return timetable.find(
-      (lecture) =>
-        lecture.section.id === sectionId &&
-        lecture.start_time.substring(0, 5) === time
+  function isCurrentSemester(item) {
+    if (!item.semester_start_date || !item.semester_end_date) {
+      return true;
+    }
+
+    const today = new Date();
+
+    const start = new Date(item.semester_start_date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(item.semester_end_date);
+    end.setHours(23, 59, 59, 999);
+
+    return today >= start && today <= end;
+  }
+
+  function getSemester(section) {
+    const record = timetable.find(
+      (t) =>
+        t.section.id === section.id &&
+        t.section.year === section.year &&
+        isCurrentSemester(t)
     );
-  };
 
-  return (
+    return record?.semester ?? "";
+  }
 
+  function getLecture(section, time) {
+    const semester = getSemester(section);
+
+    return timetable.find(
+      (t) =>
+        t.section.id === section.id &&
+        t.section.year === section.year &&
+        t.semester === semester &&
+        t.start_time.substring(0, 5) === time &&
+        isCurrentSemester(t)
+    );
+  }  return (
     <motion.div
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  transition={{ duration: 0.4 }}
-  className="min-h-screen bg-slate-100 p-6"
->
-  {/* Header */}
-  <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-    <h1 className="text-4xl font-bold text-center text-indigo-700">
-      MANIKCHAND PAHADE LAW COLLEGE
-    </h1>
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen bg-gray-100 p-4 print:bg-white"
+    >
+      <style>{`
+        @media print{
+          @page{
+            size:A4 landscape;
+            margin:10mm;
+          }
 
-    <p className="text-center text-gray-500 mt-2">
-      Marathwada Legal & General Education Society
-    </p>
+          .no-print{
+            display:none !important;
+          }
 
-    <h2 className="text-3xl font-semibold text-center mt-4">
-      Semester Timetable
-    </h2>
-  </div>
+          body{
+            background:#fff;
+          }
 
-  {/* Error */}
-  {error && (
-    <div className="mb-6 rounded-lg bg-red-100 border border-red-300 text-red-700 p-4">
-      {error}
-    </div>
-  )}
+          table{
+            border-collapse:collapse;
+            width:100%;
+          }
 
-  {/* Timetable */}
-  <div className="bg-white rounded-xl shadow-xl overflow-x-auto">
+          th,td{
+            border:1px solid #000;
+          }
+        }
+      `}</style>
 
-    <table className="min-w-full border-collapse">
+      <div className="bg-white border-2 border-black p-4 mb-4">
+        <h1 className="text-3xl font-bold text-center">
+          MANIKCHAND PAHADE LAW COLLEGE
+        </h1>
 
-      <thead>
+        <p className="text-center text-sm">
+          Marathwada Legal & General Education Society
+        </p>
 
-        <tr className="bg-indigo-700 text-white">
+        <h2 className="text-xl font-bold text-center mt-3">
+          SEMESTER TIME TABLE
+        </h2>
+      </div>
 
-          <th className="border p-4 sticky left-0 bg-indigo-700 z-20 min-w-[240px]">
-            Class / Section
-          </th>
+      {error && (
+        <div className="bg-red-100 border border-red-500 p-3 mb-4">
+          {error}
+        </div>
+      )}
 
-          {timeSlots.map((time) => (
+      <div className="overflow-x-auto bg-white">
+        <table className="w-full border-collapse text-xs">
 
-            <th
-              key={time}
-              className="border p-4 text-center min-w-[180px]"
-            >
-              {time}
-            </th>
+          <thead>
+            <tr className="bg-gray-200">
 
-          ))}
+              <th className="p-2">
+                Programme / Section
+              </th>
 
-        </tr>
-
-      </thead>
-
-      <tbody>
-
-        {loading ? (
-
-          <tr>
-
-            <td
-              colSpan={timeSlots.length + 1}
-              className="text-center p-16 text-xl"
-            >
-              Loading Timetable...
-            </td>
-
-          </tr>
-
-        ) : sectionRows.length === 0 ? (
-
-          <tr>
-
-            <td
-              colSpan={timeSlots.length + 1}
-              className="text-center p-16 text-gray-500"
-            >
-              No Timetable Found
-            </td>
-
-          </tr>
-
-        ) : (
-
-          sectionRows.map((section) => (
-
-            <tr key={section.id}>
-
-              <td className="border p-4 bg-gray-50 sticky left-0 z-10">
-
-                <div className="font-bold text-lg text-indigo-700">
-                  {section.program}
-                </div>
-
-                <div className="font-semibold">
-                  {section.name}
-                </div>
-
-                <div className="text-sm text-gray-500">
-                  Year {section.year}
-                </div>
-
-              </td>
-
-              {timeSlots.map((time) => {
-
-                const lecture = getLecture(section.id, time);
-
-                return (
-
-                  <td
-                    key={time}
-                    className="border align-top p-3 h-32"
-                  >
-
-                    {lecture ? (
-
-                      <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 h-full"
-                      >
-
-                        <div className="font-bold text-indigo-700">
-                          {lecture.subject.name}
-                        </div>
-
-                        <div className="mt-3 text-gray-700">
-                          👨‍🏫 {lecture.teacher.first_name}{" "}
-                          {lecture.teacher.last_name}
-                        </div>
-
-                        <div className="mt-2 text-sm text-gray-500">
-                          {lecture.day_of_week}
-                        </div>
-
-                      </motion.div>
-
-                    ) : (
-
-                      <div className="flex h-full items-center justify-center text-gray-300 text-3xl">
-                        —
-                      </div>
-
-                    )}
-
-                  </td>
-
-                );
-
-              })}
+              {TIME_SLOTS.map((slot) => (
+                <th
+                  key={slot.value}
+                  className="p-2"
+                >
+                  {slot.label}
+                </th>
+              ))}
 
             </tr>
+          </thead>
 
-          ))
-
-        )}
-
-      </tbody>
-
-    </table>
-
-  </div>
-
-  {/* Footer */}
-
-  <div className="mt-8 flex flex-wrap justify-end gap-4">
-
-    <button
-      onClick={() => window.print()}
-      className="rounded-lg bg-green-600 px-6 py-3 text-white shadow hover:bg-green-700"
+          <tbody>{loading ? (
+  <tr>
+    <td
+      colSpan={TIME_SLOTS.length + 1}
+      className="p-10 text-center font-semibold"
     >
-      🖨 Print Timetable
-    </button>
-
-    <button
-      onClick={() => navigate(-1)}
-      className="rounded-lg bg-gray-600 px-6 py-3 text-white shadow hover:bg-gray-700"
+      Loading Timetable...
+    </td>
+  </tr>
+) : sections.length === 0 ? (
+  <tr>
+    <td
+      colSpan={TIME_SLOTS.length + 1}
+      className="p-10 text-center text-red-500"
     >
-      ← Back
-    </button>
+      No Active Timetable Found
+    </td>
+  </tr>
+) : (
+  sections.map((section) => (
+    <tr key={section.id}>
 
-  </div>
-  </motion.div>
+      <td className="p-2 align-top">
+
+        <div className="font-bold text-sm">
+          {section.program} - {ROMAN[section.year]}
+        </div>
+
+        <div>
+          ({section.name.replace("Section ", "")})
+        </div>
+
+        <div className="text-gray-500">
+          ({getSemester(section)}-Sem)
+        </div>
+
+      </td>
+
+      {TIME_SLOTS.map((slot) => {
+
+        const lecture = getLecture(section, slot.value);
+
+        return (
+
+          <td
+            key={slot.value}
+            className="p-2 h-24 align-top"
+          >
+
+            {lecture ? (
+
+              <>
+
+                <div className="font-bold uppercase">
+                  {lecture.subject?.name}
+                </div>
+
+                <div className="mt-2 text-[11px] text-gray-700">
+                  {lecture.teacher
+                    ? `${lecture.teacher.first_name} ${lecture.teacher.last_name}`
+                    : "Teacher Not Assigned"}
+                </div>
+
+              </>
+
+            ) : (
+
+              <div className="text-center text-gray-300">
+                —
+              </div>
+
+            )}
+
+          </td>
+
+        );
+
+      })}
+
+    </tr>
+  ))
+)}          </tbody>
+        </table>
+      </div>
+
+      <div className="flex justify-end gap-3 mt-5 no-print">
+
+        <button
+          onClick={() => window.print()}
+          className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded transition"
+        >
+          Print
+        </button>
+
+        <button
+          onClick={() => navigate(-1)}
+          className="bg-gray-700 hover:bg-gray-800 text-white px-5 py-2 rounded transition"
+        >
+          Back
+        </button>
+
+      </div>
+
+    </motion.div>
   );
 }
-
-export default TimetableDisplay;

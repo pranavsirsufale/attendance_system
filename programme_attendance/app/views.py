@@ -2909,6 +2909,12 @@ class TimetableDisplayView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        # Optional filters from frontend
+        section = request.query_params.get("section")
+        semester = request.query_params.get("semester")
+        program = request.query_params.get("program")
+        year = request.query_params.get("year")
+
         timetable = (
             Timetable.objects
             .select_related(
@@ -2917,15 +2923,29 @@ class TimetableDisplayView(APIView):
                 "teacher",
                 "subject",
             )
-            .order_by(
-                "section__program__name",
-                "section__year",
-                "section__name",
-                "day_of_week",
-                "start_time",
-            )
+        )
+
+        # Apply filters
+        if section:
+            timetable = timetable.filter(section_id=section)
+
+        if semester:
+            timetable = timetable.filter(subject__semester=semester)
+
+        if program:
+            timetable = timetable.filter(section__program_id=program)
+
+        if year:
+            timetable = timetable.filter(section__year=year)
+
+        # Sort records
+        timetable = timetable.order_by(
+            "section__program__name",
+            "section__year",
+            "section__name",
+            "day_of_week",
+            "start_time",
         )
 
         serializer = TimetableSerializer(timetable, many=True)
-
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
